@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#1B1713">
+<title>UROSI — La plateforme de micro-missions de la Métropole Européenne de Lille</title>
+<meta name="description" content="UROSI, la plateforme de micro-missions de la MEL. UROSI T, son premier service : des missions de 5h maximum, tarif visible avant d'accepter, 100% du tarif affiché pour le travailleur, CV vivant.">
+<!-- SEO / partage — remplace https://urosi.fr par ton vrai domaine une fois acheté -->
+<link rel="canonical" href="https://urosi.fr/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="UROSI">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:title" content="UROSI — La plateforme de micro-missions de la Métropole Européenne de Lille">
+<meta property="og:description" content="Des missions de 5 heures maximum. Tarif visible avant d'accepter, 100 % du tarif affiché pour le travailleur, CV vivant. Bêta privée — Tourcoing, MEL.">
+<meta property="og:url" content="https://urosi.fr/">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"Organization",
+  "name":"UROSI",
+  "alternateName":"UROSI T",
+  "description":"Plateforme de micro-missions de la Métropole Européenne de Lille. UROSI T est le premier service d'UROSI, dédié aux micro-missions de 5 heures maximum.",
+  "url":"https://urosi.fr",
+  "email":"contact@urosit.fr",
+  "address":{"@type":"PostalAddress","addressLocality":"Tourcoing","addressRegion":"Hauts-de-France","addressCountry":"FR"},
+  "areaServed":"Métropole Européenne de Lille"
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --charbon:#1B1713;
+  --charbon-2:#26201A;
+  --brique:#9E3120;
+  --brique-claire:#E0553C;
+  --chantier:#FFC72C;
+  --papier:#EDEBE3;
+  --carte:#FBFAF5;
+  --vert-ess:#2E6B4F;
+  --encre:#26211C;
+  --gris:#544E46;
+  --gris-clair:#B8B2A6;
+  --ligne:#C9C4B6;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+[id]{scroll-margin-top:78px}
+[data-ancre]{cursor:pointer}
+html,body{background:var(--charbon)}
+body{
+  font-family:'Archivo',sans-serif;font-variation-settings:'wdth' 100;
+  color:var(--papier);line-height:1.55;-webkit-font-smoothing:antialiased;
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
+::selection{background:var(--chantier);color:var(--charbon)}
+.mono{font-family:'IBM Plex Mono',monospace}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+a{color:inherit}
+button{font-family:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--chantier);outline-offset:3px}
+
+.hazard{height:10px;background:repeating-linear-gradient(-45deg,var(--charbon) 0 14px,var(--chantier) 14px 28px)}
+
+/* ---------- statut / preuve sociale ---------- */
+.statut{background:#141110;color:var(--chantier);font-family:'IBM Plex Mono',monospace;font-size:.7rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;text-align:center;padding:8px 16px;border-bottom:1px solid rgba(237,235,227,.12)}
+
+/* ---------- nav ---------- */
+nav{position:sticky;top:0;z-index:50;background:var(--charbon);border-bottom:2px solid rgba(237,235,227,.9)}
+.nav-in{display:flex;align-items:center;justify-content:space-between;height:64px}
+.logo{font-weight:900;font-size:1.35rem;letter-spacing:-.02em;text-decoration:none;display:flex;align-items:center;gap:10px;color:var(--papier)}
+.logo .mel{font-family:'IBM Plex Mono',monospace;font-size:.62rem;font-weight:500;color:var(--gris-clair);letter-spacing:.14em;border:1px solid rgba(237,235,227,.35);padding:2px 7px;border-radius:99px}
+.nav-links{display:flex;gap:26px;align-items:center;list-style:none}
+.nav-links a{text-decoration:none;font-size:.9rem;font-weight:600}
+.nav-links a:hover{color:var(--chantier)}
+.btn{
+  display:inline-block;text-decoration:none;font-weight:800;font-size:.95rem;
+  padding:13px 24px;border:2px solid var(--charbon);
+  background:var(--chantier);color:var(--charbon);
+  box-shadow:4px 4px 0 rgba(237,235,227,.3);
+  transition:transform .3s cubic-bezier(.2,.7,.2,1),box-shadow .3s cubic-bezier(.2,.7,.2,1);
+}
+.btn:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 rgba(237,235,227,.4)}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 rgba(237,235,227,.3)}
+.btn.sm{padding:9px 16px;font-size:.85rem}
+.btn.brique{background:var(--brique-claire);color:var(--charbon)}
+.btn.ghost{background:transparent;color:var(--papier);border-color:var(--papier);box-shadow:4px 4px 0 rgba(0,0,0,.35)}
+.burger{display:none;background:none;border:2px solid var(--papier);color:var(--papier);padding:8px 10px;font-weight:800}
+
+/* ---------- hero ---------- */
+header.hero{border-bottom:2px solid rgba(237,235,227,.35);overflow:hidden}
+.hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:56px;padding:64px 0 72px;align-items:center}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:.75rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gris-clair);font-weight:600;margin-bottom:18px;display:flex;align-items:flex-start;gap:10px;line-height:1.5}
+.eyebrow::before{margin-top:7px}
+.eyebrow::before{content:"";width:26px;height:2px;background:var(--chantier);display:inline-block;flex:none}
+h1{
+  font-weight:900;font-variation-settings:'wdth' 75;
+  font-size:clamp(2.3rem,5.2vw,4rem);
+  line-height:1.02;letter-spacing:-.02em;text-transform:uppercase;
+}
+h1 .souligne{background:var(--chantier);color:var(--charbon);padding:2px 12px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+h1 .rouge{color:var(--brique-claire)}
+.sous-slogan{margin-top:16px;font-size:1.08rem;color:var(--gris-clair);max-width:32rem}
+.mecanique{list-style:none;margin:24px 0 6px;display:grid;gap:11px;max-width:33rem}
+.mecanique li{display:flex;gap:12px;align-items:flex-start;font-size:1.04rem;line-height:1.45}
+.mecanique li>span:last-child{padding-top:1px}
+.mecanique .tir{flex:none;width:20px;height:20px;margin-top:4px;background:transparent;border:2px solid rgba(237,235,227,.45);display:grid;place-items:center;font-weight:900;font-size:.7rem;color:var(--chantier)}
+.produit-note{font-family:'IBM Plex Mono',monospace;font-size:.78rem;line-height:1.5;border-left:4px solid var(--brique-claire);padding:8px 0 8px 14px;margin:22px 0 28px;max-width:32rem;color:var(--gris-clair)}
+.produit-note strong{color:var(--chantier)}
+.hero-ctas{display:flex;gap:16px;flex-wrap:wrap}
+
+/* ---------- mockup téléphone ---------- */
+.tel-scene{display:flex;justify-content:center}
+.tel{
+  width:300px;background:#0D0B09;border-radius:38px;padding:12px;
+  border:2px solid rgba(237,235,227,.35);box-shadow:14px 14px 0 rgba(0,0,0,.5);
+  transform:rotate(1.6deg);
+}
+.tel-ecran{background:#0a0a14;border-radius:28px;overflow:hidden;display:flex;flex-direction:column;height:560px;position:relative;font-family:'DM Sans','Archivo',sans-serif}
+.app-toast{position:absolute;left:50%;top:52px;transform:translate(-50%,-8px);background:#111827;color:#4ade80;border:1px solid #166534;font-size:.62rem;font-weight:700;padding:6px 13px;border-radius:99px;opacity:0;transition:opacity .7s cubic-bezier(.4,0,.2,1),transform .7s cubic-bezier(.4,0,.2,1);pointer-events:none;white-space:nowrap;z-index:2}
+.app-toast.voir{opacity:1;transform:translate(-50%,0)}
+.app-carte{transition:transform .9s cubic-bezier(.3,.7,.3,1),opacity .9s cubic-bezier(.3,.7,.3,1)}
+.app-carte.part{transform:translateX(-36px);opacity:0}
+@keyframes carte-arrive{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+.app-carte.arrive{animation:carte-arrive .9s cubic-bezier(.3,.7,.3,1)}
+.tel-encoche{height:22px;display:grid;place-items:center}
+.tel-encoche::after{content:"";width:90px;height:9px;background:#0D0B09;border-radius:99px}
+.app-haut{padding:14px 15px 11px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1f2937}
+.app-haut .app-logo{display:flex;align-items:center;gap:7px;font-weight:900;font-size:.9rem;color:#f1f5f9}
+.app-haut .app-logo .u{width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,#1d4ed8,#0891b2);display:grid;place-items:center;color:#fff;font-size:.8rem}
+.app-haut .app-solde{font-size:.6rem;font-weight:700;color:#22d3ee;background:rgba(34,211,238,.12);padding:3px 9px;border-radius:99px}
+.app-titre{font-size:.66rem;font-weight:700;color:#9ca3af;padding:12px 15px 4px}
+.app-flux{flex:1;overflow:hidden;padding:0 12px;display:grid;gap:9px;align-content:start}
+.app-carte{background:#111827;color:#f1f5f9;border:1px solid #1f2937;border-radius:13px;padding:13px 13px 11px;position:relative}
+.app-carte.sol{border-color:#14532d}
+.app-carte .ac-pay{font-size:1.7rem;font-weight:900;color:#f1f5f9;letter-spacing:-1px;line-height:1;margin-bottom:5px}
+.app-carte.sol .ac-pay{font-size:1.25rem;color:#4ade80;display:flex;align-items:baseline;gap:7px}
+.app-carte.sol .ac-pay small{font-size:.8rem;color:#9ca3af;font-weight:800}
+.app-carte .ac-titre{font-size:.78rem;font-weight:700;color:#f1f5f9;margin-bottom:4px;line-height:1.2}
+.app-carte .ac-struct{font-size:.6rem;font-weight:700;color:#9ca3af;display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px}
+.app-carte .ac-verif{color:#4ade80;background:#052e16;border-radius:6px;padding:1px 5px;font-size:.52rem}
+.app-carte .ac-stars{color:#f59e0b;font-size:.6rem;letter-spacing:.5px}
+.app-carte .ac-adr{font-size:.56rem;color:#6b7280;margin-bottom:9px}
+.app-carte .ac-btn{background:#fff;color:#000;text-align:center;border-radius:8px;padding:8px 0;font-size:.72rem;font-weight:900}
+.app-carte.sol .ac-btn{background:#16a34a;color:#fff}
+.app-bas{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;border-top:1px solid #1f2937;padding:7px 10px 12px}
+.app-bas span{font-size:.58rem;font-weight:700;text-align:center;padding:8px 4px;border-radius:8px;color:#6b7280}
+.app-bas span.actif{background:#fff;color:#000}
+
+/* ---------- structures types ---------- */
+.logos{border-bottom:2px solid rgba(237,235,227,.35);background:var(--charbon)}
+.logos-in{display:flex;align-items:baseline;gap:28px;padding:18px 24px;flex-wrap:wrap}
+.logos-lab{font-family:'IBM Plex Mono',monospace;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gris-clair);flex:none}
+.logos-liste{display:flex;gap:30px;flex-wrap:wrap;align-items:baseline;opacity:.75}
+.logos-liste span{color:var(--gris-clair);white-space:nowrap;line-height:1}
+.lg-1{font-style:italic;font-weight:700;font-size:1.02rem}
+.lg-2{font-weight:900;font-variation-settings:'wdth' 72;letter-spacing:.04em}
+.lg-3{font-family:'IBM Plex Mono',monospace;font-size:.85rem;font-weight:600}
+.lg-4{font-weight:400;font-size:1rem;letter-spacing:.06em}
+.lg-5{font-weight:900;font-size:1.05rem;letter-spacing:.14em}
+
+/* ---------- bandeau stats ---------- */
+.strip{background:#141110;border-bottom:2px solid rgba(237,235,227,.35);border-top:1px solid rgba(237,235,227,.15)}
+.strip-in{display:grid;grid-template-columns:repeat(4,1fr)}
+.strip .cell{padding:26px 20px;border-left:1px solid rgba(237,235,227,.18);display:flex;flex-direction:column;justify-content:flex-start}
+.strip .cell:first-child{border-left:none}
+.strip .num{font-weight:900;font-size:1.9rem;font-variation-settings:'wdth' 78;line-height:1}
+.strip .num em{font-style:normal;color:var(--chantier)}
+.strip .lab{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--gris-clair);margin-top:8px}
+
+/* ---------- sections ---------- */
+section{padding:80px 0;border-bottom:2px solid rgba(237,235,227,.35)}
+.sec-head{margin-bottom:44px;max-width:44rem}
+h2{font-weight:900;font-variation-settings:'wdth' 75;text-transform:uppercase;font-size:clamp(1.8rem,4vw,2.7rem);line-height:1.02;letter-spacing:-.01em}
+.sec-head p{margin-top:16px;font-size:1.05rem;color:var(--gris-clair)}
+
+/* ---------- aperçu des missions ---------- */
+.filtres{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:28px}
+.chip{font-family:'IBM Plex Mono',monospace;font-size:.74rem;font-weight:600;letter-spacing:.06em;background:transparent;color:var(--gris-clair);border:2px solid rgba(237,235,227,.4);padding:8px 16px;border-radius:99px;transition:all .3s cubic-bezier(.2,.7,.2,1)}
+.chip:hover{border-color:var(--papier);color:var(--papier)}
+.chip.actif{background:var(--chantier);color:var(--charbon);border-color:var(--chantier)}
+.tableau{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.bordereau{background:var(--carte);color:var(--encre);border:2px solid var(--papier);position:relative;box-shadow:6px 6px 0 rgba(0,0,0,.5);cursor:pointer;transition:transform .3s cubic-bezier(.2,.7,.2,1)}
+.bordereau:hover{transform:translateY(-2px)}
+.bordereau.sol{border-color:#7FB89C}
+.bordereau::before{content:"";position:absolute;left:-2px;top:0;bottom:0;width:14px;background:radial-gradient(circle at 0 8px,var(--charbon) 5px,transparent 5.5px) repeat-y;background-size:14px 16px;border-right:2px dashed var(--ligne)}
+.bord-in{padding:18px 18px 16px 30px}
+.bord-ref{font-family:'IBM Plex Mono',monospace;font-size:.64rem;color:var(--gris);display:flex;justify-content:space-between;letter-spacing:.05em;padding-right:64px}
+.bordereau h3{font-size:1.02rem;font-weight:800;margin:6px 0 4px;line-height:1.2;padding-right:64px}
+.bord-meta{font-family:'IBM Plex Mono',monospace;font-size:.72rem;display:flex;gap:14px;flex-wrap:wrap}
+.bord-net{position:absolute;right:14px;top:14px;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:.85rem;background:var(--chantier);border:2px solid var(--charbon);padding:2px 9px}
+.bordereau.sol .bord-net{background:var(--vert-ess);color:#F1F5EF;border-color:var(--vert-ess)}
+.bord-detail{display:none;border-top:1px dashed var(--ligne);margin-top:14px;padding-top:14px}
+.bordereau.ouvert .bord-detail{display:block}
+.bord-detail p{font-size:.88rem;color:var(--gris);margin-bottom:12px}
+.bord-compte{font-family:'IBM Plex Mono',monospace;font-size:.76rem;display:grid;gap:5px;margin-bottom:14px}
+.bord-compte .l-trav{font-weight:600;background:rgba(255,199,44,.45);padding:3px 8px;display:inline-block;width:max-content}
+.bord-ouvrir{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--brique);letter-spacing:.08em;margin-top:10px}
+.bordereau.ouvert .bord-ouvrir{display:none}
+@media(max-width:920px){.tableau{grid-template-columns:1fr}}
+@media(max-width:560px){.bordereau{box-shadow:3px 3px 0 rgba(0,0,0,.5)}}
+
+/* ---------- chaîne animée ---------- */
+.chaine{display:flex;align-items:stretch;border:2px solid var(--papier);background:var(--charbon);margin-bottom:52px;box-shadow:6px 6px 0 rgba(0,0,0,.5)}
+.maillon{flex:1;background:var(--carte);color:var(--encre);padding:22px 20px;min-width:0;position:relative}
+.maillon.accent{background:var(--chantier);color:var(--charbon)}
+.m-num{font-family:'IBM Plex Mono',monospace;font-size:.68rem;font-weight:600;letter-spacing:.14em;color:var(--brique)}
+.m-titre{font-weight:900;text-transform:uppercase;font-variation-settings:'wdth' 76;font-size:1.25rem;line-height:1.05;margin:8px 0 6px}
+.m-sub{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--gris);line-height:1.4}
+.maillon.accent .m-sub,.maillon.accent .m-num{color:var(--charbon)}
+.fleche{flex:none;display:grid;place-items:center;background:var(--charbon);color:var(--chantier);font-weight:900;font-size:1.4rem;padding:0 10px}
+/* la lumière passe, lentement : cycle 8 s, teinte douce */
+@keyframes allume{0%,100%{background-color:var(--carte)}8%{background-color:#FFF1CC}20%{background-color:#FFF1CC}30%{background-color:var(--carte)}}
+@keyframes allume-accent{0%,86%,100%{box-shadow:none}78%{box-shadow:0 0 0 3px rgba(255,199,44,.55)}}
+@keyframes fleche-pulse{0%,100%{opacity:.35}10%{opacity:.95}26%{opacity:.35}}
+.maillon:nth-of-type(1){animation:allume 8s cubic-bezier(.4,0,.2,1) infinite}
+.maillon:nth-of-type(3){animation:allume 8s cubic-bezier(.4,0,.2,1) infinite;animation-delay:2s}
+.maillon:nth-of-type(5){animation:allume 8s cubic-bezier(.4,0,.2,1) infinite;animation-delay:4s}
+.maillon.accent{animation:allume-accent 8s cubic-bezier(.4,0,.2,1) infinite}
+.fleche{color:rgba(237,235,227,.4)}
+.fleche:nth-of-type(2){animation:fleche-pulse 8s infinite;animation-delay:1.6s;color:var(--chantier)}
+.fleche:nth-of-type(4){animation:fleche-pulse 8s infinite;animation-delay:3.6s;color:var(--chantier)}
+.fleche:nth-of-type(6){animation:fleche-pulse 8s infinite;animation-delay:5.6s;color:var(--chantier)}
+
+/* ---------- profil exemple ---------- */
+.deux-col{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
+.profil{background:#141110;border:2px solid rgba(237,235,227,.55);padding:28px;box-shadow:6px 6px 0 rgba(0,0,0,.5)}
+.profil .p-haut{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:6px}
+.profil h3{font-weight:900;text-transform:uppercase;font-variation-settings:'wdth' 78;font-size:1.25rem}
+.profil .p-tag{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.12em;color:var(--gris-clair);border:1px solid rgba(237,235,227,.35);padding:2px 8px;border-radius:99px;white-space:nowrap;margin-top:5px}
+.profil .etoiles{color:var(--chantier);font-size:1rem;letter-spacing:.12em;margin-bottom:18px}
+.profil .etoiles small{font-family:'IBM Plex Mono',monospace;color:var(--gris-clair);letter-spacing:0;margin-left:8px}
+.p-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:rgba(237,235,227,.25);border:1px solid rgba(237,235,227,.25);margin-bottom:18px}
+.p-stats div{background:#141110;padding:12px 10px;text-align:center}
+.p-stats .n{font-weight:900;font-size:1.35rem;color:var(--papier);line-height:1}
+.p-stats .l{font-family:'IBM Plex Mono',monospace;font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;color:var(--gris-clair);margin-top:6px}
+.p-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.p-chips span{font-family:'IBM Plex Mono',monospace;font-size:.66rem;border:1px solid rgba(237,235,227,.45);padding:4px 10px;border-radius:99px;color:var(--papier)}
+.p-der{border-top:1px dashed rgba(237,235,227,.3);padding-top:16px}
+.p-der .l{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gris-clair);margin-bottom:8px}
+.p-der .m{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.p-der .m .quoi{font-weight:700}
+.p-der .m .det{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--gris-clair)}
+.p-der .ok{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--chantier);border:1.5px solid var(--chantier);padding:2px 8px;border-radius:3px;transform:rotate(-4deg)}
+.fiab-liste{list-style:none;display:grid;gap:14px;margin-top:24px}
+.fiab-liste li{display:flex;gap:14px;align-items:flex-start;font-size:.97rem;line-height:1.45}
+.fiab-liste .coche{flex:none;width:26px;height:26px;border:2px solid rgba(237,235,227,.45);background:transparent;color:var(--chantier);display:grid;place-items:center;font-weight:900;font-size:.85rem;margin-top:2px}
+
+/* ---------- structures ---------- */
+.structures{background:var(--charbon-2)}
+.s4{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:var(--papier);border:2px solid var(--papier);margin-bottom:36px}
+.s4 div{background:var(--carte);color:var(--encre);padding:24px 20px}
+.s4 .sn{font-family:'IBM Plex Mono',monospace;font-size:.7rem;font-weight:600;letter-spacing:.12em;color:var(--brique)}
+.s4 h3{font-size:1.15rem;font-weight:900;margin-top:8px;text-transform:uppercase;font-variation-settings:'wdth' 78}
+
+/* ---------- simulateur ---------- */
+.simu-punch{
+  font-weight:900;font-variation-settings:'wdth' 74;text-transform:uppercase;
+  font-size:clamp(1.7rem,4.6vw,3.1rem);line-height:1.02;letter-spacing:-.01em;
+  margin-bottom:40px;max-width:56rem;
+}
+.simu-punch em{font-style:normal;background:var(--chantier);color:var(--charbon);padding:2px 10px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.simu-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
+.simu-ctrl{background:var(--carte);color:var(--encre);border:2px solid var(--papier);padding:30px;box-shadow:6px 6px 0 rgba(0,0,0,.5)}
+.simu-ctrl label{display:block;font-weight:800;font-size:.9rem;margin-bottom:8px}
+.simu-ctrl .val{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--brique)}
+input[type=range]{width:100%;accent-color:var(--brique);margin:6px 0 26px;height:26px}
+.simu-ctrl .note{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--gris)}
+.recu{border:2px solid var(--papier);background:var(--carte);color:var(--encre);box-shadow:6px 6px 0 rgba(0,0,0,.5)}
+.recu .recu-head{background:var(--charbon);color:var(--papier);padding:14px 22px;font-family:'IBM Plex Mono',monospace;font-size:.75rem;letter-spacing:.12em;display:flex;justify-content:space-between}
+.recu table{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:.88rem}
+.recu td{padding:14px 22px;border-bottom:1px dashed var(--ligne);vertical-align:top}
+.recu td:last-child{text-align:right;font-weight:600}
+.recu tr.total td{border-bottom:none;font-weight:600;font-size:1rem}
+.recu tr.travailleur td{background:rgba(255,199,44,.5)}
+.recu tr.travailleur td:last-child{font-size:1.25rem;font-weight:600}
+.recu .foot{padding:14px 22px;font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--gris);border-top:2px solid var(--charbon)}
+.badge-100{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:.7rem;font-weight:600;border:2px solid var(--brique);color:var(--brique);padding:2px 8px;border-radius:3px;transform:rotate(-3deg);margin-left:8px}
+
+/* ---------- solidaire ---------- */
+.solidaire{background:var(--vert-ess);color:#F1F5EF}
+.solidaire h2,.solidaire .eyebrow{color:#F1F5EF}
+.solidaire .eyebrow::before{background:var(--chantier)}
+.solidaire .sec-head p{color:rgba(241,245,239,.92)}
+.sol-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.sol-card{border:2px solid rgba(241,245,239,.85);padding:24px;background:rgba(0,0,0,.14)}
+.sol-card h3{font-weight:800;margin-bottom:8px;font-size:1.02rem}
+.sol-card p{font-size:.92rem;color:rgba(241,245,239,.94)}
+
+/* ---------- juridique compact ---------- */
+.checks{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:var(--papier);border:2px solid var(--papier)}
+.check{background:var(--carte);color:var(--encre);padding:22px 20px;display:flex;gap:12px;align-items:flex-start}
+.check>div{flex:1;min-width:0}
+.check b{line-height:1.25;margin-bottom:2px}
+.check .c{flex:none;width:24px;height:24px;background:transparent;border:2px solid var(--charbon);color:var(--brique);display:grid;place-items:center;font-weight:900;font-size:.8rem;margin-top:2px}
+.check b{display:block;font-size:.98rem}
+.check span{font-size:.82rem;color:var(--gris)}
+.legal-note{margin-top:22px;font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--gris-clair);max-width:52rem}
+
+/* ---------- fenêtres légales ---------- */
+dialog.legal{border:2px solid var(--papier);background:var(--carte);color:var(--encre);max-width:660px;width:calc(100vw - 32px);max-height:84vh;padding:0;margin:auto;box-shadow:10px 10px 0 rgba(0,0,0,.55)}
+dialog.legal::backdrop{background:rgba(13,11,9,.8)}
+.dlg-head{position:sticky;top:0;background:var(--charbon);color:var(--papier);display:flex;justify-content:space-between;align-items:center;padding:14px 22px}
+.dlg-head h3{font-family:'IBM Plex Mono',monospace;font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600}
+.dlg-fermer{background:none;border:2px solid var(--papier);color:var(--papier);font-weight:800;font-size:.8rem;padding:5px 12px}
+.dlg-corps{padding:24px 26px 30px;overflow-y:auto}
+.dlg-corps .version{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--gris);margin-bottom:18px;letter-spacing:.06em}
+.dlg-corps h4{font-size:.95rem;font-weight:800;margin:20px 0 6px;text-transform:uppercase;font-variation-settings:'wdth' 80}
+.dlg-corps h4:first-of-type{margin-top:0}
+.dlg-corps p{font-size:.9rem;color:var(--encre);margin-bottom:8px}
+.legal-note a{color:var(--chantier);text-decoration:underline}
+
+/* ---------- FAQ ---------- */
+.faq-item{border:2px solid var(--papier);border-bottom:none;background:var(--carte);color:var(--encre)}
+.faq-item:last-of-type{border-bottom:2px solid var(--papier)}
+.faq-q{width:100%;text-align:left;background:none;border:none;padding:19px 24px;font-weight:800;font-size:1rem;display:flex;justify-content:space-between;align-items:center;gap:16px;color:var(--encre)}
+.faq-q .plus{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--brique);flex:none}
+.faq-a{display:none;padding:0 24px 20px;color:var(--gris);font-size:.94rem;max-width:52rem}
+.faq-item.ouvert .faq-a{display:block}
+.faq-item.ouvert{background:#F3E9C9}
+
+/* ---------- CTA final ---------- */
+.final{background:var(--brique);color:var(--papier);text-align:center}
+.final h2{color:var(--papier);max-width:44rem;margin:0 auto}
+.final p{margin:20px auto 36px;max-width:36rem;color:rgba(237,235,227,.95)}
+.final .btn{border-color:var(--charbon);box-shadow:4px 4px 0 rgba(0,0,0,.35)}
+
+/* ---------- footer ---------- */
+footer{background:#141110;color:var(--papier);padding:56px 0 40px;border-top:1px solid rgba(237,235,227,.2)}
+.foot-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px}
+.foot-grid h4{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gris-clair);margin-bottom:14px}
+.foot-grid ul{list-style:none;display:grid;gap:9px;font-size:.9rem}
+.foot-grid a{text-decoration:none;color:rgba(237,235,227,.92)}
+.foot-grid a:hover{color:var(--chantier)}
+.foot-grid .muet{color:var(--gris-clair)}
+.foot-bas{margin-top:44px;padding-top:20px;border-top:1px solid rgba(237,235,227,.25);display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:rgba(237,235,227,.72);flex-wrap:wrap;gap:10px}
+
+/* ---------- responsive ---------- */
+@media(max-width:920px){
+  .hero-grid,.simu-grid,.deux-col{grid-template-columns:1fr}
+  .tel-scene{order:-1}
+  .tel{transform:none;width:270px}
+  .tel-ecran{height:490px}
+  .s4,.checks{grid-template-columns:1fr 1fr}
+  .sol-grid{grid-template-columns:1fr}
+  .strip-in{grid-template-columns:1fr 1fr}
+  .strip .cell:nth-child(3){border-left:none;border-top:1px solid rgba(237,235,227,.18)}
+  .strip .cell:nth-child(4){border-top:1px solid rgba(237,235,227,.18)}
+  .foot-grid{grid-template-columns:1fr 1fr}
+  .chaine{flex-direction:column}
+  .fleche{padding:6px 0;font-size:0}
+  .fleche::before{content:"↓";font-size:1.3rem}
+  .nav-links{display:none;position:absolute;top:64px;left:0;right:0;background:var(--charbon);border-bottom:2px solid rgba(237,235,227,.9);flex-direction:column;padding:20px 24px;gap:18px;align-items:flex-start}
+  .nav-links.ouvert{display:flex}
+  .burger{display:block}
+}
+@media(max-width:560px){
+  .wrap{padding:0 16px}
+  section{padding:56px 0}
+  .hero-grid{padding:36px 0 48px;gap:36px}
+  h1{font-size:2.1rem}
+  .mecanique li{font-size:.98rem}
+  .hero-ctas{flex-direction:column}
+  .hero-ctas .btn{width:100%;text-align:center}
+  .s4,.checks{grid-template-columns:1fr}
+  .strip .num{font-size:1.5rem}
+  .strip .cell{padding:20px 14px}
+  .tel{width:250px;box-shadow:8px 8px 0 rgba(0,0,0,.5)}
+  .tel-ecran{height:460px}
+  .simu-ctrl{padding:22px 18px}
+  .recu td{padding:12px 16px;font-size:.8rem}
+  .recu tr.travailleur td:last-child{font-size:1.1rem}
+  .faq-q{padding:16px;font-size:.95rem}
+  .faq-a{padding:0 16px 18px}
+  .logo .mel{display:none}
+  input[type=range]{height:34px}
+  .ticket,.simu-ctrl,.recu,.profil,.chaine{box-shadow:3px 3px 0 rgba(0,0,0,.5)}
+}
+</style>
+</head>
+<body>
+
+<div class="hazard" aria-hidden="true"></div>
+<div class="statut">Bêta privée · Construit à Tourcoing · Déploiement pilote dans la Métropole Européenne de Lille — les premières structures arrivent</div>
+
+<nav>
+  <div class="wrap nav-in">
+    <a class="logo" href="#top">UROSI<span class="mel">MEL · TOURCOING</span></a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#missions">Missions</a></li>
+      <li><a href="#moteur">Le moteur</a></li>
+      <li><a href="#structures">Structures</a></li>
+      <li><a href="#transparence">Transparence</a></li>
+      <li><a href="#solidaire">Solidaire</a></li>
+      <li><a href="#faq">FAQ</a></li>
+      <li><a href="#" class="btn sm" data-app>Rejoindre la bêta</a></li>
+    </ul>
+    <button class="burger" id="burger" aria-label="Ouvrir le menu" aria-expanded="false">MENU</button>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero" id="top">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">La plateforme de micro-missions de la Métropole Européenne de Lille</div>
+      <h1>Chaque travail mérite <span class="souligne">une première preuve</span>.</h1>
+      <p class="sous-slogan">Le travail ne devrait jamais demander de l'expérience pour commencer.</p>
+      <ul class="mecanique">
+        <li><span class="tir">✓</span><span>Des micro-missions de <strong>5&nbsp;heures maximum</strong>, dans la MEL.</span></li>
+        <li><span class="tir">✓</span><span>Tu vois le tarif <strong>avant</strong> d'accepter.</span></li>
+        <li><span class="tir">✓</span><span>Tu touches <strong>100&nbsp;% du tarif affiché</strong> — la commission est côté structure.</span></li>
+        <li><span class="tir">✓</span><span>Chaque mission construit ton <strong>CV vivant</strong>.</span></li>
+        <li><span class="tir">✓</span><span>Ouvert à tous dès <strong>18&nbsp;ans</strong> — le statut légal n'est demandé que plus tard.</span></li>
+      </ul>
+      <p class="produit-note"><strong>UROSI&nbsp;T</strong> est le premier service d'UROSI, dédié aux micro-missions de 5&nbsp;heures maximum.</p>
+      <div class="hero-ctas">
+        <a class="btn" href="#" data-app>Rejoindre la bêta privée</a>
+        <a class="btn brique" href="#structures">Je suis une structure</a>
+      </div>
+    </div>
+
+    <div class="tel-scene" aria-label="Aperçu de l'application UROSI T">
+      <div class="tel">
+        <!-- CAPTURE RÉELLE : dépose une capture verticale de ton app nommée "app.png"
+             à côté de ce fichier HTML. Elle remplacera automatiquement la maquette CSS. -->
+        <img src="app.png" alt="Application UROSI T — flux de missions"
+             style="display:none;width:100%;border-radius:28px"
+             onload="document.getElementById('mockCss').style.display='none';this.style.display='block'"
+             onerror="this.remove()">
+        <div class="tel-ecran" id="mockCss">
+          <div class="tel-encoche" aria-hidden="true"></div>
+          <div class="app-toast" id="appToast">✓ Mission validée · CV vivant +1</div>
+          <div class="app-haut">
+            <span class="app-logo"><span class="u">U</span>UROSI&nbsp;T</span>
+            <span class="app-solde"><b id="appSolde">56,00</b>&nbsp;€ · portefeuille</span>
+          </div>
+          <div class="app-titre">Missions près de toi</div>
+          <div class="app-flux">
+            <div class="app-carte" data-net="56">
+              <div class="ac-pay">56&nbsp;€</div>
+              <div class="ac-titre">Trattoria Milano — coup de feu du midi</div>
+              <div class="ac-struct">Burger Nord <span class="ac-verif">✓ Vérifié</span> <span class="ac-stars">★★★★★</span></div>
+              <div class="ac-adr">📍 Rue de Béthune, Lille · 1,2&nbsp;km</div>
+              <div class="ac-btn">Accepter</div>
+            </div>
+            <div class="app-carte" data-net="45">
+              <div class="ac-pay">45&nbsp;€</div>
+              <div class="ac-titre">Maison Nord Déco — montage d'expo</div>
+              <div class="ac-struct">Maison Nord <span class="ac-verif">✓ Vérifié</span> <span class="ac-stars">★★★★★</span></div>
+              <div class="ac-adr">📍 Roubaix · 3,4&nbsp;km</div>
+              <div class="ac-btn">Accepter</div>
+            </div>
+            <div class="app-carte sol" data-net="0">
+              <div class="ac-pay">Solidaire <small>0&nbsp;€</small></div>
+              <div class="ac-titre">Banque alimentaire — distribution</div>
+              <div class="ac-struct">🤝 Association <span class="ac-verif">✓ Vérifié</span></div>
+              <div class="ac-adr">📍 Lille · 5,1&nbsp;km · compte au CV vivant</div>
+              <div class="ac-btn sol">🤝 Participer</div>
+            </div>
+            <div class="app-carte" data-net="75">
+              <div class="ac-pay">75&nbsp;€</div>
+              <div class="ac-titre">Festival Nord Jazz — accueil public</div>
+              <div class="ac-struct">Nord Jazz <span class="ac-verif">✓ Vérifié</span> <span class="ac-stars">★★★★★</span></div>
+              <div class="ac-adr">📍 Wattrelos · 2,0&nbsp;km</div>
+              <div class="ac-btn">Accepter</div>
+            </div>
+          </div>
+          <div class="app-bas">
+            <span class="actif">🗂 Flux</span><span>👤 Missions</span><span>💳 Wallet</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ STRUCTURES TYPES ============ -->
+<div class="logos">
+  <div class="wrap logos-in">
+    <span class="logos-lab">Structures types de la MEL — illustration</span>
+    <div class="logos-liste">
+      <span class="lg-1">Café du Centre</span>
+      <span class="lg-2">BURGER NORD</span>
+      <span class="lg-3">Banque Alimentaire</span>
+      <span class="lg-4">Théâtre de Tourcoing</span>
+      <span class="lg-5">NORD JAZZ</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BANDEAU ============ -->
+<div class="strip">
+  <div class="wrap strip-in">
+    <div class="cell"><div class="num">5&nbsp;h</div><div class="lab">Durée max par mission</div></div>
+    <div class="cell"><div class="num"><em>100&nbsp;%</em></div><div class="lab">Du tarif affiché pour le travailleur</div></div>
+    <div class="cell"><div class="num">J+3</div><div class="lab">Objectif de versement</div></div>
+    <div class="cell"><div class="num">0&nbsp;€</div><div class="lab">Frais côté travailleur</div></div>
+  </div>
+</div>
+
+<!-- ============ APERÇU DES MISSIONS ============ -->
+<section id="missions">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Aperçu · missions types de la bêta</div>
+      <h2>À quoi ressemble une mission&nbsp;? Regarde.</h2>
+      <p>Touche un bordereau pour voir le détail et le décompte exact. Le vrai tableau vit dans l'application — ici, des exemples fidèles.</p>
+    </div>
+    <div class="filtres" id="filtres" role="group" aria-label="Filtrer les missions">
+      <button class="chip actif" data-f="toutes">Toutes</button>
+      <button class="chip" data-f="Tourcoing">Tourcoing</button>
+      <button class="chip" data-f="Roubaix">Roubaix</button>
+      <button class="chip" data-f="Lille">Lille</button>
+      <button class="chip" data-f="solidaire">Solidaires</button>
+    </div>
+    <div class="tableau" id="tableauMissions"></div>
+  </div>
+</section>
+
+<!-- ============ LE MOTEUR ============ -->
+<section id="moteur">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Le moteur</div>
+      <h2>«&nbsp;Il faut de l'expérience pour trouver du travail.&nbsp;» On casse la phrase.</h2>
+      <p>Une mission courte te laisse trois choses&nbsp;: de l'argent, une preuve, une réputation qui t'appartient.</p>
+    </div>
+
+    <div class="chaine" aria-label="Le cycle UROSI T">
+      <div class="maillon"><div class="m-num">01</div><div class="m-titre">Mission courte</div><div class="m-sub">5&nbsp;h max, près de chez toi</div></div>
+      <div class="fleche" aria-hidden="true">→</div>
+      <div class="maillon"><div class="m-num">02</div><div class="m-titre">Argent</div><div class="m-sub">100&nbsp;% du tarif affiché, objectif J+3</div></div>
+      <div class="fleche" aria-hidden="true">→</div>
+      <div class="maillon"><div class="m-num">03</div><div class="m-titre">Preuve</div><div class="m-sub">Validée par la structure, horodatée</div></div>
+      <div class="fleche" aria-hidden="true">→</div>
+      <div class="maillon accent"><div class="m-num">04</div><div class="m-titre">Réputation portable</div><div class="m-sub">À toi. Faite pour te suivre partout.</div></div>
+    </div>
+
+    <div class="deux-col">
+      <div class="profil">
+        <div class="p-haut">
+          <h3>Aïssa&nbsp;D.</h3>
+          <span class="p-tag">PROFIL D'EXEMPLE</span>
+        </div>
+        <div class="etoiles">★★★★★ <small>évaluations mutuelles</small></div>
+        <div class="p-stats">
+          <div><div class="n">18</div><div class="l">missions</div></div>
+          <div><div class="n">0</div><div class="l">absence</div></div>
+          <div><div class="n">2</div><div class="l">solidaires</div></div>
+        </div>
+        <div class="p-chips"><span>Restauration</span><span>Commerce</span><span>Événementiel</span></div>
+        <div class="p-der">
+          <div class="l">Dernière mission</div>
+          <div class="m">
+            <div><div class="quoi">Burger Nord — renfort service</div><div class="det">14&nbsp;€/h · 4&nbsp;h · Tourcoing</div></div>
+            <span class="ok">✓ VALIDÉE</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3 style="font-weight:900;font-size:1.3rem;text-transform:uppercase;font-variation-settings:'wdth' 78">Un indice de fiabilité, pas une note qui te juge</h3>
+        <ul class="fiab-liste">
+          <li><span class="coche">✓</span><span><strong>Jamais bloquant.</strong> Il informe, il ne filtre pas. Personne n'est banni par un algorithme.</span></li>
+          <li><span class="coche">✓</span><span><strong>Des faits, pas des humeurs.</strong> Événements objectifs, pas jugements de caractère.</span></li>
+          <li><span class="coche">✓</span><span><strong>Toujours contestable.</strong> Un humain tranche — article 22 du RGPD.</span></li>
+          <li><span class="coche">✓</span><span><strong>Toujours visible.</strong> Ce que la structure voit, tu le vois aussi.</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ STRUCTURES ============ -->
+<section class="structures" id="structures">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Pour les structures</div>
+      <h2>Besoin d'un renfort aujourd'hui&nbsp;?</h2>
+      <p>Restaurants, commerces, événements, associations de la MEL — un besoin ponctuel ne devrait pas prendre trois semaines de paperasse.</p>
+    </div>
+    <div class="s4">
+      <div><div class="sn">01</div><h3>Publiez une mission</h3></div>
+      <div><div class="sn">02</div><h3>Recevez des candidatures</h3></div>
+      <div><div class="sn">03</div><h3>Choisissez</h3></div>
+      <div><div class="sn">04</div><h3>Le paiement est sécurisé</h3></div>
+    </div>
+    <p style="font-size:.98rem;color:var(--gris-clair);max-width:44rem;margin-bottom:28px">Vous proposez le tarif, la durée (5&nbsp;h max), le créneau. Chaque candidature arrive avec son historique réel de missions. Vous provisionnez le montant + 18&nbsp;% de commission — c'est le seul coût, il n'y a pas d'abonnement. UROSI&nbsp;T agit comme intermédiaire de mise en relation et de paiement.</p>
+    <a class="btn" href="#" data-app>Publier une première mission</a>
+  </div>
+</section>
+
+<!-- ============ SIMULATEUR ============ -->
+<section id="transparence">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Transparence totale</div>
+      <h2>Qui paie quoi&nbsp;? Fais le calcul toi-même.</h2>
+    </div>
+    <p class="simu-punch">Tu reçois <em>exactement</em> ce qui est affiché.</p>
+    <div class="simu-grid">
+      <div class="simu-ctrl">
+        <label for="tarif">Tarif horaire affiché sur la mission — <span class="val" id="tarifVal">14&nbsp;€/h</span></label>
+        <input type="range" id="tarif" min="12" max="30" step="1" value="14">
+        <label for="heures">Durée de la mission — <span class="val" id="heuresVal">4&nbsp;h</span></label>
+        <input type="range" id="heures" min="1" max="5" step="1" value="4">
+        <p class="note">Durée plafonnée à 5&nbsp;h — c'est une règle de la plateforme, pas une option.</p>
+      </div>
+      <div class="recu" aria-live="polite">
+        <div class="recu-head"><span>DÉCOMPTE DE MISSION</span><span>UROSI&nbsp;T</span></div>
+        <table>
+          <tr><td>Tarif × durée</td><td id="ligneBase">56,00&nbsp;€</td></tr>
+          <tr><td>Commission plateforme (18&nbsp;%, à la charge de la structure)</td><td id="ligneCom">10,08&nbsp;€</td></tr>
+          <tr class="total"><td>La structure paie</td><td id="ligneStruct">66,08&nbsp;€</td></tr>
+          <tr class="travailleur"><td>Le travailleur reçoit <span class="badge-100">100&nbsp;%</span></td><td id="ligneTrav">56,00&nbsp;€</td></tr>
+        </table>
+        <div class="foot">Fonds sécurisés via un prestataire de paiement agréé (intégration en cours) · Objectif de versement&nbsp;: J+3 après validation</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SOLIDAIRE ============ -->
+<section class="solidaire" id="solidaire">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Missions solidaires · ESS</div>
+      <h2>L'expérience compte aussi quand elle ne se facture pas.</h2>
+      <p>Les associations publient des missions bénévoles&nbsp;: zéro euro, zéro commission — et une vraie ligne validée sur ton CV vivant. Ouvertes à tous, sans statut.</p>
+    </div>
+    <div class="sol-grid">
+      <div class="sol-card"><h3>Pour les associations</h3><p>Publiez vos besoins ponctuels et touchez des personnes de votre quartier.</p></div>
+      <div class="sol-card"><h3>Pour les travailleurs</h3><p>Chaque mission solidaire validée est datée et signée par la structure. De l'expérience prouvée.</p></div>
+      <div class="sol-card"><h3>Pour le territoire</h3><p>L'entraide circule là où le marché ne va pas. C'est dans l'ADN du projet.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ JURIDIQUE COMPACT ============ -->
+<section id="confiance">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Confiance</div>
+      <h2>L'essentiel, en quatre points.</h2>
+    </div>
+    <div class="checks">
+      <div class="check"><span class="c">✓</span><div><b>Paiement sécurisé</b><span>Prestataire de paiement agréé — intégration en cours. L'argent ne transite jamais par nos comptes.</span></div></div>
+      <div class="check"><span class="c">✓</span><div><b>Identité vérifiée</b><span>Une seule fois, à la première mission payée, par le prestataire de paiement.</span></div></div>
+      <div class="check"><span class="c">✓</span><div><b>RGPD par conception</b><span>Le minimum de données, jamais de pièce d'identité ni d'IBAN stockés chez nous.</span></div></div>
+      <div class="check"><span class="c">✓</span><div><b>Pas de frais cachés</b><span>18&nbsp;% côté structure. Zéro frais côté travailleur. C'est tout le modèle.</span></div></div>
+    </div>
+    <p class="legal-note">Le détail est consultable ici même&nbsp;: <a href="#" data-dialog="dlgCgu">CGU</a> · <a href="#" data-dialog="dlgRgpd">politique RGPD</a> · <a href="#" data-dialog="dlgMentions">mentions légales</a> — versions bêta, mises à jour à l'ouverture publique.</p>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section id="faq">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Questions fréquentes</div>
+      <h2>Les vraies questions, les vraies réponses.</h2>
+    </div>
+    <div class="faq-liste">
+      <div class="faq-item"><button class="faq-q" aria-expanded="false">Combien ça me coûte en tant que travailleur&nbsp;?<span class="plus">+</span></button><div class="faq-a">Rien. Zéro commission, zéro abonnement. Le tarif affiché sur la mission, c'est ce que tu reçois — à 100&nbsp;%. La commission de 18&nbsp;% est payée par la structure, en plus de ce tarif.</div></div>
+      <div class="faq-item"><button class="faq-q" aria-expanded="false">Quel statut faut-il pour travailler via UROSI&nbsp;T&nbsp;?<span class="plus">+</span></button><div class="faq-a">Aucun au départ. UROSI est ouvert à tous dès 18&nbsp;ans&nbsp;: tu t'inscris, tu consultes les missions et tu fais des missions solidaires immédiatement. C'est seulement à partir d'un certain niveau d'activité — au moment de recevoir tes premiers paiements — qu'UROSI te demandera un statut légal. La micro-entreprise suffit, elle se crée gratuitement en ligne et on te guide pas à pas.</div></div>
+      <div class="faq-item"><button class="faq-q" aria-expanded="false">Quand est-ce que je suis payé, concrètement&nbsp;?<span class="plus">+</span></button><div class="faq-a">Les fonds sont sécurisés via un prestataire de paiement agréé avant même le début de la mission. Une fois la mission validée par les deux côtés, le montant apparaît dans ton portefeuille, avec un objectif de virement sous 3&nbsp;jours ouvrés (J+3).</div></div>
+      <div class="faq-item"><button class="faq-q" aria-expanded="false">Pourquoi les missions sont limitées à 5&nbsp;heures&nbsp;?<span class="plus">+</span></button><div class="faq-a">Parce qu'UROSI&nbsp;T fait des micro-missions, pas de l'intérim déguisé. Le plafond de 5&nbsp;h et la limite de 3&nbsp;jours consécutifs auprès d'une même structure protègent tout le monde&nbsp;: le travailleur contre la dépendance à une seule structure, la structure contre les risques juridiques d'une relation qui s'installe.</div></div>
+      <div class="faq-item"><button class="faq-q" aria-expanded="false">La plateforme démarre — pourquoi lui faire confiance&nbsp;?<span class="plus">+</span></button><div class="faq-a">Parce que tout est vérifiable. Le tarif est affiché avant d'accepter, le décompte est public, les fonds sont provisionnés avant la mission, et le modèle tient en une phrase&nbsp;: 18&nbsp;% côté structure, zéro frais côté travailleur. On est en bêta privée dans la MEL, on grandit mission par mission — pas de promesse qu'on ne peut pas tenir.</div></div>
+      <div class="faq-item"><button class="faq-q" aria-expanded="false">Je gère une association, c'est vraiment gratuit&nbsp;?<span class="plus">+</span></button><div class="faq-a">Oui. Les missions solidaires à 0&nbsp;€ publiées par les structures de l'ESS ne portent aucune commission. Elles alimentent le CV vivant des participants exactement comme les missions payées.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CTA FINAL ============ -->
+<section class="final">
+  <div class="wrap">
+    <h2>La métropole est pleine de coups de main à donner. Et de talents à prouver.</h2>
+    <p>Travailleur ou structure, tout commence par une première mission de 5&nbsp;heures max.</p>
+    <div class="hero-ctas" style="justify-content:center">
+      <a class="btn" href="#" data-app>Rejoindre la bêta privée</a>
+      <a class="btn ghost" href="mailto:contact@urosit.fr">Écrire à l'équipe</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="logo" href="#top">UROSI</a>
+        <p style="margin-top:14px;font-size:.88rem;color:rgba(237,235,227,.8);max-width:26rem">La plateforme de micro-missions de la Métropole Européenne de Lille. <strong>UROSI&nbsp;T</strong> est le premier service d'UROSI, dédié aux micro-missions de 5&nbsp;heures maximum. Né à Tourcoing.</p>
+      </div>
+      <div>
+        <h4>Plateforme</h4>
+        <ul><li><a href="#moteur">Le moteur</a></li><li><a href="#structures">Structures</a></li><li><a href="#transparence">Transparence</a></li><li><a href="#solidaire">Missions solidaires</a></li></ul>
+      </div>
+      <div>
+        <h4>Légal</h4>
+        <ul><li><a href="#" data-dialog="dlgCgu">CGU (version bêta)</a></li><li><a href="#" data-dialog="dlgRgpd">Politique RGPD</a></li><li><a href="#" data-dialog="dlgMentions">Mentions légales</a></li><li><a href="#confiance">L'essentiel en 4 points</a></li></ul>
+      </div>
+      <div>
+        <h4>Contact</h4>
+        <ul><li><a href="mailto:contact@urosit.fr">contact@urosit.fr</a></li><li><a href="#" data-app>L'application</a></li><li><span class="muet">Tourcoing · MEL</span></li></ul>
+      </div>
+    </div>
+    <div class="foot-bas">
+      <span>© 2026 UROSI · Tourcoing</span>
+      <span>BÊTA PRIVÉE · DÉPLOIEMENT PILOTE MEL</span>
+    </div>
+  </div>
+</footer>
+
+<dialog class="legal" id="dlgCgu">
+  <div class="dlg-head"><h3>Conditions générales d'utilisation</h3><button class="dlg-fermer">FERMER</button></div>
+  <div class="dlg-corps">
+    <p class="version">VERSION BÊTA — DOCUMENT COMPLET PUBLIÉ À L'OUVERTURE PUBLIQUE</p>
+    <h4>1. Objet</h4>
+    <p>UROSI T est un service de mise en relation entre des structures situées dans la Métropole Européenne de Lille et des travailleurs indépendants, pour des missions d'une durée maximale de 5 heures.</p>
+    <h4>2. Rôle d'UROSI T</h4>
+    <p>UROSI T agit exclusivement comme intermédiaire de mise en relation et de paiement. UROSI T n'emploie pas les travailleurs, ne dirige pas l'exécution des missions, ne fixe pas les tarifs et n'impose aucune mission. Les travailleurs sont indépendants&nbsp;; les structures sont clientes du service.</p>
+    <h4>3. Accès au service</h4>
+    <p>Le service est ouvert à toute personne âgée de 18&nbsp;ans ou plus. L'inscription, la consultation des missions et les missions solidaires sont accessibles immédiatement, sans statut. Un statut d'indépendant en règle (micro-entreprise ou équivalent) est demandé à partir d'un certain niveau d'activité, et en tout état de cause avant le premier versement de rémunération.</p>
+    <h4>4. Missions et tarifs</h4>
+    <p>La structure publie la mission et propose le tarif horaire. Le travailleur accepte ou refuse librement, sans conséquence sur son accès au service. La durée d'une mission est plafonnée à 5 heures, et un travailleur ne peut pas dépasser 3 jours consécutifs auprès d'une même structure.</p>
+    <h4>5. Commission et frais</h4>
+    <p>Une commission de 18&nbsp;% du montant de la mission est facturée à la structure, en sus du tarif. Le travailleur reçoit 100&nbsp;% du tarif affiché. Aucun frais, commission ni abonnement n'est facturé au travailleur.</p>
+    <h4>6. Paiement</h4>
+    <p>Les fonds sont provisionnés par la structure avant le début de la mission, via un prestataire de paiement agréé (intégration en cours au stade bêta). Après validation de la mission par les deux parties, le versement au travailleur vise un délai de 3 jours ouvrés (J+3). Les fonds ne transitent jamais par les comptes propres d'UROSI T.</p>
+    <h4>7. Indice de fiabilité</h4>
+    <p>L'indice enregistre des événements objectifs (mission honorée, annulation tardive). Il est informatif, jamais bloquant, toujours visible par la personne concernée, et chaque événement peut être contesté avec examen humain, conformément à l'article 22 du RGPD.</p>
+    <h4>8. Annulation et litiges</h4>
+    <p>Les conditions d'annulation sont affichées sur chaque mission avant acceptation. En cas de litige sur l'exécution d'une mission, UROSI T facilite la résolution entre les parties, la validation restant bilatérale.</p>
+    <h4>9. Résiliation</h4>
+    <p>Chacun peut fermer son compte à tout moment. Les preuves de missions validées restent exportables par le travailleur.</p>
+    <h4>10. Droit applicable</h4>
+    <p>Les présentes conditions sont régies par le droit français. Tout litige relève des tribunaux compétents du ressort de Lille.</p>
+  </div>
+</dialog>
+
+<dialog class="legal" id="dlgRgpd">
+  <div class="dlg-head"><h3>Politique de protection des données</h3><button class="dlg-fermer">FERMER</button></div>
+  <div class="dlg-corps">
+    <p class="version">VERSION BÊTA — CONFORME RGPD — MISE À JOUR À L'OUVERTURE PUBLIQUE</p>
+    <h4>Responsable de traitement</h4>
+    <p>UROSI, Tourcoing (France). Contact&nbsp;: contact@urosit.fr.</p>
+    <h4>Données collectées</h4>
+    <p>Données de compte (nom, téléphone, e-mail, zone géographique), historique de missions, mouvements du portefeuille, et données de connexion strictement nécessaires au fonctionnement du service.</p>
+    <h4>Ce que nous ne stockons pas</h4>
+    <p>Les pièces d'identité et coordonnées bancaires (IBAN) sont collectées et traitées exclusivement par le prestataire de paiement agréé, jamais stockées par UROSI.</p>
+    <h4>Finalités et bases légales</h4>
+    <p>Exécution du service (contrat), sécurisation des paiements et obligations déclaratives (obligation légale), amélioration du service (intérêt légitime). Aucune donnée n'est vendue ni utilisée à des fins publicitaires tierces.</p>
+    <h4>Aucune décision entièrement automatisée</h4>
+    <p>Conformément à l'article 22 du RGPD, aucune décision produisant des effets significatifs (accès aux missions, suspension) n'est prise de manière entièrement automatisée&nbsp;: un examen humain est toujours possible et l'indice de fiabilité est contestable.</p>
+    <h4>Durées de conservation</h4>
+    <p>Les données de compte sont conservées pendant la durée d'utilisation du service, puis archivées ou supprimées selon les obligations légales (notamment comptables et fiscales).</p>
+    <h4>Vos droits</h4>
+    <p>Accès, rectification, effacement, portabilité, limitation et opposition&nbsp;: écrivez à contact@urosit.fr. Vous pouvez également saisir la CNIL (cnil.fr).</p>
+  </div>
+</dialog>
+
+<dialog class="legal" id="dlgMentions">
+  <div class="dlg-head"><h3>Mentions légales</h3><button class="dlg-fermer">FERMER</button></div>
+  <div class="dlg-corps">
+    <p class="version">VERSION BÊTA</p>
+    <h4>Éditeur</h4>
+    <p>UROSI — Tourcoing, France. Les informations d'immatriculation (forme sociale, SIREN, siège) seront complétées à l'issue des formalités de constitution, avant l'ouverture publique du service.</p>
+    <h4>Directeur de la publication</h4>
+    <p>Le fondateur d'UROSI.</p>
+    <h4>Contact</h4>
+    <p>contact@urosit.fr</p>
+    <h4>Hébergement</h4>
+    <p>Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, États-Unis — vercel.com.</p>
+    <h4>Propriété intellectuelle</h4>
+    <p>La marque UROSI, le nom UROSI T, les contenus et l'identité visuelle de ce site sont la propriété de leur éditeur. Toute reproduction non autorisée est interdite.</p>
+  </div>
+</dialog>
+
+<script>
+// ===== URL DE L'APPLICATION — À CHANGER ICI, UNE SEULE FOIS =====
+const URL_APP = "https://app.urosi.fr";
+document.querySelectorAll('[data-app]').forEach(a=>a.href=URL_APP);
+
+// ----- aperçu des missions : tout se consulte ici, sans quitter la page -----
+const MISSIONS=[
+  {ref:'Nº 0147',ville:'Tourcoing',km:'1,2',titre:'Trattoria Milano — coup de feu du midi',h:4,tarif:14,quand:'sam. 11:30',sol:false,
+   desc:"Aide au service en salle et au débarrassage pendant le rush du samedi midi. Équipe de six, ambiance familiale, repas du personnel offert."},
+  {ref:'Nº 0152',ville:'Roubaix',km:'3,4',titre:"Maison Nord Déco — montage d'exposition",h:3,tarif:15,quand:'mer. 18:00',sol:false,
+   desc:"Montage des présentoirs et mise en place de la vitrine de rentrée. Port de charges légères, matériel fourni."},
+  {ref:'SOLIDAIRE',ville:'Lille',km:'5,1',titre:'Banque alimentaire — distribution du vendredi',h:2,tarif:0,quand:'ven. 09:00',sol:true,
+   desc:"Distribution de paniers, accueil des bénéficiaires et réassort. Mission validée et signée sur ton CV vivant."},
+  {ref:'Nº 0160',ville:'Wattrelos',km:'2,0',titre:'Festival Nord Jazz — accueil du public',h:5,tarif:15,quand:'dim. 14:00',sol:false,
+   desc:"Accueil, orientation du public et contrôle des entrées sur le site du festival. Debout, en extérieur couvert."},
+  {ref:'Nº 0163',ville:'Tourcoing',km:'0,8',titre:'Le Café du Centre — service en terrasse',h:3,tarif:14,quand:'jeu. 15:00',sol:false,
+   desc:"Service en terrasse l'après-midi : prise de commandes simples, encaissement avec le gérant à côté. Idéal première mission."},
+  {ref:'Nº 0168',ville:'Tourcoing',km:'1,5',titre:'Bazaar Textile — inventaire de nuit',h:4,tarif:16,quand:'ven. 20:00',sol:false,
+   desc:"Comptage et scan des références avant les soldes. Travail en binôme, scanner fourni, majoration soirée incluse dans le tarif."},
+  {ref:'SOLIDAIRE',ville:'Roubaix',km:'2,6',titre:'Ressourcerie du quartier — tri des dons',h:2,tarif:0,quand:'sam. 10:00',sol:true,
+   desc:"Tri des vêtements et objets donnés, étiquetage pour la boutique solidaire. Café offert, équipe de bénévoles réguliers."},
+  {ref:'Nº 0171',ville:'Lille',km:'4,9',titre:'Théâtre de la Manufacture — installation décor',h:5,tarif:16,quand:'lun. 08:00',sol:false,
+   desc:"Aide au montage du décor avec l'équipe technique : portage, assemblage guidé, rangement. Chaussures fermées obligatoires."}
+];
+const fmtE=n=>n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+'\u00a0€';
+function bordereau(m){
+  const base=m.tarif*m.h, struct=base*1.18;
+  const net=m.sol?'CV\u00a0+1':Math.round(base)+'\u00a0€';
+  const compte=m.sol
+    ?'<div class="bord-compte"><span>0\u00a0€ · 0\u00a0commission — mission bénévole ESS</span><span class="l-trav">CV vivant : +1 preuve validée</span></div>'
+    :'<div class="bord-compte"><span>Tarif : '+m.tarif+'\u00a0€/h × '+m.h+'\u00a0h</span><span>La structure paie : '+fmtE(struct)+' (tarif + 18\u00a0%)</span><span class="l-trav">Tu reçois : '+fmtE(base)+' — 100\u00a0% du tarif affiché</span></div>';
+  return '<article class="bordereau'+(m.sol?' sol':'')+'" data-ville="'+m.ville+'" tabindex="0">'
+    +'<div class="bord-in">'
+    +'<div class="bord-ref"><span>'+m.ref+'</span><span>'+m.ville.toUpperCase()+' · '+m.km+'\u00a0km</span></div>'
+    +'<h3>'+m.titre+'</h3>'
+    +'<div class="bord-meta"><span>⏱ '+m.h+'\u00a0h</span><span>📅 '+m.quand+'</span>'+(m.sol?'<span>🤝 bénévole</span>':'<span>💶 '+m.tarif+'\u00a0€/h</span>')+'</div>'
+    +'<span class="bord-net">'+net+'</span>'
+    +'<div class="bord-detail"><p>'+m.desc+'</p>'+compte
+    +'<a class="btn sm" href="'+URL_APP+'">Voir dans l\'app</a></div>'
+    +'<div class="bord-ouvrir">TOUCHER POUR LE DÉTAIL +</div>'
+    +'</div></article>';
+}
+const tableau=document.getElementById('tableauMissions');
+function rendre(f){
+  const liste=MISSIONS.filter(m=>f==='toutes'||(f==='solidaire'?m.sol:m.ville===f));
+  tableau.innerHTML=liste.map(bordereau).join('');
+}
+rendre('toutes');
+tableau.addEventListener('click',e=>{
+  const b=e.target.closest('.bordereau');
+  if(b&&!e.target.closest('a')) b.classList.toggle('ouvert');
+});
+tableau.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){const b=e.target.closest('.bordereau');if(b)b.classList.toggle('ouvert');}
+});
+document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('.chip').forEach(x=>x.classList.remove('actif'));
+  c.classList.add('actif');
+  rendre(c.dataset.f);
+}));
+
+// ----- ancres internes : les href sont retirés, l'aperçu n'a plus rien à intercepter -----
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+  a.dataset.ancre=a.getAttribute('href').slice(1);
+  a.removeAttribute('href');
+  a.setAttribute('role','link');
+  a.setAttribute('tabindex','0');
+});
+function allerA(id){
+  const c=document.getElementById(id);
+  if(c) c.scrollIntoView({behavior:'smooth',block:'start'});
+}
+document.addEventListener('click',e=>{
+  const a=e.target.closest('[data-ancre]');
+  if(!a) return;
+  e.preventDefault();
+  if(a.dataset.ancre) allerA(a.dataset.ancre);
+});
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter') return;
+  const a=e.target.closest('[data-ancre]');
+  if(a){e.preventDefault(); if(a.dataset.ancre) allerA(a.dataset.ancre);}
+});
+
+// ----- menu mobile -----
+const burger=document.getElementById('burger');
+const navLinks=document.getElementById('navLinks');
+burger.addEventListener('click',()=>{
+  const ouvert=navLinks.classList.toggle('ouvert');
+  burger.setAttribute('aria-expanded',ouvert);
+});
+navLinks.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{
+  navLinks.classList.remove('ouvert');burger.setAttribute('aria-expanded','false');
+}));
+
+// ----- simulateur 18% -----
+const tarif=document.getElementById('tarif');
+const heures=document.getElementById('heures');
+const fmt=n=>n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+'\u00a0€';
+function calc(){
+  const t=+tarif.value,h=+heures.value;
+  const base=t*h, com=base*0.18;
+  document.getElementById('tarifVal').textContent=t+'\u00a0€/h';
+  document.getElementById('heuresVal').textContent=h+'\u00a0h';
+  document.getElementById('ligneBase').textContent=fmt(base);
+  document.getElementById('ligneCom').textContent=fmt(com);
+  document.getElementById('ligneStruct').textContent=fmt(base+com);
+  document.getElementById('ligneTrav').textContent=fmt(base);
+}
+tarif.addEventListener('input',calc);
+heures.addEventListener('input',calc);
+calc();
+
+// ----- le téléphone vit : boucle de 8 s -----
+(function(){
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const flux=document.querySelector('.app-flux');
+  const toast=document.getElementById('appToast');
+  const soldeEl=document.getElementById('appSolde');
+  if(!flux||!soldeEl) return;
+  let solde=56.00;
+  const pool=[
+    {ref:'Nº 0163',lieu:'TOURCOING · 0,8\u00a0km',titre:'Le Café du Centre — service en terrasse',meta:'⏱ 3\u00a0h · 📅 jeu. 15:00',net:42,sol:false},
+    {ref:'SOLIDAIRE',lieu:'ROUBAIX · 2,6\u00a0km',titre:'Ressourcerie du quartier — tri des dons',meta:'⏱ 2\u00a0h · 📅 sam. 10:00',net:0,sol:true},
+    {ref:'Nº 0171',lieu:'LILLE · 4,9\u00a0km',titre:'Théâtre de la Manufacture — installation décor',meta:'⏱ 5\u00a0h · 📅 lun. 08:00',net:80,sol:false},
+    {ref:'Nº 0175',lieu:'TOURCOING · 1,5\u00a0km',titre:'Bazaar Textile — inventaire de nuit',meta:'⏱ 4\u00a0h · 📅 ven. 20:00',net:64,sol:false}
+  ];
+  let i=0;
+  const fr=n=>n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  function tick(vers){
+    const depart=solde,delta=vers-depart,t0=performance.now();
+    (function pas(t){
+      const x=Math.min((t-t0)/900,1),e=1-Math.pow(1-x,3);
+      soldeEl.textContent=fr(depart+delta*e);
+      if(x<1)requestAnimationFrame(pas);else solde=vers;
+    })(t0);
+  }
+  function nouvelle(m){
+    const d=document.createElement('div');
+    d.className='app-carte'+(m.sol?' sol':'')+' arrive';
+    d.dataset.net=m.net;
+    const pay=m.sol?'Solidaire <small>0\u00a0€</small>':m.net+'\u00a0€';
+    const struct=m.sol?'🤝 Association <span class="ac-verif">✓ Vérifié</span>':'<span class="ac-verif">✓ Vérifié</span> <span class="ac-stars">★★★★★</span>';
+    const btn=m.sol?'<div class="ac-btn sol">🤝 Participer</div>':'<div class="ac-btn">Accepter</div>';
+    d.innerHTML='<div class="ac-pay">'+pay+'</div>'
+      +'<div class="ac-titre">'+m.titre+'</div>'
+      +'<div class="ac-struct">'+struct+'</div>'
+      +'<div class="ac-adr">📍 '+m.lieu+'</div>'+btn;
+    flux.appendChild(d);
+    setTimeout(()=>d.classList.remove('arrive'),950);
+  }
+  setInterval(()=>{
+    const premiere=flux.firstElementChild;
+    if(!premiere) return;
+    const gain=parseFloat(premiere.dataset.net)||0;
+    premiere.classList.add('part');
+    setTimeout(()=>{
+      premiere.remove();
+      nouvelle(pool[i%pool.length]); i++;
+      if(gain>0) tick(solde+gain);
+      toast.classList.add('voir');
+      setTimeout(()=>toast.classList.remove('voir'),2400);
+    },900);
+  },8000);
+})();
+
+// ----- fenêtres légales : tout est sur place, aucun lien externe -----
+document.querySelectorAll('[data-dialog]').forEach(a=>{
+  a.addEventListener('click',e=>{
+    e.preventDefault();
+    const d=document.getElementById(a.dataset.dialog);
+    if(d) d.showModal();
+  });
+});
+document.querySelectorAll('dialog.legal').forEach(d=>{
+  d.querySelector('.dlg-fermer').addEventListener('click',()=>d.close());
+  d.addEventListener('click',e=>{if(e.target===d)d.close()});
+});
+
+// ----- FAQ accordéon -----
+document.querySelectorAll('.faq-q').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const item=btn.parentElement;
+    const ouvert=item.classList.toggle('ouvert');
+    btn.setAttribute('aria-expanded',ouvert);
+    btn.querySelector('.plus').textContent=ouvert?'−':'+';
+  });
+});
+</script>
+</body>
+</html>
