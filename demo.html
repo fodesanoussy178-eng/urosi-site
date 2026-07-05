@@ -33,8 +33,8 @@ const { useState, useRef, useEffect } = React;
 
 const FONT = "'DM Sans', system-ui, sans-serif";
 const T = { bg: "#0a0a14", card: "#111827", cb: "#1f2937", row: "#0f172a", text: "#f1f5f9", sub: "#9ca3af", mu: "#6b7280", grad: "linear-gradient(135deg,#1d4ed8,#0891b2)" };
-const DEMO_SECONDS = 30;
-const DEMO_PROFILE = { prenom: "Alex", nom: "Martin", ville: "Angers", adresse: "", naissance: "2000-01-01", email: "", tel: "" };
+const DEMO_SECONDS = 180;
+const DEMO_PROFILE = { prenom: "Alex", nom: "Martin", ville: "Lille", adresse: "", naissance: "2000-01-01", email: "", tel: "" };
 
 const MOTIFS = {
   absent: "Structure absente / pas au rendez-vous",
@@ -281,7 +281,6 @@ function WorkerApp({ onBack, onDelete, infos, subscribed = false, demoSeconds = 
 
   const accept = m => {
     if (mine.find(a => a.id === m.id)) return;
-    if (!subscribed && onNeedSubscribe) { setDetail(null); onNeedSubscribe("worker"); return; }
     if (m.pay > 0 && !kycDone) { setKycFor(m); setDetail(null); return; }   // 1re mission payée : vérification d'identité
     setMine(l => [...l, m]); setDetail(null); notif("✓ Acceptée — retrouve-la dans Mes missions.");
   };
@@ -600,21 +599,21 @@ function WorkerApp({ onBack, onDelete, infos, subscribed = false, demoSeconds = 
 
         {/* KYC — vérification à la 1re acceptation, puis n'apparaît plus */}
         {kycFor && <div style={{ ...S, background: "rgba(0,0,0,.9)" }} onClick={() => setKycFor(null)}><div style={{ ...SH, maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-          <div style={{ fontSize: 15, fontWeight: 900, color: T.text, marginBottom: 4 }}>Vérifions ton identité</div>
-          <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.55, marginBottom: 16 }}>Une seule fois, avant ta première mission. C'est ce qui permet d'être payé sur ton compte. Ensuite, on ne te le redemandera plus.</div>
+          <div style={{ fontSize: 15, fontWeight: 900, color: T.text, marginBottom: 4 }}>Simulation de vérification</div>
+          <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.55, marginBottom: 16 }}>Dans la vraie application, cette étape arrive une seule fois avant la première mission payée. Ici, tu peux la simuler sans envoyer de document.</div>
 
           <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: "uppercase", letterSpacing: .5, marginBottom: 7 }}>Pièce d'identité</div>
           <button onClick={() => setKyc(k => ({ ...k, idOk: true }))} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: kyc.idOk ? "#052e16" : T.row, color: kyc.idOk ? "#4ade80" : T.text, border: `1.5px solid ${kyc.idOk ? "#166534" : T.cb}`, borderRadius: 10, padding: "13px 0", fontSize: 12, fontWeight: 800, cursor: "pointer", marginBottom: 14 }}>
-            {kyc.idOk ? "✓ Pièce d'identité ajoutée" : "＋ Photographier ma carte d'identité"}
+            {kyc.idOk ? "✓ Pièce d'identité simulée" : "＋ Simuler la pièce d'identité"}
           </button>
 
-          <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: "uppercase", letterSpacing: .5, marginBottom: 7 }}>IBAN (pour être payé)</div>
-          <input value={kyc.iban} onChange={e => setKyc(k => ({ ...k, iban: e.target.value.toUpperCase() }))} placeholder="FR76 ...." style={{ width: "100%", background: T.row, border: `1px solid ${T.cb}`, borderRadius: 9, padding: "12px 13px", fontSize: 13, color: T.text, outline: "none", boxSizing: "border-box", marginBottom: 14, letterSpacing: 1 }} />
+          <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: "uppercase", letterSpacing: .5, marginBottom: 7 }}>IBAN de test</div>
+          <input value={kyc.iban} onChange={e => setKyc(k => ({ ...k, iban: e.target.value.toUpperCase() }))} placeholder="FR76 0000 0000 0000" style={{ width: "100%", background: T.row, border: `1px solid ${T.cb}`, borderRadius: 9, padding: "12px 13px", fontSize: 13, color: T.text, outline: "none", boxSizing: "border-box", marginBottom: 14, letterSpacing: 1 }} />
 
-          <div style={{ background: T.row, borderRadius: 9, padding: "10px 12px", fontSize: 9.5, color: T.mu, lineHeight: 1.55, marginBottom: 14 }}>🔒 Vérification opérée par Lemonway (agréé ACPR). Tes documents servent uniquement à confirmer ton identité et à te payer. UROSI ne stocke pas ta pièce d'identité et ne détient jamais ton argent.</div>
+          <div style={{ background: T.row, borderRadius: 9, padding: "10px 12px", fontSize: 9.5, color: T.mu, lineHeight: 1.55, marginBottom: 14 }}>🔒 Démo : aucun document n'est envoyé. En production, la vérification est opérée par Lemonway (agréé ACPR). UROSI ne stocke pas ta pièce d'identité et ne détient jamais ton argent.</div>
 
           <button onClick={kycConfirm} disabled={!(kyc.idOk && kyc.iban.replace(/\s/g, "").length >= 14)} style={{ width: "100%", background: (kyc.idOk && kyc.iban.replace(/\s/g, "").length >= 14) ? "#16a34a" : T.row, color: (kyc.idOk && kyc.iban.replace(/\s/g, "").length >= 14) ? "#fff" : T.mu, border: "none", borderRadius: 10, padding: "13px 0", fontSize: 14, fontWeight: 900, cursor: "pointer" }}>
-            {kyc.idOk && kyc.iban.replace(/\s/g, "").length >= 14 ? "Valider et accepter la mission" : "Ajoute ta pièce et ton IBAN"}
+            {kyc.idOk && kyc.iban.replace(/\s/g, "").length >= 14 ? "Valider et accepter la mission" : "Simule la pièce et l'IBAN"}
           </button>
           <button onClick={() => setKycFor(null)} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", fontSize: 11, color: T.mu, padding: "10px 0 0" }}>Plus tard</button>
         </div></div>}
@@ -705,6 +704,11 @@ function StructureApp({ onBack, subscribed = false, demoSeconds = DEMO_SECONDS, 
     setMis([]);
     setCands([]);
     setHab([]);
+    setShowPub(false);
+    setPanelC(null);
+    setCandMis(null);
+    setStab("missions");
+    setF({ t: "", adr: "", pay: 42, jour: "Aujourd'hui", horaire: "", desc: "", solid: false });
   }, [subscribed, subscriptionInfo]);
 
   const [toast, setToast] = useState(null);
@@ -1030,7 +1034,7 @@ function SubscribeModal({ role, reason, onClose, onDone }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.88)", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, fontFamily: FONT }}>
       <div style={{ width: "100%", maxWidth: 390, background: T.card, border: `1px solid ${T.cb}`, borderRadius: 18, padding: 18, boxShadow: "0 24px 90px rgba(0,0,0,.55)" }}>
-        <div style={{ fontSize: 16, fontWeight: 900, color: T.text, marginBottom: 5 }}>{reason === "publish" ? "Abonnement requis pour publier" : "Démo terminée"}</div>
+        <div style={{ fontSize: 16, fontWeight: 900, color: T.text, marginBottom: 5 }}>{reason === "locked" ? "Démo terminée" : reason === "publish" ? "Abonnement requis pour publier" : "Abonnement requis"}</div>
         <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.55, marginBottom: 15 }}>
           {isStruct ? "Renseigne ton email, ton téléphone et ton SIRET. Après abonnement, les faux comptes disparaissent et ton espace structure repart vierge." : "Renseigne tes informations pour continuer. Les champs de démo disparaissent dès que l'abonnement est validé."}
         </div>
@@ -1055,9 +1059,10 @@ function Root() {
   const [demoSeconds, setDemoSeconds] = useState(DEMO_SECONDS);
   const [locked, setLocked] = useState(false);
   const [subscribeReason, setSubscribeReason] = useState(null);
+  const demoActive = route === "structure" || (route === "worker" && !!workerInfos);
 
   useEffect(() => {
-    if (!route || subscribed) return;
+    if (!demoActive || subscribed) return;
     setDemoSeconds(DEMO_SECONDS);
     setLocked(false);
     const timer = setInterval(() => {
@@ -1072,7 +1077,7 @@ function Root() {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [route, subscribed]);
+  }, [demoActive, subscribed]);
 
   const needSubscribe = reason => setSubscribeReason(reason || "access");
   const finishSubscribe = info => {
@@ -1101,7 +1106,7 @@ function Root() {
         <div style={{ marginBottom: 28 }}><Logo sz={78} /></div>
         <div style={{ fontSize: 12, color: T.mu, marginBottom: 30 }}>Micro-missions · Métropole de Lille</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <button onClick={() => setRoute("worker")} style={{ textAlign: "left", padding: "16px 17px", borderRadius: 13, border: `1.5px solid ${T.cb}`, background: T.card, cursor: "pointer" }}>
+          <button onClick={() => { setWorkerInfos(DEMO_PROFILE); setRoute("worker"); }} style={{ textAlign: "left", padding: "16px 17px", borderRadius: 13, border: `1.5px solid ${T.cb}`, background: T.card, cursor: "pointer" }}>
             <div style={{ fontSize: 19, marginBottom: 5 }}>👷</div>
             <div style={{ fontSize: 14, fontWeight: 800, color: T.text, marginBottom: 2 }}>Je cherche des missions</div>
             <div style={{ fontSize: 12, color: T.mu }}>Flux, présence, et mon CV vivant</div>
