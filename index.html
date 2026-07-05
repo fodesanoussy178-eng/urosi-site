@@ -397,7 +397,7 @@ footer{background:#141110;color:var(--papier);padding:56px 0 40px;border-top:1px
       <li><a href="#transparence">Transparence</a></li>
       <li><a href="#solidaire">Solidaire</a></li>
       <li><a href="#faq">FAQ</a></li>
-      <li><a href="#" class="btn sm" data-app>Rejoindre la bêta</a></li>
+      <li><a href="#" class="btn sm" data-app>Voir la démo</a></li>
     </ul>
     <button class="burger" id="burger" aria-label="Ouvrir le menu" aria-expanded="false">MENU</button>
   </div>
@@ -419,7 +419,7 @@ footer{background:#141110;color:var(--papier);padding:56px 0 40px;border-top:1px
       </ul>
       <p class="produit-note"><strong>UROSI&nbsp;T</strong> est le premier service d'UROSI, dédié aux micro-missions de 5&nbsp;heures maximum.</p>
       <div class="hero-ctas">
-        <a class="btn" href="#" data-app>Rejoindre la bêta privée</a>
+        <a class="btn" href="#" data-app>Voir la démo</a>
         <a class="btn brique" href="#structures">Je suis une structure</a>
       </div>
     </div>
@@ -590,7 +590,7 @@ footer{background:#141110;color:var(--papier);padding:56px 0 40px;border-top:1px
       <div><div class="sn">04</div><h3>Le paiement est sécurisé</h3></div>
     </div>
     <p style="font-size:.98rem;color:var(--gris-clair);max-width:44rem;margin-bottom:28px">Vous proposez le tarif, la durée (5&nbsp;h max), le créneau. Chaque candidature arrive avec son historique réel de missions. Vous provisionnez le montant + 18&nbsp;% de commission — c'est le seul coût, il n'y a pas d'abonnement. UROSI&nbsp;T agit comme intermédiaire de mise en relation et de paiement.</p>
-    <a class="btn" href="#" data-app>Publier une première mission</a>
+    <a class="btn" href="#" data-app>Tester la démo structure</a>
   </div>
 </section>
 
@@ -681,7 +681,7 @@ footer{background:#141110;color:var(--papier);padding:56px 0 40px;border-top:1px
     <h2>La métropole est pleine de coups de main à donner. Et de talents à prouver.</h2>
     <p>Travailleur ou structure, tout commence par une première mission de 5&nbsp;heures max.</p>
     <div class="hero-ctas" style="justify-content:center">
-      <a class="btn" href="#" data-app>Rejoindre la bêta privée</a>
+      <a class="btn" href="#" data-app>Voir la démo</a>
       <a class="btn ghost" href="mailto:contact@urosit.fr">Écrire à l'équipe</a>
     </div>
   </div>
@@ -704,7 +704,7 @@ footer{background:#141110;color:var(--papier);padding:56px 0 40px;border-top:1px
       </div>
       <div>
         <h4>Contact</h4>
-        <ul><li><a href="mailto:contact@urosit.fr">contact@urosit.fr</a></li><li><a href="#" data-app>L'application</a></li><li><span class="muet">Tourcoing · MEL</span></li></ul>
+        <ul><li><a href="mailto:contact@urosit.fr">contact@urosit.fr</a></li><li><a href="#" data-app>La démo</a></li><li><span class="muet">Tourcoing · MEL</span></li></ul>
       </div>
     </div>
     <div class="foot-bas">
@@ -781,7 +781,7 @@ footer{background:#141110;color:var(--papier);padding:56px 0 40px;border-top:1px
 
 <script>
 // ===== URL DE L'APPLICATION — À CHANGER ICI, UNE SEULE FOIS =====
-const URL_APP = "https://app.urosi.fr";
+const URL_APP = "demo.html";
 document.querySelectorAll('[data-app]').forEach(a=>a.href=URL_APP);
 
 // ----- aperçu des missions : tout se consulte ici, sans quitter la page -----
@@ -817,7 +817,7 @@ function bordereau(m){
     +'<div class="bord-meta"><span>⏱ '+m.h+'\u00a0h</span><span>📅 '+m.quand+'</span>'+(m.sol?'<span>🤝 bénévole</span>':'<span>💶 '+m.tarif+'\u00a0€/h</span>')+'</div>'
     +'<span class="bord-net">'+net+'</span>'
     +'<div class="bord-detail"><p>'+m.desc+'</p>'+compte
-    +'<a class="btn sm" href="'+URL_APP+'">Voir dans l\'app</a></div>'
+    +'<a class="btn sm" href="'+URL_APP+'">Voir la démo</a></div>'
     +'<div class="bord-ouvrir">TOUCHER POUR LE DÉTAIL +</div>'
     +'</div></article>';
 }
