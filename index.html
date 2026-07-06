@@ -6,14 +6,14 @@
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#1B1713">
 <title>UROSI — La plateforme de micro-missions de la Métropole Européenne de Lille</title>
-<meta name="description" content="UROSI, la plateforme de micro-missions de la MEL. UROSI T, son premier service : des missions de 5h maximum, tarif visible avant d'accepter, 100% du tarif affiché pour le travailleur, CV vivant.">
-<!-- SEO / partage — remplace https://urosi.fr par ton vrai domaine une fois acheté -->
+<meta name="description" content="UROSI, la plateforme de micro-missions de la MEL. UROSI T, son premier service : des missions courtes de quelques heures à 3 jours maximum, tarif visible avant d'accepter, 100% du tarif affiché pour le travailleur, CV vivant.">
+<!-- SEO / partage -->
 <link rel="canonical" href="https://urosi.fr/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="UROSI">
 <meta property="og:locale" content="fr_FR">
 <meta property="og:title" content="UROSI — La plateforme de micro-missions de la Métropole Européenne de Lille">
-<meta property="og:description" content="Des missions de 5 heures maximum. Tarif visible avant d'accepter, 100 % du tarif affiché pour le travailleur, CV vivant. Bêta privée — Tourcoing, MEL.">
+<meta property="og:description" content="Des missions courtes de quelques heures à 3 jours maximum. Tarif visible avant d'accepter, 100 % du tarif affiché pour le travailleur, CV vivant. Bêta privée — Tourcoing, MEL.">
 <meta property="og:url" content="https://urosi.fr/">
 <meta name="twitter:card" content="summary">
 <script type="application/ld+json">
@@ -22,9 +22,9 @@
   "@type":"Organization",
   "name":"UROSI",
   "alternateName":"UROSI T",
-  "description":"Plateforme de micro-missions de la Métropole Européenne de Lille. UROSI T est le premier service d'UROSI, dédié aux micro-missions de 5 heures maximum.",
+  "description":"Plateforme de micro-missions de la Métropole Européenne de Lille. UROSI T est le premier service d'UROSI, dédié aux missions courtes de quelques heures à 3 jours maximum.",
   "url":"https://urosi.fr",
-  "email":"contact@urosit.fr",
+  "email":"contact@urosi.fr",
   "address":{"@type":"PostalAddress","addressLocality":"Tourcoing","addressRegion":"Hauts-de-France","addressCountry":"FR"},
   "areaServed":"Métropole Européenne de Lille"
 }
@@ -269,6 +269,7 @@ h2{font-weight:900;font-variation-settings:'wdth' 75;text-transform:uppercase;fo
 .simu-ctrl label{display:block;font-weight:800;font-size:.9rem;margin-bottom:8px}
 .simu-ctrl .val{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--brique)}
 input[type=range]{width:100%;accent-color:var(--brique);margin:6px 0 26px;height:26px}
+.simu-select{width:100%;background:var(--carte);color:var(--encre);border:2px solid var(--charbon);padding:11px 13px;margin:6px 0 18px;font:600 .9rem 'IBM Plex Mono',monospace}
 .simu-ctrl .note{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--gris)}
 .recu{border:2px solid var(--papier);background:var(--carte);color:var(--encre);box-shadow:6px 6px 0 rgba(0,0,0,.5)}
 .recu .recu-head{background:var(--charbon);color:var(--papier);padding:14px 22px;font-family:'IBM Plex Mono',monospace;font-size:.75rem;letter-spacing:.12em;display:flex;justify-content:space-between}
@@ -411,13 +412,13 @@ footer{background:#141110;color:var(--papier);padding:56px 0 40px;border-top:1px
       <h1>Chaque travail mérite <span class="souligne">une première preuve</span>.</h1>
       <p class="sous-slogan">Le travail ne devrait jamais demander de l'expérience pour commencer.</p>
       <ul class="mecanique">
-        <li><span class="tir">✓</span><span>Des micro-missions de <strong>5&nbsp;heures maximum</strong>, dans la MEL.</span></li>
+        <li><span class="tir">✓</span><span>Des micro-missions de <strong>quelques heures à 3&nbsp;jours maximum</strong>, dans la MEL.</span></li>
         <li><span class="tir">✓</span><span>Tu vois le tarif <strong>avant</strong> d'accepter.</span></li>
         <li><span class="tir">✓</span><span>Tu touches <strong>100&nbsp;% du tarif affiché</strong> — la commission est côté structure.</span></li>
         <li><span class="tir">✓</span><span>Chaque mission construit ton <strong>CV vivant</strong>.</span></li>
         <li><span class="tir">✓</span><span>Ouvert à tous dès <strong>18&nbsp;ans</strong> — le statut légal n'est demandé que plus tard.</span></li>
       </ul>
-      <p class="produit-note"><strong>UROSI&nbsp;T</strong> est le premier service d'UROSI, dédié aux micro-missions de 5&nbsp;heures maximum.</p>
+      <p class="produit-note"><strong>UROSI&nbsp;T</strong> est le premier service d'UROSI, dédié aux missions courtes de quelques heures à 3&nbsp;jours maximum.</p>
       <div class="hero-ctas">
         <a class="btn" href="#" data-app>Voir la démo</a>
         <a class="btn brique" href="#structures">Je suis une structure</a>
@@ -496,7 +497,7 @@ footer{background:#141110;color:var(--papier);padding:56px 0 40px;border-top:1px
 <!-- ============ BANDEAU ============ -->
 <div class="strip">
   <div class="wrap strip-in">
-    <div class="cell"><div class="num">5&nbsp;h</div><div class="lab">Durée max par mission</div></div>
+    <div class="cell"><div class="num">3&nbsp;j</div><div class="lab">Durée max par mission</div></div>
     <div class="cell"><div class="num"><em>100&nbsp;%</em></div><div class="lab">Du tarif affiché pour le travailleur</div></div>
     <div class="cell"><div class="num">J+3</div><div class="lab">Objectif de versement</div></div>
     <div class="cell"><div class="num">0&nbsp;€</div><div class="lab">Frais côté travailleur</div></div>
@@ -532,7 +533,7 @@ footer{background:#141110;color:var(--papier);padding:56px 0 40px;border-top:1px
     </div>
 
     <div class="chaine" aria-label="Le cycle UROSI T">
-      <div class="maillon"><div class="m-num">01</div><div class="m-titre">Mission courte</div><div class="m-sub">5&nbsp;h max, près de chez toi</div></div>
+      <div class="maillon"><div class="m-num">01</div><div class="m-titre">Mission courte</div><div class="m-sub">Quelques heures à 3&nbsp;jours, près de chez toi</div></div>
       <div class="fleche" aria-hidden="true">→</div>
       <div class="maillon"><div class="m-num">02</div><div class="m-titre">Argent</div><div class="m-sub">100&nbsp;% du tarif affiché, objectif J+3</div></div>
       <div class="fleche" aria-hidden="true">→</div>
@@ -589,7 +590,7 @@ footer{background:#141110;color:var(--papier);padding:56px 0 40px;border-top:1px
       <div><div class="sn">03</div><h3>Choisissez</h3></div>
       <div><div class="sn">04</div><h3>Le paiement est sécurisé</h3></div>
     </div>
-    <p style="font-size:.98rem;color:var(--gris-clair);max-width:44rem;margin-bottom:28px">Vous proposez le tarif, la durée (5&nbsp;h max), le créneau. Chaque candidature arrive avec son historique réel de missions. Vous provisionnez le montant + 18&nbsp;% de commission — c'est le seul coût, il n'y a pas d'abonnement. UROSI&nbsp;T agit comme intermédiaire de mise en relation et de paiement.</p>
+    <p style="font-size:.98rem;color:var(--gris-clair);max-width:44rem;margin-bottom:28px">Vous proposez le tarif, la durée (quelques heures, 1&nbsp;jour, 2&nbsp;jours ou 3&nbsp;jours maximum), le créneau. Chaque candidature arrive avec son historique réel de missions. Vous provisionnez le montant + 18&nbsp;% de commission — c'est le seul coût, il n'y a pas d'abonnement. UROSI&nbsp;T agit comme intermédiaire de mise en relation et de paiement.</p>
     <a class="btn" href="#" data-app>Tester la démo structure</a>
   </div>
 </section>
@@ -606,9 +607,14 @@ footer{background:#141110;color:var(--papier);padding:56px 0 40px;border-top:1px
       <div class="simu-ctrl">
         <label for="tarif">Tarif horaire affiché sur la mission — <span class="val" id="tarifVal">14&nbsp;€/h</span></label>
         <input type="range" id="tarif" min="12" max="30" step="1" value="14">
-        <label for="heures">Durée de la mission — <span class="val" id="heuresVal">4&nbsp;h</span></label>
-        <input type="range" id="heures" min="1" max="5" step="1" value="4">
-        <p class="note">Durée plafonnée à 5&nbsp;h — c'est une règle de la plateforme, pas une option.</p>
+        <label for="duree">Durée de la mission — <span class="val" id="dureeVal">Quelques heures</span></label>
+        <select id="duree" class="simu-select">
+          <option value="4" selected>Quelques heures</option>
+          <option value="7">1 jour</option>
+          <option value="14">2 jours</option>
+          <option value="21">3 jours</option>
+        </select>
+        <p class="note">Durée plafonnée à 3&nbsp;jours — 5&nbsp;h reste seulement un exemple de mission courte.</p>
       </div>
       <div class="recu" aria-live="polite">
         <div class="recu-head"><span>DÉCOMPTE DE MISSION</span><span>UROSI&nbsp;T</span></div>
@@ -668,7 +674,7 @@ footer{background:#141110;color:var(--papier);padding:56px 0 40px;border-top:1px
       <div class="faq-item"><button class="faq-q" aria-expanded="false">Combien ça me coûte en tant que travailleur&nbsp;?<span class="plus">+</span></button><div class="faq-a">Rien. Zéro commission, zéro abonnement. Le tarif affiché sur la mission, c'est ce que tu reçois — à 100&nbsp;%. La commission de 18&nbsp;% est payée par la structure, en plus de ce tarif.</div></div>
       <div class="faq-item"><button class="faq-q" aria-expanded="false">Quel statut faut-il pour travailler via UROSI&nbsp;T&nbsp;?<span class="plus">+</span></button><div class="faq-a">Aucun au départ. UROSI est ouvert à tous dès 18&nbsp;ans&nbsp;: tu t'inscris, tu consultes les missions et tu fais des missions solidaires immédiatement. C'est seulement à partir d'un certain niveau d'activité — au moment de recevoir tes premiers paiements — qu'UROSI te demandera un statut légal. La micro-entreprise suffit, elle se crée gratuitement en ligne et on te guide pas à pas.</div></div>
       <div class="faq-item"><button class="faq-q" aria-expanded="false">Quand est-ce que je suis payé, concrètement&nbsp;?<span class="plus">+</span></button><div class="faq-a">Les fonds sont sécurisés via un prestataire de paiement agréé avant même le début de la mission. Une fois la mission validée par les deux côtés, le montant apparaît dans ton portefeuille, avec un objectif de virement sous 3&nbsp;jours ouvrés (J+3).</div></div>
-      <div class="faq-item"><button class="faq-q" aria-expanded="false">Pourquoi les missions sont limitées à 5&nbsp;heures&nbsp;?<span class="plus">+</span></button><div class="faq-a">Parce qu'UROSI&nbsp;T fait des micro-missions, pas de l'intérim déguisé. Le plafond de 5&nbsp;h et la limite de 3&nbsp;jours consécutifs auprès d'une même structure protègent tout le monde&nbsp;: le travailleur contre la dépendance à une seule structure, la structure contre les risques juridiques d'une relation qui s'installe.</div></div>
+      <div class="faq-item"><button class="faq-q" aria-expanded="false">Quelle est la durée maximale d'une mission&nbsp;?<span class="plus">+</span></button><div class="faq-a">UROSI&nbsp;T propose des missions courtes&nbsp;: quelques heures, 1&nbsp;jour, 2&nbsp;jours ou 3&nbsp;jours maximum. Une mission de 5&nbsp;h est un exemple de format court, pas une limite de la plateforme.</div></div>
       <div class="faq-item"><button class="faq-q" aria-expanded="false">La plateforme démarre — pourquoi lui faire confiance&nbsp;?<span class="plus">+</span></button><div class="faq-a">Parce que tout est vérifiable. Le tarif est affiché avant d'accepter, le décompte est public, les fonds sont provisionnés avant la mission, et le modèle tient en une phrase&nbsp;: 18&nbsp;% côté structure, zéro frais côté travailleur. On est en bêta privée dans la MEL, on grandit mission par mission — pas de promesse qu'on ne peut pas tenir.</div></div>
       <div class="faq-item"><button class="faq-q" aria-expanded="false">Je gère une association, c'est vraiment gratuit&nbsp;?<span class="plus">+</span></button><div class="faq-a">Oui. Les missions solidaires à 0&nbsp;€ publiées par les structures de l'ESS ne portent aucune commission. Elles alimentent le CV vivant des participants exactement comme les missions payées.</div></div>
     </div>
@@ -679,10 +685,10 @@ footer{background:#141110;color:var(--papier);padding:56px 0 40px;border-top:1px
 <section class="final">
   <div class="wrap">
     <h2>La métropole est pleine de coups de main à donner. Et de talents à prouver.</h2>
-    <p>Travailleur ou structure, tout commence par une première mission de 5&nbsp;heures max.</p>
+    <p>Travailleur ou structure, tout commence par une première mission courte, de quelques heures à 3&nbsp;jours maximum.</p>
     <div class="hero-ctas" style="justify-content:center">
       <a class="btn" href="#" data-app>Voir la démo</a>
-      <a class="btn ghost" href="mailto:contact@urosit.fr">Écrire à l'équipe</a>
+      <a class="btn ghost" href="mailto:contact@urosi.fr">Écrire à l'équipe</a>
     </div>
   </div>
 </section>
@@ -692,7 +698,7 @@ footer{background:#141110;color:var(--papier);padding:56px 0 40px;border-top:1px
     <div class="foot-grid">
       <div>
         <a class="logo" href="#top">UROSI</a>
-        <p style="margin-top:14px;font-size:.88rem;color:rgba(237,235,227,.8);max-width:26rem">La plateforme de micro-missions de la Métropole Européenne de Lille. <strong>UROSI&nbsp;T</strong> est le premier service d'UROSI, dédié aux micro-missions de 5&nbsp;heures maximum. Né à Tourcoing.</p>
+        <p style="margin-top:14px;font-size:.88rem;color:rgba(237,235,227,.8);max-width:26rem">La plateforme de micro-missions de la Métropole Européenne de Lille. <strong>UROSI&nbsp;T</strong> est le premier service d'UROSI, dédié aux missions courtes de quelques heures à 3&nbsp;jours maximum. Né à Tourcoing.</p>
       </div>
       <div>
         <h4>Plateforme</h4>
@@ -704,7 +710,7 @@ footer{background:#141110;color:var(--papier);padding:56px 0 40px;border-top:1px
       </div>
       <div>
         <h4>Contact</h4>
-        <ul><li><a href="mailto:contact@urosit.fr">contact@urosit.fr</a></li><li><a href="#" data-app>La démo</a></li><li><span class="muet">Tourcoing · MEL</span></li></ul>
+        <ul><li><a href="mailto:contact@urosi.fr">contact@urosi.fr</a></li><li><a href="#" data-app>La démo</a></li><li><span class="muet">Tourcoing · MEL</span></li></ul>
       </div>
     </div>
     <div class="foot-bas">
@@ -719,13 +725,13 @@ footer{background:#141110;color:var(--papier);padding:56px 0 40px;border-top:1px
   <div class="dlg-corps">
     <p class="version">VERSION BÊTA — DOCUMENT COMPLET PUBLIÉ À L'OUVERTURE PUBLIQUE</p>
     <h4>1. Objet</h4>
-    <p>UROSI T est un service de mise en relation entre des structures situées dans la Métropole Européenne de Lille et des travailleurs indépendants, pour des missions d'une durée maximale de 5 heures.</p>
+    <p>UROSI T est un service de mise en relation entre des structures situées dans la Métropole Européenne de Lille et des travailleurs indépendants, pour des missions courtes d'une durée maximale de 3 jours.</p>
     <h4>2. Rôle d'UROSI T</h4>
     <p>UROSI T agit exclusivement comme intermédiaire de mise en relation et de paiement. UROSI T n'emploie pas les travailleurs, ne dirige pas l'exécution des missions, ne fixe pas les tarifs et n'impose aucune mission. Les travailleurs sont indépendants&nbsp;; les structures sont clientes du service.</p>
     <h4>3. Accès au service</h4>
     <p>Le service est ouvert à toute personne âgée de 18&nbsp;ans ou plus. L'inscription, la consultation des missions et les missions solidaires sont accessibles immédiatement, sans statut. Un statut d'indépendant en règle (micro-entreprise ou équivalent) est demandé à partir d'un certain niveau d'activité, et en tout état de cause avant le premier versement de rémunération.</p>
     <h4>4. Missions et tarifs</h4>
-    <p>La structure publie la mission et propose le tarif horaire. Le travailleur accepte ou refuse librement, sans conséquence sur son accès au service. La durée d'une mission est plafonnée à 5 heures, et un travailleur ne peut pas dépasser 3 jours consécutifs auprès d'une même structure.</p>
+    <p>La structure publie la mission et propose le tarif horaire. Le travailleur accepte ou refuse librement, sans conséquence sur son accès au service. La durée d'une mission peut être de quelques heures, 1 jour, 2 jours ou 3 jours maximum. Toute mission supérieure à 3 jours est refusée par la plateforme.</p>
     <h4>5. Commission et frais</h4>
     <p>Une commission de 18&nbsp;% du montant de la mission est facturée à la structure, en sus du tarif. Le travailleur reçoit 100&nbsp;% du tarif affiché. Aucun frais, commission ni abonnement n'est facturé au travailleur.</p>
     <h4>6. Paiement</h4>
@@ -746,7 +752,7 @@ footer{background:#141110;color:var(--papier);padding:56px 0 40px;border-top:1px
   <div class="dlg-corps">
     <p class="version">VERSION BÊTA — CONFORME RGPD — MISE À JOUR À L'OUVERTURE PUBLIQUE</p>
     <h4>Responsable de traitement</h4>
-    <p>UROSI, Tourcoing (France). Contact&nbsp;: contact@urosit.fr.</p>
+    <p>UROSI, Tourcoing (France). Contact&nbsp;: contact@urosi.fr.</p>
     <h4>Données collectées</h4>
     <p>Données de compte (nom, téléphone, e-mail, zone géographique), historique de missions, mouvements du portefeuille, et données de connexion strictement nécessaires au fonctionnement du service.</p>
     <h4>Ce que nous ne stockons pas</h4>
@@ -758,7 +764,7 @@ footer{background:#141110;color:var(--papier);padding:56px 0 40px;border-top:1px
     <h4>Durées de conservation</h4>
     <p>Les données de compte sont conservées pendant la durée d'utilisation du service, puis archivées ou supprimées selon les obligations légales (notamment comptables et fiscales).</p>
     <h4>Vos droits</h4>
-    <p>Accès, rectification, effacement, portabilité, limitation et opposition&nbsp;: écrivez à contact@urosit.fr. Vous pouvez également saisir la CNIL (cnil.fr).</p>
+    <p>Accès, rectification, effacement, portabilité, limitation et opposition&nbsp;: écrivez à contact@urosi.fr. Vous pouvez également saisir la CNIL (cnil.fr).</p>
   </div>
 </dialog>
 
@@ -771,7 +777,7 @@ footer{background:#141110;color:var(--papier);padding:56px 0 40px;border-top:1px
     <h4>Directeur de la publication</h4>
     <p>Le fondateur d'UROSI.</p>
     <h4>Contact</h4>
-    <p>contact@urosit.fr</p>
+    <p>contact@urosi.fr</p>
     <h4>Hébergement</h4>
     <p>Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, États-Unis — vercel.com.</p>
     <h4>Propriété intellectuelle</h4>
@@ -786,21 +792,21 @@ document.querySelectorAll('[data-app]').forEach(a=>a.href=URL_APP);
 
 // ----- aperçu des missions : tout se consulte ici, sans quitter la page -----
 const MISSIONS=[
-  {ref:'Nº 0147',ville:'Tourcoing',km:'1,2',titre:'Trattoria Milano — coup de feu du midi',h:4,tarif:14,quand:'sam. 11:30',sol:false,
+  {ref:'Nº 0147',ville:'Tourcoing',km:'1,2',titre:'Trattoria Milano — coup de feu du midi',h:4,duree:'4\u00a0h',tarif:14,quand:'sam. 11:30',sol:false,
    desc:"Aide au service en salle et au débarrassage pendant le rush du samedi midi. Équipe de six, ambiance familiale, repas du personnel offert."},
-  {ref:'Nº 0152',ville:'Roubaix',km:'3,4',titre:"Maison Nord Déco — montage d'exposition",h:3,tarif:15,quand:'mer. 18:00',sol:false,
+  {ref:'Nº 0152',ville:'Roubaix',km:'3,4',titre:"Maison Nord Déco — montage d'exposition",h:7,duree:'1\u00a0jour',tarif:15,quand:'mer. 09:00',sol:false,
    desc:"Montage des présentoirs et mise en place de la vitrine de rentrée. Port de charges légères, matériel fourni."},
-  {ref:'SOLIDAIRE',ville:'Lille',km:'5,1',titre:'Banque alimentaire — distribution du vendredi',h:2,tarif:0,quand:'ven. 09:00',sol:true,
+  {ref:'SOLIDAIRE',ville:'Lille',km:'5,1',titre:'Banque alimentaire — distribution du vendredi',h:2,duree:'Quelques heures',tarif:0,quand:'ven. 09:00',sol:true,
    desc:"Distribution de paniers, accueil des bénéficiaires et réassort. Mission validée et signée sur ton CV vivant."},
-  {ref:'Nº 0160',ville:'Wattrelos',km:'2,0',titre:'Festival Nord Jazz — accueil du public',h:5,tarif:15,quand:'dim. 14:00',sol:false,
+  {ref:'Nº 0160',ville:'Wattrelos',km:'2,0',titre:'Festival Nord Jazz — accueil du public',h:14,duree:'2\u00a0jours',tarif:15,quand:'sam. 14:00',sol:false,
    desc:"Accueil, orientation du public et contrôle des entrées sur le site du festival. Debout, en extérieur couvert."},
-  {ref:'Nº 0163',ville:'Tourcoing',km:'0,8',titre:'Le Café du Centre — service en terrasse',h:3,tarif:14,quand:'jeu. 15:00',sol:false,
+  {ref:'Nº 0163',ville:'Tourcoing',km:'0,8',titre:'Le Café du Centre — service en terrasse',h:3,duree:'3\u00a0h',tarif:14,quand:'jeu. 15:00',sol:false,
    desc:"Service en terrasse l'après-midi : prise de commandes simples, encaissement avec le gérant à côté. Idéal première mission."},
-  {ref:'Nº 0168',ville:'Tourcoing',km:'1,5',titre:'Bazaar Textile — inventaire de nuit',h:4,tarif:16,quand:'ven. 20:00',sol:false,
+  {ref:'Nº 0168',ville:'Tourcoing',km:'1,5',titre:'Bazaar Textile — inventaire de nuit',h:4,duree:'4\u00a0h',tarif:16,quand:'ven. 20:00',sol:false,
    desc:"Comptage et scan des références avant les soldes. Travail en binôme, scanner fourni, majoration soirée incluse dans le tarif."},
-  {ref:'SOLIDAIRE',ville:'Roubaix',km:'2,6',titre:'Ressourcerie du quartier — tri des dons',h:2,tarif:0,quand:'sam. 10:00',sol:true,
+  {ref:'SOLIDAIRE',ville:'Roubaix',km:'2,6',titre:'Ressourcerie du quartier — tri des dons',h:7,duree:'1\u00a0jour',tarif:0,quand:'sam. 10:00',sol:true,
    desc:"Tri des vêtements et objets donnés, étiquetage pour la boutique solidaire. Café offert, équipe de bénévoles réguliers."},
-  {ref:'Nº 0171',ville:'Lille',km:'4,9',titre:'Théâtre de la Manufacture — installation décor',h:5,tarif:16,quand:'lun. 08:00',sol:false,
+  {ref:'Nº 0171',ville:'Lille',km:'4,9',titre:'Théâtre de la Manufacture — installation décor',h:21,duree:'3\u00a0jours',tarif:16,quand:'lun. 08:00',sol:false,
    desc:"Aide au montage du décor avec l'équipe technique : portage, assemblage guidé, rangement. Chaussures fermées obligatoires."}
 ];
 const fmtE=n=>n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+'\u00a0€';
@@ -809,12 +815,12 @@ function bordereau(m){
   const net=m.sol?'CV\u00a0+1':Math.round(base)+'\u00a0€';
   const compte=m.sol
     ?'<div class="bord-compte"><span>0\u00a0€ · 0\u00a0commission — mission bénévole ESS</span><span class="l-trav">CV vivant : +1 preuve validée</span></div>'
-    :'<div class="bord-compte"><span>Tarif : '+m.tarif+'\u00a0€/h × '+m.h+'\u00a0h</span><span>La structure paie : '+fmtE(struct)+' (tarif + 18\u00a0%)</span><span class="l-trav">Tu reçois : '+fmtE(base)+' — 100\u00a0% du tarif affiché</span></div>';
+    :'<div class="bord-compte"><span>Tarif : '+m.tarif+'\u00a0€/h · durée : '+(m.duree || (m.h+'\u00a0h'))+'</span><span>La structure paie : '+fmtE(struct)+' (tarif + 18\u00a0%)</span><span class="l-trav">Tu reçois : '+fmtE(base)+' — 100\u00a0% du tarif affiché</span></div>';
   return '<article class="bordereau'+(m.sol?' sol':'')+'" data-ville="'+m.ville+'" tabindex="0">'
     +'<div class="bord-in">'
     +'<div class="bord-ref"><span>'+m.ref+'</span><span>'+m.ville.toUpperCase()+' · '+m.km+'\u00a0km</span></div>'
     +'<h3>'+m.titre+'</h3>'
-    +'<div class="bord-meta"><span>⏱ '+m.h+'\u00a0h</span><span>📅 '+m.quand+'</span>'+(m.sol?'<span>🤝 bénévole</span>':'<span>💶 '+m.tarif+'\u00a0€/h</span>')+'</div>'
+    +'<div class="bord-meta"><span>⏱ '+(m.duree || (m.h+'\u00a0h'))+'</span><span>📅 '+m.quand+'</span>'+(m.sol?'<span>🤝 bénévole</span>':'<span>💶 '+m.tarif+'\u00a0€/h</span>')+'</div>'
     +'<span class="bord-net">'+net+'</span>'
     +'<div class="bord-detail"><p>'+m.desc+'</p>'+compte
     +'<a class="btn sm" href="'+URL_APP+'">Voir la démo</a></div>'
@@ -876,20 +882,21 @@ navLinks.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{
 
 // ----- simulateur 18% -----
 const tarif=document.getElementById('tarif');
-const heures=document.getElementById('heures');
+const duree=document.getElementById('duree');
+const durees={4:'Quelques heures',7:'1 jour',14:'2 jours',21:'3 jours'};
 const fmt=n=>n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+'\u00a0€';
 function calc(){
-  const t=+tarif.value,h=+heures.value;
+  const t=+tarif.value,h=+duree.value;
   const base=t*h, com=base*0.18;
   document.getElementById('tarifVal').textContent=t+'\u00a0€/h';
-  document.getElementById('heuresVal').textContent=h+'\u00a0h';
+  document.getElementById('dureeVal').textContent=durees[h] || 'Quelques heures';
   document.getElementById('ligneBase').textContent=fmt(base);
   document.getElementById('ligneCom').textContent=fmt(com);
   document.getElementById('ligneStruct').textContent=fmt(base+com);
   document.getElementById('ligneTrav').textContent=fmt(base);
 }
 tarif.addEventListener('input',calc);
-heures.addEventListener('input',calc);
+duree.addEventListener('change',calc);
 calc();
 
 // ----- le téléphone vit : boucle de 8 s -----
@@ -903,7 +910,7 @@ calc();
   const pool=[
     {ref:'Nº 0163',lieu:'TOURCOING · 0,8\u00a0km',titre:'Le Café du Centre — service en terrasse',meta:'⏱ 3\u00a0h · 📅 jeu. 15:00',net:42,sol:false},
     {ref:'SOLIDAIRE',lieu:'ROUBAIX · 2,6\u00a0km',titre:'Ressourcerie du quartier — tri des dons',meta:'⏱ 2\u00a0h · 📅 sam. 10:00',net:0,sol:true},
-    {ref:'Nº 0171',lieu:'LILLE · 4,9\u00a0km',titre:'Théâtre de la Manufacture — installation décor',meta:'⏱ 5\u00a0h · 📅 lun. 08:00',net:80,sol:false},
+    {ref:'Nº 0171',lieu:'LILLE · 4,9\u00a0km',titre:'Théâtre de la Manufacture — installation décor',meta:'⏱ 3\u00a0jours · 📅 lun. 08:00',net:336,sol:false},
     {ref:'Nº 0175',lieu:'TOURCOING · 1,5\u00a0km',titre:'Bazaar Textile — inventaire de nuit',meta:'⏱ 4\u00a0h · 📅 ven. 20:00',net:64,sol:false}
   ];
   let i=0;

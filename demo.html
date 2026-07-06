@@ -33,7 +33,7 @@ const { useState, useRef, useEffect } = React;
 
 const FONT = "'DM Sans', system-ui, sans-serif";
 const T = { bg: "#0a0a14", card: "#111827", cb: "#1f2937", row: "#0f172a", text: "#f1f5f9", sub: "#9ca3af", mu: "#6b7280", grad: "linear-gradient(135deg,#1d4ed8,#0891b2)" };
-const DEMO_SECONDS = 180;
+const DEMO_SECONDS = 45;
 const DEMO_PROFILE = { prenom: "Alex", nom: "Martin", ville: "Lille", adresse: "", naissance: "2000-01-01", email: "", tel: "" };
 
 const MOTIFS = {
@@ -328,6 +328,7 @@ function WorkerApp({ onBack, onDelete, infos, subscribed = false, demoSeconds = 
             <div style={{ width: 28, height: 28, borderRadius: 8, background: T.grad, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 14 }}>U</div>
             <span style={{ fontSize: 10, fontWeight: 700, color: "#22d3ee", background: "#22d3ee15", borderRadius: 20, padding: "3px 8px" }}>{hist.length} missions au CV</span>
             {!subscribed && <span style={{ fontSize: 10, fontWeight: 800, color: "#fbbf24", background: "#1c1400", border: "1px solid #78350f", borderRadius: 20, padding: "3px 8px" }}>Démo {demoSeconds}s</span>}
+            {!subscribed && <button onClick={() => onNeedSubscribe("signup")} style={{ fontSize: 10, fontWeight: 800, color: "#000", background: "#fff", border: "none", borderRadius: 20, padding: "4px 9px", cursor: "pointer" }}>S'inscrire</button>}
           </div>
           <button onClick={onBack} style={{ fontSize: 10, color: T.mu, background: "none", border: `1px solid ${T.cb}`, borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>← Accueil</button>
         </div>
@@ -625,14 +626,16 @@ function WorkerApp({ onBack, onDelete, infos, subscribed = false, demoSeconds = 
 
 // ═══ STRUCTURE (vérification puis publication) ════════════════════════════════
 const STAG = { active: ["Active", "#4ade80", "#052e16"], draft: ["Brouillon", "#9ca3af", "#1f2937"], pourvue: ["Pourvue", "#60a5fa", "#0c1a2e"] };
+const DUREE_OPTIONS = ["quelques heures", "1 jour", "2 jours", "3 jours"];
+const isDureeAllowed = d => DUREE_OPTIONS.includes(d);
 
 // Jeux de données distincts selon le type de structure (chargés par la démo)
 const SEED = {
   pme: {
     mis: [
-      { id: "m1", t: "Renfort service midi", adr: "12 Rue de Béthune, Lille", pay: 42, dt: "Aujourd'hui · 12h", desc: "Rush du midi, aide au comptoir et à l'encaissement.", st: "active" },
-      { id: "m2", t: "Runner soirée", adr: "Salle Majestic, Lille", pay: 60, dt: "Sam 17 · 19h", desc: "Coordination logistique en soirée, port de charges léger.", st: "active" },
-      { id: "m3", t: "Inventaire fin de mois", adr: "Entrepôt, Lille", pay: 55, dt: "Lun 26 · 8h", desc: "Comptage et rangement des stocks.", st: "draft" },
+      { id: "m1", t: "Renfort service midi", adr: "12 Rue de Béthune, Lille", pay: 42, dt: "Aujourd'hui · 12h · quelques heures", desc: "Rush du midi, aide au comptoir et à l'encaissement.", st: "active" },
+      { id: "m2", t: "Runner soirée", adr: "Salle Majestic, Lille", pay: 60, dt: "Sam 17 · 19h · quelques heures", desc: "Coordination logistique en soirée, port de charges léger.", st: "active" },
+      { id: "m3", t: "Inventaire fin de mois", adr: "Entrepôt, Lille", pay: 110, dt: "Lun 26 · 8h · 1 jour", desc: "Comptage et rangement des stocks.", st: "draft" },
     ],
     cands: [
       { id: "c1", mid: "m1", nom: "Yanis M.", av: "Y", hue: 24, note: 4.6, nb: 18, ville: "Lille", dist: 1.2, fois: 3, dec: null, hist: [["Renfort midi", "12/04"], ["Runner soir", "05/04"]] },
@@ -646,9 +649,9 @@ const SEED = {
   },
   asso: {
     mis: [
-      { id: "a1", t: "Distribution de colis alimentaires", adr: "Rue Nationale, Lille", pay: 0, solid: true, dt: "Aujourd'hui · 14h", desc: "Préparation et remise de colis aux familles.", st: "active" },
-      { id: "a2", t: "Tri des denrées", adr: "Entrepôt, Lille", pay: 0, solid: true, dt: "Demain · 9h", desc: "Tri et rangement des dons alimentaires reçus.", st: "active" },
-      { id: "a3", t: "Maraude du soir", adr: "Wazemmes, Lille", pay: 0, solid: true, dt: "Ven · 20h", desc: "Distribution de repas chauds aux personnes sans abri.", st: "draft" },
+      { id: "a1", t: "Distribution de colis alimentaires", adr: "Rue Nationale, Lille", pay: 0, solid: true, dt: "Aujourd'hui · 14h · quelques heures", desc: "Préparation et remise de colis aux familles.", st: "active" },
+      { id: "a2", t: "Tri des denrées", adr: "Entrepôt, Lille", pay: 0, solid: true, dt: "Demain · 9h · 1 jour", desc: "Tri et rangement des dons alimentaires reçus.", st: "active" },
+      { id: "a3", t: "Maraude du soir", adr: "Wazemmes, Lille", pay: 0, solid: true, dt: "Ven · 20h · quelques heures", desc: "Distribution de repas chauds aux personnes sans abri.", st: "draft" },
     ],
     cands: [
       { id: "b1", mid: "a1", nom: "Awa T.", av: "A", hue: 150, note: 4.9, nb: 12, ville: "Lille", dist: 0.9, fois: 4, dec: null, hist: [["Distribution colis", "11/04"], ["Tri denrées", "04/04"]] },
@@ -688,7 +691,7 @@ function StructureApp({ onBack, subscribed = false, demoSeconds = DEMO_SECONDS, 
   const [showPub, setShowPub] = useState(false);
   const [aide, setAide] = useState(false);
   const [panelC, setPanelC] = useState(null);
-  const [f, setF] = useState({ t: "", adr: "", pay: 42, jour: "Aujourd'hui", horaire: "", desc: "", solid: false });
+  const [f, setF] = useState({ t: "", adr: "", pay: 42, jour: "Aujourd'hui", horaire: "", duree: "quelques heures", desc: "", solid: false });
   const [mis, setMis] = useState(SEED.pme.mis);
   const [cands, setCands] = useState(SEED.pme.cands);
   const [habitues, setHab] = useState(SEED.pme.habitues);
@@ -708,7 +711,7 @@ function StructureApp({ onBack, subscribed = false, demoSeconds = DEMO_SECONDS, 
     setPanelC(null);
     setCandMis(null);
     setStab("missions");
-    setF({ t: "", adr: "", pay: 42, jour: "Aujourd'hui", horaire: "", desc: "", solid: false });
+    setF({ t: "", adr: "", pay: 42, jour: "Aujourd'hui", horaire: "", duree: "quelques heures", desc: "", solid: false });
   }, [subscribed, subscriptionInfo]);
 
   const [toast, setToast] = useState(null);
@@ -724,13 +727,15 @@ function StructureApp({ onBack, subscribed = false, demoSeconds = DEMO_SECONDS, 
     setChecking(true); setTimeout(() => { setChecking(false); setVerified(true); notif("✓ Vérifiée — type détecté automatiquement via le SIRET."); }, 900);
   };
 
-  const ok = f.t.trim().length >= 2 && f.adr.trim().length >= 2 && (f.solid || f.pay > 0);
+  const dureeOk = isDureeAllowed(f.duree);
+  const ok = f.t.trim().length >= 2 && f.adr.trim().length >= 2 && dureeOk && (f.solid || f.pay > 0);
   const publish = () => {
+    if (!dureeOk) { notif("Durée limitée à 3 jours maximum."); return; }
     if (!ok) return;
     if (!subscribed && onNeedSubscribe) { onNeedSubscribe("publish"); return; }
-    setMis(l => [{ id: "m" + Date.now(), t: f.t, adr: f.adr, pay: f.solid ? 0 : f.pay, solid: f.solid, dt: [f.jour, f.horaire].filter(Boolean).join(" · ") || "À planifier", desc: f.desc, st: "active" }, ...l]);
+    setMis(l => [{ id: "m" + Date.now(), t: f.t, adr: f.adr, pay: f.solid ? 0 : f.pay, solid: f.solid, dt: [f.jour, f.horaire, f.duree].filter(Boolean).join(" · ") || "À planifier", desc: f.desc, st: "active" }, ...l]);
     notif(`« ${f.t} » publiée.`);
-    setF({ t: "", adr: "", pay: 42, jour: "Aujourd'hui", horaire: "", desc: "", solid: false });
+    setF({ t: "", adr: "", pay: 42, jour: "Aujourd'hui", horaire: "", duree: "quelques heures", desc: "", solid: false });
     setShowPub(false);
     setStab("missions");
   };
@@ -751,7 +756,8 @@ function StructureApp({ onBack, subscribed = false, demoSeconds = DEMO_SECONDS, 
             <div style={{ width: 30, height: 30, borderRadius: 8, background: T.grad, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, color: "#fff", fontSize: 15 }}>U</div>
             <span style={{ fontWeight: 900, fontSize: 15, color: T.text }}>{(verified || skipped) ? "Espace structure" : "Vérifier ma structure"}</span>
             {!subscribed && (verified || skipped) && <span style={{ fontSize: 10, fontWeight: 800, color: "#fbbf24", background: "#1c1400", border: "1px solid #78350f", borderRadius: 20, padding: "3px 8px" }}>Démo {demoSeconds}s</span>}
-            {subscribed && <span style={{ fontSize: 9, fontWeight: 800, color: "#4ade80", background: "#052e16", border: "1px solid #14532d", borderRadius: 20, padding: "3px 8px" }}>ABONNÉ</span>}
+            {!subscribed && (verified || skipped) && <button onClick={() => onNeedSubscribe("signup")} style={{ fontSize: 10, fontWeight: 800, color: "#000", background: "#fff", border: "none", borderRadius: 20, padding: "4px 9px", cursor: "pointer" }}>S'inscrire</button>}
+            {subscribed && <span style={{ fontSize: 9, fontWeight: 800, color: "#4ade80", background: "#052e16", border: "1px solid #14532d", borderRadius: 20, padding: "3px 8px" }}>INSCRIT</span>}
           </div>
           <div style={{ display: "flex", gap: 7 }}>
             <button onClick={() => setAide(true)} style={{ fontSize: 10, color: T.mu, background: "none", border: `1px solid ${T.cb}`, borderRadius: 6, padding: "4px 9px", cursor: "pointer" }}>? Aide</button>
@@ -782,7 +788,7 @@ function StructureApp({ onBack, subscribed = false, demoSeconds = DEMO_SECONDS, 
         </> : <>
           {/* Bandeau structure */}
           {subscribed && <div style={{ background: "#052e16", border: "1px solid #14532d", borderRadius: 12, padding: "12px 15px", marginBottom: 12, fontSize: 11, color: "#4ade80", lineHeight: 1.5 }}>
-            Abonnement actif : les comptes et missions de démonstration ont disparu. Ton espace est vierge, prêt pour tes vraies missions.
+            Inscription active : les comptes et missions de démonstration ont disparu. Ton espace est vierge, prêt pour tes vraies missions.
           </div>}
 
           {verified
@@ -948,6 +954,14 @@ function StructureApp({ onBack, subscribed = false, demoSeconds = DEMO_SECONDS, 
               </div>
               <div style={{ fontSize: 9, color: T.mu, marginTop: 7, lineHeight: 1.5 }}>{CONFIANCE ? "✓ Structure de confiance UROSI — tu peux planifier jusqu'à 7 jours." : "Publication ouverte à 48h à l'avance (flux constant). Au-delà : réservé aux structures de confiance UROSI, dont on anticipe déjà les besoins."}</div>
             </Fld>
+            <Fld label="Durée">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                {DUREE_OPTIONS.map(d => (
+                  <button key={d} onClick={() => setF(x => ({ ...x, duree: d }))} style={{ background: f.duree === d ? "#fff" : T.row, color: f.duree === d ? "#000" : T.sub, border: `1px solid ${f.duree === d ? "#fff" : T.cb}`, borderRadius: 9, padding: "10px 0", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>{d === "quelques heures" ? "Quelques heures" : d}</button>
+                ))}
+              </div>
+              <div style={{ fontSize: 9, color: T.mu, marginTop: 7, lineHeight: 1.5 }}>Plafond réel UROSI : 3 jours. Une mission de 5h est seulement un exemple de mission courte.</div>
+            </Fld>
             <Fld label="Horaire">
               <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 8 }}>
                 {["11h – 15h", "18h – 23h", "9h – 17h", "Soir", "Journée"].map(h => (
@@ -1034,16 +1048,16 @@ function SubscribeModal({ role, reason, onClose, onDone }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.88)", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, fontFamily: FONT }}>
       <div style={{ width: "100%", maxWidth: 390, background: T.card, border: `1px solid ${T.cb}`, borderRadius: 18, padding: 18, boxShadow: "0 24px 90px rgba(0,0,0,.55)" }}>
-        <div style={{ fontSize: 16, fontWeight: 900, color: T.text, marginBottom: 5 }}>{reason === "locked" ? "Démo terminée" : reason === "publish" ? "Abonnement requis pour publier" : "Abonnement requis"}</div>
+        <div style={{ fontSize: 16, fontWeight: 900, color: T.text, marginBottom: 5 }}>{reason === "locked" ? "Démo terminée" : reason === "publish" ? "Inscription requise pour publier" : "Inscription"}</div>
         <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.55, marginBottom: 15 }}>
-          {isStruct ? "Renseigne ton email, ton téléphone et ton SIRET. Après abonnement, les faux comptes disparaissent et ton espace structure repart vierge." : "Renseigne tes informations pour continuer. Les champs de démo disparaissent dès que l'abonnement est validé."}
+          {isStruct ? "Renseigne ton email, ton téléphone et ton SIRET. Après inscription, les faux comptes disparaissent et ton espace structure repart vierge." : "Renseigne tes informations pour continuer. Les champs de démo disparaissent dès que l'inscription est validée."}
         </div>
         {isStruct && <Fld label="Nom de la structure"><input value={f.structure} onChange={e => setF(x => ({ ...x, structure: e.target.value }))} placeholder="Ma structure" style={inp} /></Fld>}
         {isStruct && <Fld label="SIRET"><input value={f.siret} onChange={e => setF(x => ({ ...x, siret: e.target.value }))} placeholder="123 456 789 00012" style={inp} /></Fld>}
         <Fld label="Email"><input value={f.email} onChange={e => setF(x => ({ ...x, email: e.target.value }))} placeholder="contact@email.fr" style={inp} inputMode="email" /></Fld>
         <Fld label="Téléphone"><input value={f.tel} onChange={e => setF(x => ({ ...x, tel: e.target.value }))} placeholder="06 12 34 56 78" style={inp} inputMode="tel" /></Fld>
         <button onClick={() => ok && onDone(f)} disabled={!ok} style={{ width: "100%", background: ok ? "#16a34a" : T.row, color: ok ? "#fff" : T.mu, border: "none", borderRadius: 10, padding: "13px 0", fontSize: 14, fontWeight: 900, cursor: ok ? "pointer" : "not-allowed" }}>
-          {ok ? "S'abonner et continuer" : "Complète les informations"}
+          {ok ? "S'inscrire et continuer" : "Complète les informations"}
         </button>
         {reason !== "locked" && <button onClick={onClose} style={{ width: "100%", background: "none", border: "none", color: T.mu, cursor: "pointer", padding: "12px 0 0", fontSize: 12, fontWeight: 700 }}>Plus tard</button>}
       </div>
