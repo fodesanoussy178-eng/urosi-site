@@ -20,11 +20,20 @@ const DURATIONS = [
   { value: "3_days", label: "3 jours" },
 ];
 
+const STRUCTURE_TYPES = [
+  { value: "association", label: "Association" },
+  { value: "entreprise", label: "Entreprise" },
+  { value: "collectivite", label: "Collectivite" },
+  { value: "etablissement", label: "Etablissement" },
+];
+
 const BADGES = {
   verified: "Verifiee",
   pending: "En attente",
   rejected: "Refusee",
 };
+
+const PENDING_PROFILE_KEY = "urosi.pendingProfile";
 
 const emptyWorker = {
   email: "",
@@ -41,8 +50,11 @@ const emptyWorker = {
 const emptyStructure = {
   email: "",
   password: "",
+  firstName: "",
+  lastName: "",
   phone: "",
   name: "",
+  type: "association",
   siren: "",
   siret: "",
   address: "",
@@ -63,8 +75,8 @@ const emptyMission = {
 
 function App() {
   const [session, setSession] = useState(null);
-  const [screen, setScreen] = useState("worker");
-  const [authMode, setAuthMode] = useState("signup");
+  const [booting, setBooting] = useState(true);
+  const [authView, setAuthView] = useState("login");
   const [workerForm, setWorkerForm] = useState(emptyWorker);
   const [structureForm, setStructureForm] = useState(emptyStructure);
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
@@ -81,19 +93,27 @@ function App() {
   useEffect(() => {
     if (!supabase) return;
 
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session);
-      if (data.session?.user) loadAccount(data.session.user.id);
+      if (data.session?.user) {
+        await loadAccount(data.session.user).catch((error) => setNotice(error.message || "Profil introuvable."));
+      }
+      setBooting(false);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
-      if (nextSession?.user) loadAccount(nextSession.user.id);
+      if (nextSession?.user) {
+        loadAccount(nextSession.user).catch((error) => setNotice(error.message || "Profil introuvable."));
+      }
       if (!nextSession) {
         setProfile(null);
         setUserRow(null);
         setStructures([]);
         setApplications([]);
+        setMissions([]);
+        setReviews([]);
+        setAuthView("login");
       }
     });
 
@@ -119,11 +139,20 @@ function App() {
     }
   }
 
-  async function loadAccount(userId) {
+  async function loadAccount(authUser) {
+    const userId = authUser.id;
+    await ensureProfileExists(authUser);
+
     const [{ data: nextProfile }, { data: nextUser }] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
       supabase.from("users").select("*").eq("id", userId).maybeSingle(),
     ]);
+    if (!nextProfile) {
+      await supabase.auth.signOut();
+      setNotice("Profil UROSI introuvable. Reconnecte-toi ou cree le bon type de compte.");
+      return;
+    }
+
     setProfile(nextProfile);
     setUserRow(nextUser);
 
@@ -134,20 +163,69 @@ function App() {
         .eq("owner_id", userId)
         .order("created_at", { ascending: false });
       setStructures(data || []);
+    } else {
+      setStructures([]);
+    }
+  }
+
+  async function ensureProfileExists(authUser) {
+    const metadata = normalizeProfileData({
+      ...authUser.user_metadata,
+      ...readPendingProfile(authUser.email),
+    });
+
+    await upsertUserRow(authUser, metadata.phone);
+
+    const { data: existingProfile, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", authUser.id)
+      .maybeSingle();
+    if (error) throw error;
+
+    if (!existingProfile && metadata.role) {
+      if (metadata.role === "structure") {
+        await createStructureProfile(authUser, metadata, { skipLoad: true, skipVerify: true });
+      } else {
+        await createWorkerProfile(authUser, metadata, { skipLoad: true });
+      }
+      clearPendingProfile(authUser.email);
+      return;
+    }
+
+    if (existingProfile) {
+      const missingProfileData = {};
+      ["first_name", "last_name", "phone", "address", "city", "postal_code"].forEach((field) => {
+        if (!existingProfile[field] && metadata[field]) missingProfileData[field] = metadata[field];
+      });
+      if (!existingProfile.birth_date && metadata.birth_date) missingProfileData.birth_date = metadata.birth_date;
+
+      if (Object.keys(missingProfileData).length) {
+        const { error: updateError } = await supabase
+          .from("profiles")
+          .update(missingProfileData)
+          .eq("id", authUser.id);
+        if (updateError) throw updateError;
+      }
+      clearPendingProfile(authUser.email);
     }
   }
 
   async function loadMarket() {
+    const missionSelect = profile?.role === "structure" ? "*, structures(*)" : "*";
     const { data: missionRows, error: missionError } = await supabase
       .from("missions")
-      .select("*, structures(*)")
+      .select(missionSelect)
       .order("created_at", { ascending: false });
     if (missionError) throw missionError;
     setMissions(missionRows || []);
 
+    const applicationSelect = profile?.role === "structure"
+      ? "*, missions(*), profiles!applications_worker_id_fkey(*)"
+      : "*, missions(*)";
     const { data: applicationRows } = await supabase
       .from("applications")
-      .select("*, missions(*, structures(*)), profiles!applications_worker_id_fkey(*)")
+      .select(applicationSelect)
       .order("created_at", { ascending: false });
     setApplications(applicationRows || []);
 
@@ -160,90 +238,131 @@ function App() {
 
   async function signUpWorker() {
     const { email, password } = workerForm;
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const metadata = workerProfileData(workerForm);
+    savePendingProfile(email, metadata);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: metadata },
+    });
     if (error) throw error;
     if (!data.session?.user) {
-      setNotice("Compte cree. Verifie ton email, reconnecte-toi, puis complete ton profil UROSI.");
+      setNotice("Compte cree. Verifie ton email : ton profil UROSI sera recupere a la connexion.");
+      setAuthView("login");
       return;
     }
-    await createWorkerProfile(data.session.user, workerForm);
+    await createWorkerProfile(data.session.user, metadata);
   }
 
-  async function createWorkerProfile(user, form) {
-    const { firstName, lastName, birthDate, address, city, postalCode, phone } = form;
-    await supabase.from("users").upsert({
-      id: user.id,
-      email: user.email,
-      phone,
-      email_verified: Boolean(user.email_confirmed_at),
-      phone_verified: false,
-    }, { onConflict: "id" });
-    await supabase.from("profiles").upsert({
+  async function createWorkerProfile(user, form, options = {}) {
+    const profileData = workerProfileData(form);
+    await upsertUserRow(user, profileData.phone);
+    const { error } = await supabase.from("profiles").upsert({
       id: user.id,
       role: "worker",
-      first_name: firstName,
-      last_name: lastName,
-      birth_date: birthDate || null,
-      address,
-      city,
-      postal_code: postalCode,
-      phone,
+      first_name: profileData.first_name,
+      last_name: profileData.last_name,
+      birth_date: profileData.birth_date || null,
+      address: profileData.address,
+      city: profileData.city,
+      postal_code: profileData.postal_code,
+      phone: profileData.phone,
       kyc_level: 1,
     }, { onConflict: "id" });
-    await loadAccount(user.id);
+    if (error) throw error;
+    clearPendingProfile(user.email);
+    if (!options.skipLoad) await loadAccount(user);
   }
 
   async function signUpStructure() {
     const { email, password } = structureForm;
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const metadata = structureProfileData(structureForm);
+    savePendingProfile(email, metadata);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: metadata },
+    });
     if (error) throw error;
     if (!data.session?.user) {
-      setNotice("Compte cree. Verifie ton email, reconnecte-toi, puis complete ta structure.");
+      setNotice("Compte cree. Verifie ton email : ton profil structure sera recupere a la connexion.");
+      setAuthView("login");
       return;
     }
-    await createStructureProfile(data.session.user, structureForm);
+    await createStructureProfile(data.session.user, metadata);
   }
 
-  async function createStructureProfile(user, form) {
-    const { phone, name, siren, siret, address, city, postalCode } = form;
-    const cleanSiren = siren.replace(/\D/g, "");
-    const cleanSiret = siret.replace(/\D/g, "");
+  async function createStructureProfile(user, form, options = {}) {
+    const profileData = structureProfileData(form);
+    const cleanSiren = profileData.siren.replace(/\D/g, "");
+    const cleanSiret = profileData.siret.replace(/\D/g, "");
     if (cleanSiren.length !== 9 || cleanSiret.length !== 14) {
       throw new Error("Le SIREN doit avoir 9 chiffres et le SIRET 14 chiffres.");
     }
 
-    await supabase.from("users").upsert({
-      id: user.id,
-      email: user.email,
-      phone,
-      email_verified: Boolean(user.email_confirmed_at),
-      phone_verified: false,
-    }, { onConflict: "id" });
-    await supabase.from("profiles").upsert({
+    await upsertUserRow(user, profileData.phone);
+    const { error: profileError } = await supabase.from("profiles").upsert({
       id: user.id,
       role: "structure",
-      phone,
+      first_name: profileData.first_name,
+      last_name: profileData.last_name,
+      address: profileData.address,
+      city: profileData.city,
+      postal_code: profileData.postal_code,
+      phone: profileData.phone,
       kyc_level: 1,
     }, { onConflict: "id" });
+    if (profileError) throw profileError;
+
+    const { data: existingStructure, error: lookupError } = await supabase
+      .from("structures")
+      .select("*")
+      .eq("owner_id", user.id)
+      .eq("siret", cleanSiret)
+      .maybeSingle();
+    if (lookupError) throw lookupError;
+    if (existingStructure) {
+      const { error: updateStructureError } = await supabase
+        .from("structures")
+        .update({
+          name: profileData.structure_name,
+          structure_type: profileData.structure_type,
+          siren: cleanSiren,
+          siret: cleanSiret,
+          address: profileData.address,
+          city: profileData.city,
+          postal_code: profileData.postal_code,
+          phone: profileData.phone,
+          verification_status: existingStructure.verification_status || "pending",
+        })
+        .eq("id", existingStructure.id);
+      if (updateStructureError) throw updateStructureError;
+      clearPendingProfile(user.email);
+      if (!options.skipLoad) await loadAccount(user);
+      return;
+    }
+
     const { data: createdStructure, error: structureError } = await supabase
       .from("structures")
       .insert({
         owner_id: user.id,
-        name,
+        name: profileData.structure_name,
+        structure_type: profileData.structure_type,
         siren: cleanSiren,
         siret: cleanSiret,
-        address,
-        city,
-        postal_code: postalCode,
-        phone,
+        address: profileData.address,
+        city: profileData.city,
+        postal_code: profileData.postal_code,
+        phone: profileData.phone,
         verification_status: "pending",
       })
       .select()
       .single();
     if (structureError) throw structureError;
 
-    await verifyStructure(createdStructure);
-    await loadAccount(user.id);
+    if (!options.skipVerify) await verifyStructure(createdStructure);
+    clearPendingProfile(user.email);
+    if (!options.skipLoad) await loadAccount(user);
   }
 
   async function verifyStructure(structure) {
@@ -268,12 +387,14 @@ function App() {
   }
 
   async function login() {
-    const { error } = await supabase.auth.signInWithPassword(loginForm);
+    const { data, error } = await supabase.auth.signInWithPassword(loginForm);
     if (error) throw error;
+    if (data.user) await loadAccount(data.user);
   }
 
   async function logout() {
     await supabase.auth.signOut();
+    setAuthView("login");
   }
 
   async function publishMission() {
@@ -405,12 +526,16 @@ function App() {
 
       {notice ? <div className="notice">{notice}</div> : null}
 
-      {!session ? (
+      {booting ? (
+        <section className="panel setup">
+          <ShieldCheck />
+          <h1>UROSI</h1>
+          <p>Chargement du compte.</p>
+        </section>
+      ) : !session ? (
         <AuthPanel
-          screen={screen}
-          setScreen={setScreen}
-          authMode={authMode}
-          setAuthMode={setAuthMode}
+          authView={authView}
+          setAuthView={setAuthView}
           workerForm={workerForm}
           setWorkerForm={setWorkerForm}
           structureForm={structureForm}
@@ -423,17 +548,11 @@ function App() {
           onLogin={() => run(login)}
         />
       ) : !profile ? (
-        <SetupPanel
-          screen={screen}
-          setScreen={setScreen}
-          workerForm={workerForm}
-          setWorkerForm={setWorkerForm}
-          structureForm={structureForm}
-          setStructureForm={setStructureForm}
-          loading={loading}
-          onWorker={() => run(() => createWorkerProfile(session.user, workerForm), "Profil worker active.")}
-          onStructure={() => run(() => createStructureProfile(session.user, structureForm), "Structure creee et verification lancee.")}
-        />
+        <section className="panel setup">
+          <ShieldCheck />
+          <h1>UROSI</h1>
+          <p>Verification du profil.</p>
+        </section>
       ) : (
         <div className="grid">
           <section className="panel">
@@ -474,10 +593,8 @@ function App() {
 
 function AuthPanel(props) {
   const {
-    screen,
-    setScreen,
-    authMode,
-    setAuthMode,
+    authView,
+    setAuthView,
     workerForm,
     setWorkerForm,
     structureForm,
@@ -490,34 +607,40 @@ function AuthPanel(props) {
     onLogin,
   } = props;
 
+  const isLogin = authView === "login";
+  const isWorkerSignup = authView === "worker";
+
   return (
     <section className="auth-grid">
       <div className="panel intro">
         <h1>Entrer dans UROSI</h1>
-        <p>Les comptes demo deviennent de vrais comptes. Les missions publiees par une structure remontent dans le flux worker.</p>
+        <p>Connexion, compte worker et compte structure sont separes. Chaque compte charge ensuite son vrai profil Supabase.</p>
         <div className="switches">
-          <button className={screen === "worker" ? "active" : ""} onClick={() => setScreen("worker")}>
-            <User size={16} /> Worker
+          <button className={authView === "login" ? "active" : ""} onClick={() => setAuthView("login")}>
+            <Check size={16} /> Connexion
           </button>
-          <button className={screen === "structure" ? "active" : ""} onClick={() => setScreen("structure")}>
-            <Building2 size={16} /> Structure
+          <button className={authView === "worker" ? "active" : ""} onClick={() => setAuthView("worker")}>
+            <User size={16} /> Creer un compte worker
           </button>
-        </div>
-        <div className="switches compact">
-          <button className={authMode === "signup" ? "active" : ""} onClick={() => setAuthMode("signup")}>Inscription</button>
-          <button className={authMode === "login" ? "active" : ""} onClick={() => setAuthMode("login")}>Connexion</button>
+          <button className={authView === "structure" ? "active" : ""} onClick={() => setAuthView("structure")}>
+            <Building2 size={16} /> Creer un compte structure
+          </button>
         </div>
       </div>
 
       <div className="panel">
-        {authMode === "login" ? (
+        {isLogin ? (
           <form onSubmit={(event) => { event.preventDefault(); onLogin(); }}>
             <h2>Connexion</h2>
             <Input label="Email" value={loginForm.email} onChange={(email) => setLoginForm({ ...loginForm, email })} type="email" />
             <Input label="Mot de passe" value={loginForm.password} onChange={(password) => setLoginForm({ ...loginForm, password })} type="password" />
             <button className="primary" disabled={loading}><Check size={16} /> Se connecter</button>
+            <div className="auth-links">
+              <button type="button" onClick={() => setAuthView("worker")}><User size={16} /> Creer un compte worker</button>
+              <button type="button" onClick={() => setAuthView("structure")}><Building2 size={16} /> Creer un compte structure</button>
+            </div>
           </form>
-        ) : screen === "worker" ? (
+        ) : isWorkerSignup ? (
           <form onSubmit={(event) => { event.preventDefault(); onWorker(); }}>
             <h2>Inscription worker</h2>
             <div className="two">
@@ -534,11 +657,22 @@ function AuthPanel(props) {
             <Input label="Email" value={workerForm.email} onChange={(email) => setWorkerForm({ ...workerForm, email })} type="email" />
             <Input label="Mot de passe" value={workerForm.password} onChange={(password) => setWorkerForm({ ...workerForm, password })} type="password" />
             <button className="primary" disabled={loading}><Check size={16} /> Creer le compte</button>
+            <button type="button" className="ghost" onClick={() => setAuthView("login")}>Deja un compte ? Se connecter</button>
           </form>
         ) : (
           <form onSubmit={(event) => { event.preventDefault(); onStructure(); }}>
             <h2>Inscription structure</h2>
+            <div className="two">
+              <Input label="Prenom contact" value={structureForm.firstName} onChange={(firstName) => setStructureForm({ ...structureForm, firstName })} />
+              <Input label="Nom contact" value={structureForm.lastName} onChange={(lastName) => setStructureForm({ ...structureForm, lastName })} />
+            </div>
             <Input label="Nom structure" value={structureForm.name} onChange={(name) => setStructureForm({ ...structureForm, name })} />
+            <label>
+              Type
+              <select value={structureForm.type} onChange={(event) => setStructureForm({ ...structureForm, type: event.target.value })}>
+                {STRUCTURE_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+            </label>
             <div className="two">
               <Input label="SIREN" value={structureForm.siren} onChange={(siren) => setStructureForm({ ...structureForm, siren })} />
               <Input label="SIRET" value={structureForm.siret} onChange={(siret) => setStructureForm({ ...structureForm, siret })} />
@@ -552,6 +686,7 @@ function AuthPanel(props) {
             <Input label="Email" value={structureForm.email} onChange={(email) => setStructureForm({ ...structureForm, email })} type="email" />
             <Input label="Mot de passe" value={structureForm.password} onChange={(password) => setStructureForm({ ...structureForm, password })} type="password" />
             <button className="primary" disabled={loading}><ShieldCheck size={16} /> Verifier et creer</button>
+            <button type="button" className="ghost" onClick={() => setAuthView("login")}>Deja un compte ? Se connecter</button>
           </form>
         )}
       </div>
@@ -605,6 +740,10 @@ function SetupPanel({
         ) : (
           <form onSubmit={(event) => { event.preventDefault(); onStructure(); }}>
             <h2>Profil structure</h2>
+            <div className="two">
+              <Input label="Prenom contact" value={structureForm.firstName} onChange={(firstName) => setStructureForm({ ...structureForm, firstName })} />
+              <Input label="Nom contact" value={structureForm.lastName} onChange={(lastName) => setStructureForm({ ...structureForm, lastName })} />
+            </div>
             <Input label="Nom structure" value={structureForm.name} onChange={(name) => setStructureForm({ ...structureForm, name })} />
             <div className="two">
               <Input label="SIREN" value={structureForm.siren} onChange={(siren) => setStructureForm({ ...structureForm, siren })} />
@@ -627,13 +766,14 @@ function SetupPanel({
 function AccountCard({ profile, userRow, structure }) {
   const isStructure = profile.role === "structure";
   const status = structure?.verification_status || "pending";
+  const profileName = `${profile.first_name || ""} ${profile.last_name || ""}`.trim();
 
   return (
     <div className="account">
       <div className="avatar">{isStructure ? <Building2 /> : <User />}</div>
       <div>
-        <h2>{isStructure ? structure?.name || "Structure" : `${profile.first_name || ""} ${profile.last_name || ""}`.trim()}</h2>
-        <p>{userRow?.email}</p>
+        <h2>{isStructure ? structure?.name || profileName || "Structure" : profileName || "Worker"}</h2>
+        <p>{isStructure && profileName ? `${profileName} - ${userRow?.email || ""}` : userRow?.email}</p>
         <div className="chips">
           <span><Check size={14} /> Email {userRow?.email_verified ? "verifie" : "a verifier"}</span>
           <span><Clock3 size={14} /> Telephone {userRow?.phone_verified ? "verifie" : "a verifier"}</span>
@@ -763,11 +903,13 @@ function WorkerDesk({ missions, applications, reviews, currentUserId, myApplicat
 }
 
 function MissionCard({ mission, action }) {
+  const structureName = mission.structures?.name || "Structure UROSI";
+
   return (
     <article className="item">
       <div>
         <h3>{mission.title}</h3>
-        <p>{mission.structures?.name} - {mission.city || mission.address}</p>
+        <p>{structureName} - {mission.city || mission.address}</p>
         <div className="chips">
           <span><Clock3 size={14} /> {DURATIONS.find((item) => item.value === mission.duration)?.label}</span>
           <span>{money(mission.hourly_rate_cents)} / h</span>
@@ -791,7 +933,7 @@ function ApplicationCard({ application, reviews, side, onAccept, onReject, onRev
       <div className="split">
         <div>
           <h3>{application.missions?.title}</h3>
-          <p>{side === "structure" ? `${worker?.first_name || "Worker"} ${worker?.last_name || ""}` : application.missions?.structures?.name}</p>
+          <p>{side === "structure" ? `${worker?.first_name || "Worker"} ${worker?.last_name || ""}` : application.missions?.structures?.name || "Structure UROSI"}</p>
         </div>
         <strong className={`status ${application.status}`}>{application.status}</strong>
       </div>
@@ -853,6 +995,94 @@ function money(cents) {
     style: "currency",
     currency: "EUR",
   }).format((cents || 0) / 100);
+}
+
+async function upsertUserRow(user, phone) {
+  const { error } = await supabase.from("users").upsert({
+    id: user.id,
+    email: user.email,
+    phone: phone || user.phone || "",
+    email_verified: Boolean(user.email_confirmed_at),
+    phone_verified: Boolean(user.phone_confirmed_at),
+  }, { onConflict: "id" });
+  if (error) throw error;
+}
+
+function workerProfileData(source) {
+  const normalized = normalizeProfileData(source);
+  return {
+    role: "worker",
+    first_name: normalized.first_name,
+    last_name: normalized.last_name,
+    birth_date: normalized.birth_date,
+    address: normalized.address,
+    city: normalized.city,
+    postal_code: normalized.postal_code,
+    phone: normalized.phone,
+  };
+}
+
+function structureProfileData(source) {
+  const normalized = normalizeProfileData(source);
+  return {
+    role: "structure",
+    first_name: normalized.first_name,
+    last_name: normalized.last_name,
+    phone: normalized.phone,
+    structure_name: normalized.structure_name,
+    structure_type: normalized.structure_type,
+    siren: normalized.siren,
+    siret: normalized.siret,
+    address: normalized.address,
+    city: normalized.city,
+    postal_code: normalized.postal_code,
+  };
+}
+
+function normalizeProfileData(source = {}) {
+  const role = source.role === "structure" ? "structure" : source.role === "worker" ? "worker" : "";
+  return {
+    role,
+    first_name: valueFrom(source, "firstName", "first_name"),
+    last_name: valueFrom(source, "lastName", "last_name"),
+    birth_date: valueFrom(source, "birthDate", "birth_date"),
+    address: valueFrom(source, "address"),
+    city: valueFrom(source, "city"),
+    postal_code: valueFrom(source, "postalCode", "postal_code"),
+    phone: valueFrom(source, "phone"),
+    structure_name: valueFrom(source, "name", "structure_name"),
+    structure_type: valueFrom(source, "type", "structure_type") || "association",
+    siren: valueFrom(source, "siren").replace(/\D/g, ""),
+    siret: valueFrom(source, "siret").replace(/\D/g, ""),
+  };
+}
+
+function valueFrom(source, camelKey, snakeKey = camelKey) {
+  return String(source?.[camelKey] ?? source?.[snakeKey] ?? "").trim();
+}
+
+function savePendingProfile(email, profileData) {
+  if (!email) return;
+  window.localStorage.setItem(PENDING_PROFILE_KEY, JSON.stringify({
+    email: email.toLowerCase(),
+    profile: profileData,
+  }));
+}
+
+function readPendingProfile(email) {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(PENDING_PROFILE_KEY) || "null");
+    if (!stored?.profile) return {};
+    if (email && stored.email !== email.toLowerCase()) return {};
+    return stored.profile;
+  } catch {
+    return {};
+  }
+}
+
+function clearPendingProfile(email) {
+  const stored = readPendingProfile(email);
+  if (Object.keys(stored).length) window.localStorage.removeItem(PENDING_PROFILE_KEY);
 }
 
 export default App;

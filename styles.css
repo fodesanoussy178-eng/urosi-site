@@ -210,6 +210,12 @@ h3 {
   min-height: 34px;
 }
 
+.auth-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .ghost {
   background: transparent;
 }
