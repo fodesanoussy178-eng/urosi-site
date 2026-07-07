@@ -77,6 +77,7 @@ function App() {
   const [session, setSession] = useState(null);
   const [booting, setBooting] = useState(true);
   const [authView, setAuthView] = useState("login");
+  const [setupRole, setSetupRole] = useState("worker");
   const [workerForm, setWorkerForm] = useState(emptyWorker);
   const [structureForm, setStructureForm] = useState(emptyStructure);
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
@@ -114,6 +115,7 @@ function App() {
         setMissions([]);
         setReviews([]);
         setAuthView("login");
+        setSetupRole("worker");
       }
     });
 
@@ -139,6 +141,16 @@ function App() {
     }
   }
 
+  function handleExistingAccountError(error, email) {
+    const message = String(error?.message || "").toLowerCase();
+    if (message.includes("already") || message.includes("registered") || message.includes("exists")) {
+      clearPendingProfile(email);
+      setLoginForm({ email, password: "" });
+      setAuthView("login");
+      error.message = "Ce compte existe deja. Connecte-toi avec cet email, pas besoin de te reinscrire.";
+    }
+  }
+
   async function loadAccount(authUser) {
     const userId = authUser.id;
     await ensureProfileExists(authUser);
@@ -148,13 +160,18 @@ function App() {
       supabase.from("users").select("*").eq("id", userId).maybeSingle(),
     ]);
     if (!nextProfile) {
-      await supabase.auth.signOut();
-      setNotice("Profil UROSI introuvable. Reconnecte-toi ou cree le bon type de compte.");
+      setProfile(null);
+      setUserRow(nextUser);
+      setStructures([]);
+      const metadata = normalizeProfileData(authUser.user_metadata);
+      if (metadata.role === "structure" || metadata.role === "worker") setSetupRole(metadata.role);
+      setNotice("Compte connecte. Complete le profil UROSI une seule fois, sans recreer de compte.");
       return;
     }
 
     setProfile(nextProfile);
     setUserRow(nextUser);
+    setSetupRole(nextProfile.role === "structure" ? "structure" : "worker");
 
     if (nextProfile?.role === "structure") {
       const { data } = await supabase
@@ -245,7 +262,10 @@ function App() {
       password,
       options: { data: metadata },
     });
-    if (error) throw error;
+    if (error) {
+      handleExistingAccountError(error, email);
+      throw error;
+    }
     if (!data.session?.user) {
       setNotice("Compte cree. Verifie ton email : ton profil UROSI sera recupere a la connexion.");
       setAuthView("login");
@@ -283,7 +303,10 @@ function App() {
       password,
       options: { data: metadata },
     });
-    if (error) throw error;
+    if (error) {
+      handleExistingAccountError(error, email);
+      throw error;
+    }
     if (!data.session?.user) {
       setNotice("Compte cree. Verifie ton email : ton profil structure sera recupere a la connexion.");
       setAuthView("login");
@@ -548,11 +571,18 @@ function App() {
           onLogin={() => run(login)}
         />
       ) : !profile ? (
-        <section className="panel setup">
-          <ShieldCheck />
-          <h1>UROSI</h1>
-          <p>Verification du profil.</p>
-        </section>
+        <SetupPanel
+          setupRole={setupRole}
+          setSetupRole={setSetupRole}
+          workerForm={workerForm}
+          setWorkerForm={setWorkerForm}
+          structureForm={structureForm}
+          setStructureForm={setStructureForm}
+          loading={loading}
+          onWorker={() => run(() => createWorkerProfile(session.user, workerForm), "Profil worker active.")}
+          onStructure={() => run(() => createStructureProfile(session.user, structureForm), "Structure creee et verification lancee.")}
+          onLogout={() => run(logout)}
+        />
       ) : (
         <div className="grid">
           <section className="panel">
@@ -643,6 +673,7 @@ function AuthPanel(props) {
         ) : isWorkerSignup ? (
           <form onSubmit={(event) => { event.preventDefault(); onWorker(); }}>
             <h2>Inscription worker</h2>
+            <button type="button" className="ghost auth-return" onClick={() => setAuthView("login")}>Deja un compte ? Se connecter</button>
             <div className="two">
               <Input label="Prenom" value={workerForm.firstName} onChange={(firstName) => setWorkerForm({ ...workerForm, firstName })} />
               <Input label="Nom" value={workerForm.lastName} onChange={(lastName) => setWorkerForm({ ...workerForm, lastName })} />
@@ -662,6 +693,7 @@ function AuthPanel(props) {
         ) : (
           <form onSubmit={(event) => { event.preventDefault(); onStructure(); }}>
             <h2>Inscription structure</h2>
+            <button type="button" className="ghost auth-return" onClick={() => setAuthView("login")}>Deja un compte ? Se connecter</button>
             <div className="two">
               <Input label="Prenom contact" value={structureForm.firstName} onChange={(firstName) => setStructureForm({ ...structureForm, firstName })} />
               <Input label="Nom contact" value={structureForm.lastName} onChange={(lastName) => setStructureForm({ ...structureForm, lastName })} />
@@ -695,8 +727,8 @@ function AuthPanel(props) {
 }
 
 function SetupPanel({
-  screen,
-  setScreen,
+  setupRole,
+  setSetupRole,
   workerForm,
   setWorkerForm,
   structureForm,
@@ -704,24 +736,28 @@ function SetupPanel({
   loading,
   onWorker,
   onStructure,
+  onLogout,
 }) {
+  const isWorker = setupRole === "worker";
+
   return (
     <section className="auth-grid">
       <div className="panel intro">
-        <h1>Completer le profil UROSI</h1>
-        <p>Email connecte. Ajoute maintenant les informations obligatoires du niveau 1.</p>
+        <h1>Compte retrouve</h1>
+        <p>Ton email est connecte. Complete seulement le profil manquant, sans recreer de compte.</p>
         <div className="switches">
-          <button className={screen === "worker" ? "active" : ""} onClick={() => setScreen("worker")}>
+          <button className={isWorker ? "active" : ""} onClick={() => setSetupRole("worker")}>
             <User size={16} /> Worker
           </button>
-          <button className={screen === "structure" ? "active" : ""} onClick={() => setScreen("structure")}>
+          <button className={!isWorker ? "active" : ""} onClick={() => setSetupRole("structure")}>
             <Building2 size={16} /> Structure
           </button>
         </div>
+        <button className="ghost" onClick={onLogout}><LogOut size={16} /> Revenir a la connexion</button>
       </div>
 
       <div className="panel">
-        {screen === "worker" ? (
+        {isWorker ? (
           <form onSubmit={(event) => { event.preventDefault(); onWorker(); }}>
             <h2>Profil worker</h2>
             <div className="two">
@@ -745,6 +781,12 @@ function SetupPanel({
               <Input label="Nom contact" value={structureForm.lastName} onChange={(lastName) => setStructureForm({ ...structureForm, lastName })} />
             </div>
             <Input label="Nom structure" value={structureForm.name} onChange={(name) => setStructureForm({ ...structureForm, name })} />
+            <label>
+              Type
+              <select value={structureForm.type} onChange={(event) => setStructureForm({ ...structureForm, type: event.target.value })}>
+                {STRUCTURE_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+            </label>
             <div className="two">
               <Input label="SIREN" value={structureForm.siren} onChange={(siren) => setStructureForm({ ...structureForm, siren })} />
               <Input label="SIRET" value={structureForm.siret} onChange={(siret) => setStructureForm({ ...structureForm, siret })} />

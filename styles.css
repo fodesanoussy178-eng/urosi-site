@@ -216,6 +216,13 @@ h3 {
   gap: 8px;
 }
 
+.auth-return {
+  justify-self: start;
+  border-color: #225342;
+  color: #225342;
+  font-weight: 800;
+}
+
 .ghost {
   background: transparent;
 }
