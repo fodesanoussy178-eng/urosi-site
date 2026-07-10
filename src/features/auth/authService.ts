@@ -76,3 +76,15 @@ export async function updatePassword(newPassword: string) {
   const { error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) throw error;
 }
+
+// Renvoie l'email de confirmation d'inscription (cas « email non confirmé »).
+export async function resendConfirmationEmail(email: string) {
+  const { error } = await supabase.auth.resend({ type: 'signup', email });
+  if (error) throw frenchAuthError(error);
+}
+
+// Signale si une erreur correspond a « email non confirme » pour proposer le
+// renvoi du lien directement depuis le formulaire de connexion.
+export function isUnconfirmedEmailError(e: unknown): boolean {
+  return e instanceof Error && e.message.includes("Confirme d'abord ton adresse");
+}

@@ -465,6 +465,7 @@ export function WorkerApp() {
               <ProfilCard
                 fullName={profile?.full_name || ''}
                 ville={ville}
+                phone={profile?.phone || ''}
                 isMicro={profile?.is_micro_entrepreneur ?? false}
                 bio={profile?.bio || ''}
                 skills={profile?.skills ?? []}
@@ -475,6 +476,24 @@ export function WorkerApp() {
                   notif('Profil mis à jour ✓');
                 }}
               />
+              {/* Compte : email + statut de vérification (le SMS arrive plus tard) */}
+              <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 15 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Compte</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                  <span style={{ color: T.sub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.user.email}</span>
+                  {session.user.email_confirmed_at ? (
+                    <span style={{ fontSize: 9, fontWeight: 800, color: T.green, background: T.greenBg, borderRadius: 10, padding: '2px 8px', flexShrink: 0 }}>✓ Email vérifié</span>
+                  ) : (
+                    <span style={{ fontSize: 9, fontWeight: 800, color: T.amber, background: T.amberBg, borderRadius: 10, padding: '2px 8px', flexShrink: 0 }}>Email à confirmer</span>
+                  )}
+                </div>
+                {profile?.phone && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 12, marginTop: 7 }}>
+                    <span style={{ color: T.sub }}>{profile.phone}</span>
+                    <span style={{ fontSize: 9, fontWeight: 800, color: T.mu, background: T.row, borderRadius: 10, padding: '2px 8px', flexShrink: 0 }}>Vérification SMS bientôt</span>
+                  </div>
+                )}
+              </div>
               <AideRegles onOpen={setDocKey} />
               <button onClick={() => signOut()} style={{ textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 4px', fontSize: 11, color: T.sub, fontWeight: 600 }}>
                 Se déconnecter
@@ -721,6 +740,7 @@ export function WorkerApp() {
 function ProfilCard({
   fullName,
   ville,
+  phone,
   isMicro,
   bio,
   skills,
@@ -728,13 +748,23 @@ function ProfilCard({
 }: {
   fullName: string;
   ville: string;
+  phone: string;
   isMicro: boolean;
   bio: string;
   skills: string[];
-  onSave: (updates: { full_name: string; is_micro_entrepreneur: boolean; bio: string | null; skills: string[] }) => Promise<void>;
+  onSave: (updates: {
+    full_name: string;
+    is_micro_entrepreneur: boolean;
+    city: string | null;
+    phone: string | null;
+    bio: string | null;
+    skills: string[];
+  }) => Promise<void>;
 }) {
   const [name, setName] = useState(fullName);
   const [micro, setMicro] = useState(isMicro);
+  const [cityText, setCityText] = useState(ville);
+  const [phoneText, setPhoneText] = useState(phone);
   const [bioText, setBioText] = useState(bio);
   const [skillsText, setSkillsText] = useState(skills.join(', '));
   const [busy, setBusy] = useState(false);
@@ -743,7 +773,16 @@ function ProfilCard({
     <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 15 }}>
       <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Nom complet</div>
       <input aria-label="Nom complet" value={name} onChange={(e) => setName(e.target.value)} style={{ ...inp, marginBottom: 12 }} />
-      {ville && <div style={{ fontSize: 11, color: T.mu, marginBottom: 12 }}>📍 {ville}</div>}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Ville</div>
+          <input aria-label="Ville" value={cityText} onChange={(e) => setCityText(e.target.value)} placeholder="Lille" style={{ ...inp, marginBottom: 0 }} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Téléphone</div>
+          <input aria-label="Téléphone" value={phoneText} onChange={(e) => setPhoneText(e.target.value)} placeholder="06 12 34 56 78" inputMode="tel" style={{ ...inp, marginBottom: 0 }} />
+        </div>
+      </div>
       <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Bio (visible sur ton CV vivant)</div>
       <textarea
         aria-label="Bio"
@@ -780,6 +819,8 @@ function ProfilCard({
             await onSave({
               full_name: name,
               is_micro_entrepreneur: micro,
+              city: cityText.trim() || null,
+              phone: phoneText.trim() || null,
               bio: bioText.trim() || null,
               skills: skillsText
                 .split(',')
