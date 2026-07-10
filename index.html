@@ -4,17 +4,347 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0a0a14" />
-    <meta name="description" content="UROSI — micro-missions de la Métropole Européenne de Lille." />
-    <title>UROSI</title>
+    <meta name="description" content="UROSI — micro-missions de la Métropole Européenne de Lille. Missions de 5h max, rémunération transparente qui monte selon l'horaire, paiement immédiat sur wallet." />
+    <title>UROSI — Micro-missions de la MEL</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800;9..40,900&display=swap"
       rel="stylesheet"
     />
-    <script type="module" src="/src/main.tsx"></script>
+    <style>
+      :root {
+        --bg: #0a0a14;
+        --card: #111827;
+        --cb: #1f2937;
+        --row: #0f172a;
+        --text: #f1f5f9;
+        --sub: #9ca3af;
+        --mu: #6b7280;
+        --cyan: #22d3ee;
+        --green: #4ade80;
+        --green-bg: #052e16;
+        --green-border: #166534;
+        --amber: #fbbf24;
+        --grad: linear-gradient(135deg, #1d4ed8, #0891b2);
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+        line-height: 1.5;
+        overflow-x: hidden;
+      }
+      a { color: inherit; text-decoration: none; }
+      .wrap { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+
+      /* Nav */
+      nav {
+        position: sticky; top: 0; z-index: 50;
+        background: rgba(10, 10, 20, 0.85); backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--cb);
+      }
+      .nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; max-width: 960px; margin: 0 auto; }
+      .brand { display: flex; align-items: center; gap: 9px; font-weight: 900; font-size: 17px; letter-spacing: 1px; }
+      .brand-dot { width: 30px; height: 30px; border-radius: 9px; background: var(--grad); display: flex; align-items: center; justify-content: center; font-size: 15px; color: #fff; }
+      .nav-links { display: flex; gap: 18px; font-size: 12.5px; font-weight: 700; color: var(--sub); }
+      .nav-links a:hover { color: var(--text); }
+      @media (max-width: 720px) { .nav-links { display: none; } }
+      .btn {
+        display: inline-block; border: none; cursor: pointer; font-family: inherit;
+        border-radius: 11px; font-weight: 900; transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+      .btn:hover { transform: translateY(-1px); }
+      .btn-grad { background: var(--grad); color: #fff; padding: 10px 18px; font-size: 13px; box-shadow: 0 4px 18px rgba(8, 145, 178, 0.35); }
+      .btn-white { background: #fff; color: #000; padding: 14px 26px; font-size: 15px; }
+      .btn-ghost { background: var(--card); color: var(--text); border: 1px solid var(--cb); padding: 14px 26px; font-size: 15px; font-weight: 800; }
+
+      /* Hero */
+      .hero { position: relative; text-align: center; padding: 72px 0 60px; }
+      .hero-blob {
+        position: absolute; top: -120px; left: 50%; transform: translateX(-50%);
+        width: 560px; height: 560px; border-radius: 50%;
+        background: radial-gradient(circle, rgba(8, 145, 178, 0.22), transparent 65%);
+        pointer-events: none; animation: pulse 7s ease-in-out infinite;
+      }
+      @keyframes pulse { 0%, 100% { opacity: 0.7; transform: translateX(-50%) scale(1); } 50% { opacity: 1; transform: translateX(-50%) scale(1.08); } }
+      .hero h1 { font-size: clamp(34px, 7vw, 58px); font-weight: 900; letter-spacing: -2px; line-height: 1.08; margin-bottom: 16px; }
+      .grad-text { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+      .hero p { font-size: 15.5px; color: var(--sub); max-width: 560px; margin: 0 auto 26px; }
+      .hero-ctas { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 34px; }
+      .hero-stats { display: flex; gap: 26px; justify-content: center; flex-wrap: wrap; }
+      .hero-stats div { text-align: center; }
+      .hero-stats b { display: block; font-size: 21px; font-weight: 900; }
+      .hero-stats span { font-size: 10.5px; color: var(--mu); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+
+      /* Sections */
+      section { padding: 54px 0; }
+      .sec-tag { font-size: 11px; font-weight: 800; color: var(--cyan); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+      .sec-title { font-size: clamp(24px, 4.5vw, 34px); font-weight: 900; letter-spacing: -1px; margin-bottom: 10px; }
+      .sec-sub { font-size: 14px; color: var(--sub); max-width: 620px; margin-bottom: 28px; }
+
+      /* Reveal animation */
+      .reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.6s ease, transform 0.6s ease; }
+      .reveal.in { opacity: 1; transform: none; }
+
+      /* Mission cards */
+      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+      .mcard { background: var(--card); border: 1px solid var(--cb); border-radius: 16px; padding: 18px; transition: transform 0.2s ease, border-color 0.2s ease; }
+      .mcard:hover { transform: translateY(-4px); border-color: #0e7490; }
+      .mcard .price { font-size: 30px; font-weight: 900; letter-spacing: -1.5px; }
+      .badge { display: inline-block; font-size: 9.5px; font-weight: 800; border-radius: 10px; padding: 2px 8px; vertical-align: middle; margin-left: 7px; }
+      .badge-boost { color: #facc15; background: rgba(66, 32, 6, 0.4); border: 1px solid #713f12; }
+      .badge-urgent { color: var(--amber); background: #1c1400; }
+      .badge-demo { color: var(--mu); background: var(--row); }
+      .badge-green { color: var(--green); background: var(--green-bg); }
+      .mcard h3 { font-size: 15px; font-weight: 800; margin: 8px 0 3px; }
+      .mcard .meta { font-size: 11px; color: var(--mu); margin-bottom: 12px; }
+      .mcard .org { font-size: 11.5px; font-weight: 700; color: var(--sub); margin-bottom: 2px; }
+      .mcard .cta { display: block; text-align: center; background: #fff; color: #000; border-radius: 10px; padding: 10px 0; font-size: 13px; font-weight: 900; transition: opacity 0.15s; }
+      .mcard .cta:hover { opacity: 0.88; }
+      .mcard .cta.solidaire { background: #16a34a; color: #fff; }
+      .cards-note { font-size: 10.5px; color: var(--mu); margin-top: 12px; }
+
+      /* Moteur */
+      .engine { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+      @media (max-width: 720px) { .engine { grid-template-columns: 1fr; } }
+      .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+      .chip { font-size: 11.5px; font-weight: 700; background: var(--row); border: 1px solid var(--cb); border-radius: 20px; padding: 6px 13px; }
+      .chip b { color: var(--green); font-weight: 900; }
+      .calc { background: var(--card); border: 1px solid var(--cb); border-radius: 16px; padding: 18px; }
+      .calc-row { display: flex; justify-content: space-between; font-size: 13px; padding: 5px 0; color: var(--sub); }
+      .calc-row.plus { color: var(--green); }
+      .calc-row.total { color: var(--text); font-weight: 900; font-size: 15px; border-top: 1px solid var(--cb); margin-top: 6px; padding-top: 10px; }
+      .calc-note { font-size: 10px; color: var(--mu); margin-top: 10px; }
+
+      /* Structures / features */
+      .feats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+      .feat { background: var(--card); border: 1px solid var(--cb); border-radius: 16px; padding: 18px; transition: transform 0.2s ease; }
+      .feat:hover { transform: translateY(-3px); }
+      .feat .ico { font-size: 22px; margin-bottom: 9px; }
+      .feat h3 { font-size: 14px; font-weight: 800; margin-bottom: 5px; }
+      .feat p { font-size: 12px; color: var(--sub); }
+
+      /* Transparence */
+      .trans { background: var(--card); border: 1px solid var(--cb); border-radius: 18px; padding: 24px; }
+      .trans ul { list-style: none; }
+      .trans li { display: flex; gap: 11px; padding: 9px 0; font-size: 13px; color: var(--sub); align-items: flex-start; }
+      .trans li b { color: var(--text); }
+      .trans .check { color: var(--green); font-weight: 900; flex-shrink: 0; }
+
+      /* Solidaire */
+      .solid { background: var(--green-bg); border: 1px solid var(--green-border); border-radius: 18px; padding: 26px; }
+      .solid .sec-tag { color: var(--green); }
+      .solid p { color: #86efac; font-size: 13.5px; max-width: 620px; }
+
+      /* FAQ */
+      details { background: var(--card); border: 1px solid var(--cb); border-radius: 13px; margin-bottom: 9px; overflow: hidden; }
+      summary { cursor: pointer; padding: 15px 17px; font-size: 13.5px; font-weight: 800; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+      summary::-webkit-details-marker { display: none; }
+      summary::after { content: '+'; color: var(--cyan); font-size: 17px; font-weight: 900; transition: transform 0.2s; }
+      details[open] summary::after { transform: rotate(45deg); }
+      details p { padding: 0 17px 15px; font-size: 12.5px; color: var(--sub); }
+
+      /* Final CTA + footer */
+      .final { text-align: center; padding: 64px 0 40px; }
+      footer { border-top: 1px solid var(--cb); padding: 26px 0 40px; text-align: center; font-size: 11px; color: var(--mu); line-height: 1.8; }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <nav>
+      <div class="nav-inner">
+        <a class="brand" href="/"><span class="brand-dot">U</span>UROSI</a>
+        <div class="nav-links">
+          <a href="#missions">Missions</a>
+          <a href="#moteur">Le moteur</a>
+          <a href="#structures">Structures</a>
+          <a href="#solidaire">Solidaire</a>
+          <a href="#faq">FAQ</a>
+        </div>
+        <a class="btn btn-grad" href="/demo.html">Ouvrir l'app →</a>
+      </div>
+    </nav>
+
+    <header class="hero wrap">
+      <div class="hero-blob"></div>
+      <h1>Des missions courtes,<br /><span class="grad-text">payées au juste prix.</span></h1>
+      <p>
+        Micro-missions de la Métropole Européenne de Lille. 5 heures maximum, rémunération transparente qui monte selon
+        l'horaire, le jour et l'urgence — payée sur ton wallet dès la mission terminée.
+      </p>
+      <div class="hero-ctas">
+        <a class="btn btn-white" href="/demo.html">Trouver une mission</a>
+        <a class="btn btn-ghost" href="/demo.html">Voir la démo</a>
+      </div>
+      <div class="hero-stats">
+        <div><b>5h max</b><span>par mission</span></div>
+        <div><b>+50 %</b><span>les jours fériés</span></div>
+        <div><b>Immédiat</b><span>paiement wallet</span></div>
+        <div><b>MEL</b><span>95 communes</span></div>
+      </div>
+    </header>
+
+    <section id="missions" class="wrap reveal">
+      <div class="sec-tag">Missions</div>
+      <div class="sec-title">Le flux, en direct dans l'app</div>
+      <div class="sec-sub">
+        Les missions, leurs prix, dates et horaires vivent dans l'application et changent avec les annonces publiées par
+        les structures. Voici à quoi ressemblent les cartes :
+      </div>
+      <div class="cards">
+        <div class="mcard">
+          <div class="price">52,40 €<span class="badge badge-boost">⚡ boostée (base 42 €)</span><span class="badge badge-demo">exemple</span></div>
+          <h3>Renfort service du midi</h3>
+          <div class="org">Brasserie du Beffroi</div>
+          <div class="meta">📍 Lille · samedi · 11:30 · 4 h</div>
+          <a class="cta" href="/demo.html">Postuler</a>
+        </div>
+        <div class="mcard">
+          <div class="price">67,20 €<span class="badge badge-boost">⚡ boostée</span><span class="badge badge-urgent">Urgent</span><span class="badge badge-demo">exemple</span></div>
+          <h3>Inventaire de nuit</h3>
+          <div class="org">Logistique Wazemmes</div>
+          <div class="meta">📍 Lille · ce soir · 22:00 · 5 h</div>
+          <a class="cta" href="/demo.html">Postuler</a>
+        </div>
+        <div class="mcard">
+          <div class="price" style="color: var(--green); font-size: 24px">Solidaire<span class="badge badge-green">0 €</span><span class="badge badge-demo">exemple</span></div>
+          <h3>Distribution alimentaire</h3>
+          <div class="org">Les Restos du Nord</div>
+          <div class="meta">📍 Roubaix · samedi · 09:00 · 3 h</div>
+          <a class="cta solidaire" href="/demo.html">🤝 Participer</a>
+        </div>
+      </div>
+      <div class="cards-note">Cartes illustratives — les vraies missions (prix, dates, horaires) viennent de la base et s'affichent dans <a href="/demo.html" style="color: var(--cyan)">l'application</a>.</div>
+    </section>
+
+    <section id="moteur" class="wrap reveal">
+      <div class="sec-tag">⚡ Le moteur</div>
+      <div class="sec-title">Une rémunération qui s'adapte, pas un tarif figé</div>
+      <div class="sec-sub">
+        Chaque structure configure ses règles de majoration. Le moteur les applique automatiquement à la publication, et
+        le travailleur voit le détail noir sur blanc avant de postuler.
+      </div>
+      <div class="engine">
+        <div class="chips">
+          <span class="chip">🌅 Tôt le matin (5h-8h) <b>+10 %</b></span>
+          <span class="chip">🌙 Soir &amp; nuit (21h-6h) <b>+25 %</b></span>
+          <span class="chip">🗓 Week-end <b>+20 %</b></span>
+          <span class="chip">🎆 Jour férié <b>+50 %</b></span>
+          <span class="chip">⚡ Urgence <b>+15 %</b></span>
+          <span class="chip">💪 Difficulté élevée <b>+10 %</b></span>
+          <span class="chip">📍 Site éloigné <b>+3 €</b></span>
+          <span class="chip">📈 Secteur en tension <b>+10 %</b></span>
+          <span class="chip">🎁 Bonus structure <b>+2 €</b></span>
+        </div>
+        <div class="calc">
+          <div class="calc-row"><span>Base</span><span>42,00 €</span></div>
+          <div class="calc-row plus"><span>Majoration week-end</span><span>+8,40 €</span></div>
+          <div class="calc-row plus"><span>Majoration nuit (21h-6h)</span><span>+10,50 €</span></div>
+          <div class="calc-row plus"><span>Mission urgente</span><span>+6,30 €</span></div>
+          <div class="calc-row total"><span>Payé au travailleur</span><span>67,20 €</span></div>
+          <div class="calc-note">Exemple de calcul : mission de nuit un samedi, publiée en urgence.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="structures" class="wrap reveal">
+      <div class="sec-tag">🏢 Structures</div>
+      <div class="sec-title">Publier, choisir, payer — sans friction</div>
+      <div class="sec-sub">Restaurants, commerces, associations, collectivités : un renfort fiable en quelques heures.</div>
+      <div class="feats">
+        <div class="feat"><div class="ico">📝</div><h3>Publication en 2 minutes</h3><p>Titre, adresse, jour, heure, durée (5h max), tarif de base — le moteur calcule le reste et l'aperçu s'affiche en direct.</p></div>
+        <div class="feat"><div class="ico">⚙️</div><h3>Règles configurables</h3><p>Week-end, fériés, nuit, urgence, distance, tension… active des modèles en un clic ou crée tes propres règles.</p></div>
+        <div class="feat"><div class="ico">👤</div><h3>Candidats prouvés</h3><p>CV vivant : missions réellement effectuées, présence validée par QR, notes des structures. Informatif, jamais bloquant.</p></div>
+        <div class="feat"><div class="ico">💶</div><h3>Wallet &amp; statistiques</h3><p>Paiement automatique à la fin de mission, commission transparente, tableau de bord complet : missions, candidatures, flux payés.</p></div>
+      </div>
+    </section>
+
+    <section class="wrap reveal">
+      <div class="sec-tag">🔍 Transparence</div>
+      <div class="sec-title">Tout est visible, rien n'est caché</div>
+      <div class="trans">
+        <ul>
+          <li><span class="check">✓</span><span><b>Le détail du prix est public.</b> Base + majorations, ligne par ligne, affiché au travailleur avant de postuler.</span></li>
+          <li><span class="check">✓</span><span><b>La commission UROSI est affichée</b> à la structure sur chaque paiement — pas de frais cachés.</span></li>
+          <li><span class="check">✓</span><span><b>Les notes sont informatives, jamais bloquantes.</b> Aucun algorithme ne filtre l'accès aux missions (inscrit aux CGU).</span></li>
+          <li><span class="check">✓</span><span><b>Plafonds légaux appliqués en base :</b> 5h par mission, 3 jours consécutifs max chez la même structure pour les non micro-entrepreneurs.</span></li>
+          <li><span class="check">✓</span><span><b>Ta position reste dans ton navigateur.</b> La géolocalisation sert à trier le flux, elle n'est jamais stockée.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="solidaire" class="wrap reveal">
+      <div class="solid">
+        <div class="sec-tag">🤝 Missions solidaires</div>
+        <div class="sec-title" style="font-size: 24px">Donner un coup de main, ça compte aussi</div>
+        <p>
+          Les associations ESS publient des missions bénévoles à 0 €. Elles rejoignent le CV vivant des participants comme
+          preuve d'engagement — mêmes cartes, même pointage QR, même reconnaissance.
+        </p>
+      </div>
+    </section>
+
+    <section id="faq" class="wrap reveal">
+      <div class="sec-tag">FAQ</div>
+      <div class="sec-title">Questions fréquentes</div>
+      <details>
+        <summary>Comment suis-je payé·e après une mission ?</summary>
+        <p>Dès que la mission est marquée terminée, ton wallet UROSI est crédité automatiquement du montant affiché (base + majorations). Tu peux ensuite demander un retrait vers ton compte bancaire depuis l'app.</p>
+      </details>
+      <details>
+        <summary>Pourquoi le prix d'une mission change selon l'horaire ?</summary>
+        <p>Les structures configurent des règles de majoration (nuit, week-end, férié, urgence…). Le moteur les applique à la publication et le détail complet est affiché sur chaque carte — le prix que tu vois est le prix payé.</p>
+      </details>
+      <details>
+        <summary>C'est quoi, le CV vivant ?</summary>
+        <p>Ton historique de missions réellement effectuées : présence validée par QR, notes reçues des structures, compétences. Il se construit tout seul, mission après mission, et remplace le CV déclaratif.</p>
+      </details>
+      <details>
+        <summary>Une mauvaise note peut-elle me bloquer ?</summary>
+        <p>Non. Les notes sont informatives, jamais bloquantes : aucun filtre automatique ne restreint ton accès aux missions. C'est inscrit dans les CGU et appliqué techniquement.</p>
+      </details>
+      <details>
+        <summary>Quelles sont les limites légales ?</summary>
+        <p>5 heures maximum par mission et, pour les non micro-entrepreneurs, 3 jours consécutifs maximum chez la même structure. Ces plafonds sont appliqués directement en base de données, pas contournables.</p>
+      </details>
+      <details>
+        <summary>Comment une structure commence-t-elle ?</summary>
+        <p>Inscription avec SIRET, activation de l'abonnement, et la première mission peut être publiée en 2 minutes. Les règles de rémunération et les statistiques sont dans le tableau de bord.</p>
+      </details>
+    </section>
+
+    <div class="final wrap reveal">
+      <div class="sec-title">Prêt·e à essayer ?</div>
+      <div class="sec-sub" style="margin: 0 auto 22px; text-align: center">L'application est ouverte — missions réelles, candidatures, wallet, messagerie.</div>
+      <a class="btn btn-grad" style="padding: 16px 36px; font-size: 16px" href="/demo.html">Ouvrir l'app →</a>
+    </div>
+
+    <footer>
+      UROSI · micro-missions de la Métropole Européenne de Lille<br />
+      Modèle mandataire · plafond légal 5h/mission · notes informatives, jamais bloquantes
+    </footer>
+
+    <script>
+      // Animation d'apparition au scroll (progressive enhancement).
+      var els = document.querySelectorAll('.reveal');
+      if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (e) {
+              if (e.isIntersecting) {
+                e.target.classList.add('in');
+                io.unobserve(e.target);
+              }
+            });
+          },
+          { threshold: 0.12 },
+        );
+        els.forEach(function (el) { io.observe(el); });
+      } else {
+        els.forEach(function (el) { el.classList.add('in'); });
+      }
+    </script>
   </body>
 </html>

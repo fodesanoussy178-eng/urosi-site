@@ -4,8 +4,8 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "redirects": [
-    { "source": "/demo.html", "destination": "/", "permanent": false },
-    { "source": "/demo", "destination": "/", "permanent": false }
+    { "source": "/demo", "destination": "/demo.html", "permanent": false },
+    { "source": "/app", "destination": "/demo.html", "permanent": false }
   ],
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [{ "source": "/(.*)", "destination": "/demo.html" }]
 }
