@@ -5,7 +5,12 @@ import { Logo } from '@/components/ui/Logo';
 import { Stars } from '@/components/ui/Stars';
 import { PricingDetails } from '@/components/ui/PricingDetails';
 import { T, FONT } from '@/components/ui/theme';
-import { fetchOpenMissions, type MissionWithStructure } from '@/features/missions/missionsService';
+import {
+  fetchOpenMissions,
+  subscribeToMissionFeed,
+  unsubscribeMissionFeed,
+  type MissionWithStructure,
+} from '@/features/missions/missionsService';
 import type { PricingBreakdown } from '@/types/database.types';
 import { formatEuros, formatHours } from '@/lib/format';
 
@@ -139,14 +144,19 @@ export function LandingPage() {
 
   useEffect(() => {
     let active = true;
-    fetchOpenMissions()
-      .then((rows) => {
-        if (!active) return;
-        setMissions(rows.length > 0 ? rows.slice(0, 6).map(toLanding) : DEMO_MISSIONS);
-      })
-      .catch(() => active && setMissions(DEMO_MISSIONS));
+    const load = () =>
+      fetchOpenMissions()
+        .then((rows) => {
+          if (!active) return;
+          setMissions(rows.length > 0 ? rows.slice(0, 6).map(toLanding) : DEMO_MISSIONS);
+        })
+        .catch(() => active && setMissions((prev) => prev ?? DEMO_MISSIONS));
+    load();
+    // Démo vivante : les publications/clôtures mettent la liste à jour en direct.
+    const channel = subscribeToMissionFeed(load);
     return () => {
       active = false;
+      unsubscribeMissionFeed(channel);
     };
   }, []);
 

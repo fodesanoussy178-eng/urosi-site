@@ -10,7 +10,12 @@ import { NotificationBell } from '@/components/ui/NotificationBell';
 import { ChatSheet } from '@/components/ui/ChatSheet';
 import { WalletCard } from '@/components/ui/WalletCard';
 import { PricingDetails } from '@/components/ui/PricingDetails';
-import { fetchOpenMissions, type MissionWithStructure } from '@/features/missions/missionsService';
+import {
+  fetchOpenMissions,
+  subscribeToMissionFeed,
+  unsubscribeMissionFeed,
+  type MissionWithStructure,
+} from '@/features/missions/missionsService';
 import {
   applyToMission,
   completeApplication,
@@ -94,6 +99,15 @@ export function WorkerApp() {
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
+
+  // Flux en direct : toute mission publiée/clôturée rafraîchit la liste.
+  useEffect(() => {
+    const channel = subscribeToMissionFeed(() => {
+      load();
+    });
+    return () => unsubscribeMissionFeed(channel);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 

@@ -1,3 +1,4 @@
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import type { Mission, MissionInsert } from './types';
 
@@ -16,6 +17,20 @@ export async function fetchOpenMissions(): Promise<MissionWithStructure[]> {
     .order('scheduled_date', { ascending: true });
   if (error) throw error;
   return (data ?? []) as unknown as MissionWithStructure[];
+}
+
+// Flux en direct : la table missions est publiee sur supabase_realtime.
+// Toute publication / cloture / modification declenche onChange — le flux
+// se met a jour sans recharger la page.
+export function subscribeToMissionFeed(onChange: () => void): RealtimeChannel {
+  return supabase
+    .channel('missions-feed')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'missions' }, () => onChange())
+    .subscribe();
+}
+
+export function unsubscribeMissionFeed(channel: RealtimeChannel): void {
+  supabase.removeChannel(channel);
 }
 
 export async function fetchMissionsForStructure(structureId: string): Promise<Mission[]> {
