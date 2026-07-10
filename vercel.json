@@ -1,3 +1,11 @@
 {
+  "framework": "vite",
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "redirects": [
+    { "source": "/demo.html", "destination": "/", "permanent": false },
+    { "source": "/demo", "destination": "/", "permanent": false }
+  ],
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
