@@ -1,24 +1,42 @@
 import { useState } from 'react';
 import { Fld } from '@/components/ui/Fld';
 import { T, inp } from '@/components/ui/theme';
-import { requestPasswordReset, signIn } from './authService';
+import { isUnconfirmedEmailError, requestPasswordReset, resendConfirmationEmail, signIn } from './authService';
 
 export function SignInForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [showResend, setShowResend] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function submit() {
     if (busy) return;
     setError(null);
     setInfo(null);
+    setShowResend(false);
     setBusy(true);
     try {
       await signIn({ email: email.trim(), password });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur.');
+      if (isUnconfirmedEmailError(e)) setShowResend(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resend() {
+    if (busy || !email.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await resendConfirmationEmail(email.trim());
+      setInfo('Email de confirmation renvoyé ✓ — ouvre le lien reçu puis reconnecte-toi.');
+      setShowResend(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Envoi impossible.');
     } finally {
       setBusy(false);
     }
@@ -61,6 +79,14 @@ export function SignInForm() {
       </Fld>
       {error && <div style={{ fontSize: 12, color: T.red, marginBottom: 10 }}>{error}</div>}
       {info && <div style={{ fontSize: 12, color: T.green, marginBottom: 10 }}>{info}</div>}
+      {showResend && (
+        <button
+          onClick={resend}
+          style={{ width: '100%', background: T.amberBg, color: T.amber, border: `1px solid ${T.amberBorder}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer', marginBottom: 10 }}
+        >
+          ✉ Renvoyer l'email de confirmation
+        </button>
+      )}
       <button
         onClick={submit}
         disabled={busy}
