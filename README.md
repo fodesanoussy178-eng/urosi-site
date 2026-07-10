@@ -1,95 +1,98 @@
-# UROSI
+# Urosi-t
 
-Application React/Vite connectee a Supabase pour `urosi.fr`.
+Plateforme de micro-missions de la MEL (modele mandataire). Application
+React + TypeScript branchee sur une vraie base Supabase (Postgres + Auth +
+Row Level Security) — plus un prototype a donnees fictives.
 
-## Ce qui est pret
+## Stack
 
-- Authentification Supabase par email et mot de passe.
-- Inscription worker avec prenom, nom, date de naissance, adresse et telephone.
-- Inscription structure avec email, telephone, SIRET/SIREN et statut de verification.
-- Publication d'une vraie mission par une structure.
-- Apparition des missions publiees cote worker.
-- Candidature worker sur une mission.
-- Suivi des candidatures cote structure.
-- Notes par etoiles et signalement en fin de mission.
-- Migration SQL avec les tables demandees et RLS activee.
-- Edge Function `verify-structure` pour brancher l'API Sirene / Annuaire Entreprises cote serveur.
+- **React 18 + TypeScript** (Vite)
+- **react-router-dom** pour le routing et les vues protegees par role
+- **Supabase** : Postgres, Auth, Row Level Security. Aucune donnee mockee :
+  tout passe par les tables `profiles`, `structures`, `missions`,
+  `applications` definies dans `supabase/migrations/`.
+- **Vitest + Testing Library** pour les tests
 
-## Installation
+## Architecture
 
-```bash
-pnpm install
-cp .env.example .env.local
-pnpm run dev
+```
+src/
+  app/                 assemblage des pages (layout, routing par role)
+  components/ui/       primitives visuelles (Button, TextField, theme...)
+  features/
+    auth/              formulaire, service Supabase Auth, contexte de session
+    missions/          liste des missions, candidatures (cote travailleur)
+    structure/          creation de mission, gestion des candidatures (cote structure)
+    profile/           edition du profil
+  lib/                 client Supabase, formatage, config env
+  types/               types generes/alignes sur le schema Supabase
+supabase/
+  migrations/          schema SQL, RLS, triggers (source de verite du backend)
+  seed.sql             jeu de donnees de demo, dev local uniquement
 ```
 
-Le projet contient deja `.env.production` avec les valeurs publiques Supabase
-necessaires au deploiement Vercel. Pour le developpement local, tu peux aussi
-creer `.env.local` :
+Le design visuel (theme sombre, cartes, badges) est centralise dans
+`src/components/ui/theme.ts` et reste identique au prototype d'origine.
+
+## Demarrage
 
 ```bash
-VITE_SUPABASE_URL=https://TON-PROJET.supabase.co
-VITE_SUPABASE_ANON_KEY=ta-cle-anon-publique
+npm install
+cp .env.example .env   # renseigne VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY
+npm run dev            # http://localhost:5173
 ```
 
-Ne jamais mettre la cle `service_role` dans l'app React ou dans GitHub.
+Voir [`SETUP.md`](./SETUP.md) pour le branchement complet du backend
+Supabase (migrations, auth, variables d'environnement).
 
-## Mise en ligne sur urosi.fr
+## Scripts
 
-1. Creer un projet sur Supabase.
-2. Copier l'URL du projet et la cle `anon public`.
-3. Vercel peut utiliser `.env.production` directement. Les variables Vercel
-   peuvent aussi etre renseignees dans le dashboard si tu veux les surcharger.
-4. Lancer la migration SQL.
-5. Deployer l'Edge Function `verify-structure`.
-6. Publier le site React/Vite sur le domaine `urosi.fr`.
+| Commande | Description |
+| --- | --- |
+| `npm run dev` | serveur de developpement |
+| `npm run build` | typecheck + build de production |
+| `npm run typecheck` | verification TypeScript seule |
+| `npm run lint` | ESLint |
+| `npm test` | tests Vitest |
+| `npm run preview` | previsualise le build de production |
 
-Variables Vercel :
+## Fonctionnalites
 
-```bash
-VITE_SUPABASE_URL=https://nksxwbkpazcyoumcwzll.supabase.co
-VITE_SUPABASE_ANON_KEY=sb_publishable_rEaF-qUpBDDQEeYxdTrgBQ_5s77Lwty
-```
+- Auth email persistante (inscription Worker/Structure, connexion, mot de
+  passe oublie via `/reinitialisation`).
+- Publication et gestion de missions (secteur, difficulte, urgence, heure,
+  geolocalisation MEL) et candidatures avec pointage QR.
+- **Remuneration intelligente** : regles configurables par la structure
+  (week-end, jours feries, nuit, duree, secteur, difficulte, urgence,
+  distance, tension offre/demande, bonus). Calcul en SQL, apercu live a la
+  publication, detail transparent affiche au travailleur.
+- **Paiements + wallet** : paiement automatique a la completion (commission
+  plateforme incluse), wallets credite/debite, historique complet, Edge
+  Function `psp` prete pour Lemonway/Stripe.
+- **Messagerie temps reel** par mission (Supabase Realtime) et
+  **notifications** en direct (candidatures, decisions, paiements, notes,
+  retards, messages).
+- **CV vivant** (missions prouvees + notes bidirectionnelles), statistiques
+  Worker et Structure, wallet, abonnement structure.
 
-Build command :
+## Modele metier (mandataire)
 
-```bash
-pnpm run build
-```
+- Une structure publie des missions (`missions`), plafonnees a **5h** par
+  mission (contrainte `CHECK` en base, pas contournable cote client).
+- Un travailleur postule (`applications`). Un trigger Postgres bloque
+  l'acceptation d'une **4e journee consecutive** chez la meme structure pour
+  les travailleurs non micro-entrepreneurs.
+- L'indice de fiabilite (`reliability_index`) est calcule en base et n'est
+  jamais utilise pour filtrer l'acces aux missions.
 
-Le dossier de sortie est :
+Voir `supabase/migrations/0001_schema.sql` (schema), `0002_functions.sql`
+(triggers/fonctions) et `0003_rls.sql` (policies) pour le detail.
 
-```bash
-dist
-```
+## Hors perimetre (roadmap)
 
-Important : ce projet est une app React/Vite. Il ne faut pas ouvrir le fichier
-`index.html` source par double-clic. En local, utiliser `pnpm run dev`. Sur
-Vercel, utiliser les reglages ci-dessus.
-
-## Base de donnees
-
-Appliquer la migration :
-
-```bash
-supabase link --project-ref TON_PROJECT_REF
-supabase db push
-```
-
-ou copier le SQL de `supabase/migrations/202607070001_urosi_core.sql` dans l'editeur SQL Supabase.
-
-## Verification structure
-
-La verification SIRET/SIREN doit se faire cote serveur, via l'Edge Function :
-
-```bash
-supabase functions deploy verify-structure
-```
-
-Configurer ensuite les secrets necessaires selon l'API choisie :
-
-```bash
-supabase secrets set ENTREPRISES_API_TOKEN=...
-```
-
-L'app met le statut structure en `pending` tant que l'appel API n'est pas configure.
+- PSP reel : l'Edge Function `psp` simule le provisionnement/retrait ;
+  brancher Lemonway ou Stripe en suivant ses commentaires (webhook de
+  confirmation avant credit du wallet).
+- Auth par SMS (OTP) : necessite un provider (Twilio/MessageBird) configure
+  dans le dashboard Supabase. Le telephone est deja collecte sur le profil.
+- Back-office admin.
