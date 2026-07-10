@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from '@/features/auth/AuthContext';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { T, FONT } from '@/components/ui/theme';
 import { EntryPage } from '@/app/EntryPage';
+import { LandingPage } from '@/app/LandingPage';
 import { SignInPage } from '@/features/auth/SignInPage';
 import { WorkerSignupPage } from '@/features/auth/WorkerSignupPage';
 import { StructureSignupPage } from '@/features/auth/StructureSignupPage';
@@ -33,7 +34,10 @@ function AppShell() {
   if (!session) {
     return (
       <Routes>
-        <Route path="/" element={<EntryPage />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/acces" element={<EntryPage />} />
+        {/* Non connecté : /app renvoie vers la connexion, puis l'app s'ouvre. */}
+        <Route path="/app" element={<Navigate to="/connexion" replace />} />
         <Route path="/connexion" element={<SignInPage />} />
         <Route path="/inscription/travailleur" element={<WorkerSignupPage />} />
         <Route path="/inscription/structure" element={<StructureSignupPage />} />
@@ -50,9 +54,11 @@ function AppShell() {
 
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/app" element={profile.role === 'structure_admin' ? <StructureApp /> : <WorkerApp />} />
       <Route path="/reinitialisation" element={<ResetPasswordPage />} />
       <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
-      <Route path="*" element={profile.role === 'structure_admin' ? <StructureApp /> : <WorkerApp />} />
+      <Route path="*" element={<Navigate to="/app" replace />} />
     </Routes>
   );
 }
