@@ -21,7 +21,7 @@ export function SignInPage() {
         <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 17 }}>
           <SignInForm />
           <button
-            onClick={() => nav('/')}
+            onClick={() => nav('/acces')}
             style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: T.sub, textDecoration: 'underline', padding: '12px 0 0', fontWeight: 700 }}
           >
             Pas encore de compte ? S'inscrire

@@ -35,6 +35,14 @@ export function EntryPage() {
         >
           Déjà un compte ? Se connecter
         </button>
+        <div>
+          <button
+            onClick={() => nav('/')}
+            style={{ marginTop: 12, background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: T.mu, fontWeight: 600 }}
+          >
+            ← Retour à l'accueil
+          </button>
+        </div>
       </div>
     </div>
   );
