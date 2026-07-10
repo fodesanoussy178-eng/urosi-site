@@ -154,13 +154,13 @@ export function LandingPage() {
   const prenom = (profile?.full_name || '').split(' ')[0];
 
   function openApp() {
-    nav(session ? '/app' : '/connexion');
+    nav(session ? '/demo.html' : '/connexion');
   }
 
   function postuler() {
     // Non connecté : on passe par la connexion/inscription ; connecté : le
     // vrai flux de missions est dans l'app.
-    nav(session ? '/app' : '/connexion');
+    nav(session ? '/demo.html' : '/connexion');
   }
 
   const card = { background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14 } as const;
