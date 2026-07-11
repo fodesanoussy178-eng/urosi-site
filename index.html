@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0a0a14" />
-    <meta name="description" content="UROSI — micro-missions de la Métropole Européenne de Lille. Missions de 5h max, rémunération transparente qui monte selon l'horaire, paiement immédiat sur wallet." />
-    <title>UROSI — Micro-missions de la MEL</title>
+    <meta name="description" content="UROSI — des missions courtes, simplement. Les structures publient leurs besoins, tu consultes les horaires et le montant, tu acceptes." />
+    <title>UROSI — Des missions courtes, simplement</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -14,141 +14,93 @@
     />
     <style>
       :root {
-        --bg: #0a0a14;
-        --card: #111827;
-        --cb: #1f2937;
-        --row: #0f172a;
-        --text: #f1f5f9;
-        --sub: #9ca3af;
-        --mu: #6b7280;
-        --cyan: #22d3ee;
-        --green: #4ade80;
-        --green-bg: #052e16;
-        --green-border: #166534;
-        --amber: #fbbf24;
-        --grad: linear-gradient(135deg, #1d4ed8, #0891b2);
+        --bg: #0a0a14; --card: #111827; --cb: #1f2937; --row: #0f172a;
+        --text: #f1f5f9; --sub: #9ca3af; --mu: #6b7280;
+        --cyan: #22d3ee; --green: #4ade80; --green-bg: #052e16;
+        --amber: #fbbf24; --grad: linear-gradient(135deg, #1d4ed8, #0891b2);
       }
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html { scroll-behavior: smooth; }
-      body {
-        background: var(--bg);
-        color: var(--text);
-        font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
-        line-height: 1.5;
-        overflow-x: hidden;
-      }
+      body { background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; line-height: 1.5; overflow-x: hidden; }
       a { color: inherit; text-decoration: none; }
-      .wrap { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+      .wrap { max-width: 880px; margin: 0 auto; padding: 0 20px; }
 
-      /* Nav */
-      nav {
-        position: sticky; top: 0; z-index: 50;
-        background: rgba(10, 10, 20, 0.85); backdrop-filter: blur(12px);
-        border-bottom: 1px solid var(--cb);
-      }
-      .nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; max-width: 960px; margin: 0 auto; }
+      nav { position: sticky; top: 0; z-index: 50; background: rgba(10,10,20,.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--cb); }
+      .nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; max-width: 880px; margin: 0 auto; }
       .brand { display: flex; align-items: center; gap: 9px; font-weight: 900; font-size: 17px; letter-spacing: 1px; }
       .brand-dot { width: 30px; height: 30px; border-radius: 9px; background: var(--grad); display: flex; align-items: center; justify-content: center; font-size: 15px; color: #fff; }
-      .nav-links { display: flex; gap: 18px; font-size: 12.5px; font-weight: 700; color: var(--sub); }
-      .nav-links a:hover { color: var(--text); }
-      @media (max-width: 720px) { .nav-links { display: none; } }
-      .btn {
-        display: inline-block; border: none; cursor: pointer; font-family: inherit;
-        border-radius: 11px; font-weight: 900; transition: transform 0.15s ease, box-shadow 0.15s ease;
-      }
+      .btn { display: inline-block; border: none; cursor: pointer; font-family: inherit; border-radius: 12px; font-weight: 900; transition: transform .15s ease, opacity .15s ease; text-align: center; }
       .btn:hover { transform: translateY(-1px); }
-      .btn-grad { background: var(--grad); color: #fff; padding: 10px 18px; font-size: 13px; box-shadow: 0 4px 18px rgba(8, 145, 178, 0.35); }
-      .btn-white { background: #fff; color: #000; padding: 14px 26px; font-size: 15px; }
-      .btn-ghost { background: var(--card); color: var(--text); border: 1px solid var(--cb); padding: 14px 26px; font-size: 15px; font-weight: 800; }
+      .btn-grad { background: var(--grad); color: #fff; padding: 11px 20px; font-size: 13px; box-shadow: 0 4px 18px rgba(8,145,178,.35); }
+      .btn-white { background: #fff; color: #000; padding: 14px 24px; font-size: 14px; }
+      .btn-ghost { background: var(--card); color: var(--text); border: 1px solid var(--cb); padding: 14px 24px; font-size: 14px; font-weight: 800; }
 
-      /* Hero */
-      .hero { position: relative; text-align: center; padding: 72px 0 60px; }
-      .hero-blob {
-        position: absolute; top: -120px; left: 50%; transform: translateX(-50%);
-        width: 560px; height: 560px; border-radius: 50%;
-        background: radial-gradient(circle, rgba(8, 145, 178, 0.22), transparent 65%);
-        pointer-events: none; animation: pulse 7s ease-in-out infinite;
-      }
-      @keyframes pulse { 0%, 100% { opacity: 0.7; transform: translateX(-50%) scale(1); } 50% { opacity: 1; transform: translateX(-50%) scale(1.08); } }
-      .hero h1 { font-size: clamp(34px, 7vw, 58px); font-weight: 900; letter-spacing: -2px; line-height: 1.08; margin-bottom: 16px; }
+      .hero { position: relative; text-align: center; padding: 60px 0 30px; }
+      .hero-blob { position: absolute; top: -100px; left: 50%; transform: translateX(-50%); width: 540px; height: 540px; border-radius: 50%; background: radial-gradient(circle, rgba(8,145,178,.2), transparent 65%); pointer-events: none; animation: pulse 7s ease-in-out infinite; }
+      @keyframes pulse { 0%,100% { opacity: .7; } 50% { opacity: 1; } }
+      .hero h1 { font-size: clamp(32px, 7vw, 52px); font-weight: 900; letter-spacing: -1.8px; line-height: 1.1; margin-bottom: 14px; }
       .grad-text { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-      .hero p { font-size: 15.5px; color: var(--sub); max-width: 560px; margin: 0 auto 26px; }
-      .hero-ctas { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 34px; }
-      .hero-stats { display: flex; gap: 26px; justify-content: center; flex-wrap: wrap; }
-      .hero-stats div { text-align: center; }
-      .hero-stats b { display: block; font-size: 21px; font-weight: 900; }
-      .hero-stats span { font-size: 10.5px; color: var(--mu); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+      .hero p { font-size: 15px; color: var(--sub); max-width: 480px; margin: 0 auto 24px; }
+      .hero-ctas { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 
-      /* Sections */
-      section { padding: 54px 0; }
-      .sec-tag { font-size: 11px; font-weight: 800; color: var(--cyan); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
-      .sec-title { font-size: clamp(24px, 4.5vw, 34px); font-weight: 900; letter-spacing: -1px; margin-bottom: 10px; }
-      .sec-sub { font-size: 14px; color: var(--sub); max-width: 620px; margin-bottom: 28px; }
+      /* ── Téléphone démo ── */
+      .phone-zone { display: flex; flex-direction: column; align-items: center; padding: 34px 0 20px; }
+      .phone {
+        width: 320px; height: 640px; border-radius: 42px; position: relative;
+        background: #05050c; border: 3px solid #2a2f3f;
+        box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 0 1px #0e1320, 0 0 90px rgba(8,145,178,.18);
+        overflow: hidden;
+      }
+      .phone-notch { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 110px; height: 24px; background: #05050c; border-radius: 14px; z-index: 5; border: 1px solid #1a2030; }
+      .demo-badge { position: absolute; top: 14px; right: 14px; z-index: 6; font-size: 9px; font-weight: 900; letter-spacing: .5px; color: #000; background: var(--amber); border-radius: 10px; padding: 3px 9px; }
+      .screen { position: absolute; inset: 0; padding: 48px 14px 14px; overflow-y: auto; opacity: 0; transform: translateX(24px); transition: opacity .35s ease, transform .35s ease; pointer-events: none; background: var(--bg); }
+      .screen.on { opacity: 1; transform: none; pointer-events: auto; }
+      .s-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+      .s-title { font-size: 15px; font-weight: 900; }
+      .s-back { background: var(--row); border: 1px solid var(--cb); color: var(--sub); border-radius: 8px; font-size: 10px; font-weight: 800; padding: 5px 10px; cursor: pointer; font-family: inherit; }
+      .mcard { background: var(--card); border: 1px solid var(--cb); border-radius: 14px; padding: 13px; margin-bottom: 9px; cursor: pointer; transition: border-color .2s; }
+      .mcard:hover { border-color: #0e7490; }
+      .m-amount { font-size: 24px; font-weight: 900; letter-spacing: -1px; }
+      .m-title { font-size: 13px; font-weight: 800; margin: 3px 0 2px; }
+      .m-org { font-size: 10.5px; font-weight: 700; color: var(--sub); }
+      .stars { color: var(--amber); font-size: 10px; letter-spacing: 1px; }
+      .m-meta { font-size: 9.5px; color: var(--mu); margin-top: 3px; }
+      .p-btn { width: 100%; border: none; border-radius: 10px; padding: 11px 0; font-size: 12.5px; font-weight: 900; cursor: pointer; font-family: inherit; }
+      .p-white { background: #fff; color: #000; }
+      .p-green { background: #16a34a; color: #fff; }
+      .p-row { background: var(--row); border-radius: 10px; padding: 10px 12px; font-size: 11px; color: var(--sub); margin-bottom: 7px; }
+      .qr { width: 130px; height: 130px; margin: 12px auto; background:
+        repeating-linear-gradient(0deg, #000 0 6px, transparent 6px 12px),
+        repeating-linear-gradient(90deg, #000 0 6px, #fff 6px 12px);
+        border: 8px solid #fff; border-radius: 8px; }
+      .big-ok { width: 54px; height: 54px; border-radius: 50%; background: var(--green-bg); color: var(--green); display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 16px auto 8px; }
+      .w-balance { font-size: 32px; font-weight: 900; letter-spacing: -1.5px; margin: 4px 0 12px; }
+      .tag { display: inline-block; font-size: 8.5px; font-weight: 800; border-radius: 8px; padding: 2px 7px; }
+      .tag-g { color: var(--green); background: var(--green-bg); }
+      .dots { display: flex; gap: 6px; justify-content: center; margin-top: 16px; }
+      .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--cb); transition: background .3s; }
+      .dot.on { background: var(--cyan); }
+      .phone-hint { font-size: 11px; color: var(--mu); margin-top: 12px; text-align: center; }
+      .phone-hint b { color: var(--sub); }
 
-      /* Reveal animation */
-      .reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.6s ease, transform 0.6s ease; }
-      .reveal.in { opacity: 1; transform: none; }
+      section { padding: 44px 0; }
+      .sec-title { font-size: clamp(22px, 4.5vw, 30px); font-weight: 900; letter-spacing: -1px; margin-bottom: 8px; text-align: center; }
+      .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 26px; }
+      .step { background: var(--card); border: 1px solid var(--cb); border-radius: 16px; padding: 20px 18px; text-align: center; transition: transform .2s; }
+      .step:hover { transform: translateY(-3px); }
+      .step .n { width: 30px; height: 30px; border-radius: 50%; background: var(--grad); color: #fff; font-weight: 900; font-size: 13px; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; }
+      .step h3 { font-size: 14px; font-weight: 800; margin-bottom: 5px; }
+      .step p { font-size: 12px; color: var(--sub); }
 
-      /* Mission cards */
-      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
-      .mcard { background: var(--card); border: 1px solid var(--cb); border-radius: 16px; padding: 18px; transition: transform 0.2s ease, border-color 0.2s ease; }
-      .mcard:hover { transform: translateY(-4px); border-color: #0e7490; }
-      .mcard .price { font-size: 30px; font-weight: 900; letter-spacing: -1.5px; }
-      .badge { display: inline-block; font-size: 9.5px; font-weight: 800; border-radius: 10px; padding: 2px 8px; vertical-align: middle; margin-left: 7px; }
-      .badge-boost { color: #facc15; background: rgba(66, 32, 6, 0.4); border: 1px solid #713f12; }
-      .badge-urgent { color: var(--amber); background: #1c1400; }
-      .badge-demo { color: var(--mu); background: var(--row); }
-      .badge-green { color: var(--green); background: var(--green-bg); }
-      .mcard h3 { font-size: 15px; font-weight: 800; margin: 8px 0 3px; }
-      .mcard .meta { font-size: 11px; color: var(--mu); margin-bottom: 12px; }
-      .mcard .org { font-size: 11.5px; font-weight: 700; color: var(--sub); margin-bottom: 2px; }
-      .mcard .cta { display: block; text-align: center; background: #fff; color: #000; border-radius: 10px; padding: 10px 0; font-size: 13px; font-weight: 900; transition: opacity 0.15s; }
-      .mcard .cta:hover { opacity: 0.88; }
-      .mcard .cta.solidaire { background: #16a34a; color: #fff; }
-      .cards-note { font-size: 10.5px; color: var(--mu); margin-top: 12px; }
-
-      /* Moteur */
-      .engine { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
-      @media (max-width: 720px) { .engine { grid-template-columns: 1fr; } }
-      .chips { display: flex; flex-wrap: wrap; gap: 7px; }
-      .chip { font-size: 11.5px; font-weight: 700; background: var(--row); border: 1px solid var(--cb); border-radius: 20px; padding: 6px 13px; }
-      .chip b { color: var(--green); font-weight: 900; }
-      .calc { background: var(--card); border: 1px solid var(--cb); border-radius: 16px; padding: 18px; }
-      .calc-row { display: flex; justify-content: space-between; font-size: 13px; padding: 5px 0; color: var(--sub); }
-      .calc-row.plus { color: var(--green); }
-      .calc-row.total { color: var(--text); font-weight: 900; font-size: 15px; border-top: 1px solid var(--cb); margin-top: 6px; padding-top: 10px; }
-      .calc-note { font-size: 10px; color: var(--mu); margin-top: 10px; }
-
-      /* Structures / features */
-      .feats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
-      .feat { background: var(--card); border: 1px solid var(--cb); border-radius: 16px; padding: 18px; transition: transform 0.2s ease; }
-      .feat:hover { transform: translateY(-3px); }
-      .feat .ico { font-size: 22px; margin-bottom: 9px; }
-      .feat h3 { font-size: 14px; font-weight: 800; margin-bottom: 5px; }
-      .feat p { font-size: 12px; color: var(--sub); }
-
-      /* Transparence */
-      .trans { background: var(--card); border: 1px solid var(--cb); border-radius: 18px; padding: 24px; }
-      .trans ul { list-style: none; }
-      .trans li { display: flex; gap: 11px; padding: 9px 0; font-size: 13px; color: var(--sub); align-items: flex-start; }
-      .trans li b { color: var(--text); }
-      .trans .check { color: var(--green); font-weight: 900; flex-shrink: 0; }
-
-      /* Solidaire */
-      .solid { background: var(--green-bg); border: 1px solid var(--green-border); border-radius: 18px; padding: 26px; }
-      .solid .sec-tag { color: var(--green); }
-      .solid p { color: #86efac; font-size: 13.5px; max-width: 620px; }
-
-      /* FAQ */
       details { background: var(--card); border: 1px solid var(--cb); border-radius: 13px; margin-bottom: 9px; overflow: hidden; }
       summary { cursor: pointer; padding: 15px 17px; font-size: 13.5px; font-weight: 800; list-style: none; display: flex; justify-content: space-between; align-items: center; }
       summary::-webkit-details-marker { display: none; }
-      summary::after { content: '+'; color: var(--cyan); font-size: 17px; font-weight: 900; transition: transform 0.2s; }
+      summary::after { content: '+'; color: var(--cyan); font-size: 17px; font-weight: 900; transition: transform .2s; }
       details[open] summary::after { transform: rotate(45deg); }
       details p { padding: 0 17px 15px; font-size: 12.5px; color: var(--sub); }
 
-      /* Final CTA + footer */
-      .final { text-align: center; padding: 64px 0 40px; }
+      .reveal { opacity: 0; transform: translateY(20px); transition: opacity .6s ease, transform .6s ease; }
+      .reveal.in { opacity: 1; transform: none; }
       footer { border-top: 1px solid var(--cb); padding: 26px 0 40px; text-align: center; font-size: 11px; color: var(--mu); line-height: 1.8; }
     </style>
   </head>
@@ -156,195 +108,199 @@
     <nav>
       <div class="nav-inner">
         <a class="brand" href="/"><span class="brand-dot">U</span>UROSI</a>
-        <div class="nav-links">
-          <a href="#missions">Missions</a>
-          <a href="#moteur">Le moteur</a>
-          <a href="#structures">Structures</a>
-          <a href="#solidaire">Solidaire</a>
-          <a href="#faq">FAQ</a>
-        </div>
-        <a class="btn btn-grad" href="/demo.html">Ouvrir l'app →</a>
+        <a class="btn btn-grad" href="/app">Ouvrir l'app →</a>
       </div>
     </nav>
 
     <header class="hero wrap">
       <div class="hero-blob"></div>
-      <h1>Des missions courtes,<br /><span class="grad-text">payées au juste prix.</span></h1>
-      <p>
-        Micro-missions de la Métropole Européenne de Lille. 5 heures maximum, rémunération transparente qui monte selon
-        l'horaire, le jour et l'urgence — payée sur ton wallet dès la mission terminée.
-      </p>
+      <h1>Des missions courtes,<br /><span class="grad-text">simplement.</span></h1>
+      <p>Les structures publient leurs besoins. Tu consultes les horaires, le montant, et tu acceptes les missions qui te conviennent.</p>
       <div class="hero-ctas">
-        <a class="btn btn-white" href="/demo.html">Trouver une mission</a>
-        <a class="btn btn-ghost" href="/demo.html">Voir la démo</a>
-      </div>
-      <div class="hero-stats">
-        <div><b>5h max</b><span>par mission</span></div>
-        <div><b>+50 %</b><span>les jours fériés</span></div>
-        <div><b>Immédiat</b><span>paiement wallet</span></div>
-        <div><b>MEL</b><span>95 communes</span></div>
+        <a class="btn btn-white" href="#demo">Voir la démo</a>
+        <a class="btn btn-ghost" href="/app">Trouver une mission</a>
+        <a class="btn btn-ghost" href="/inscription/structure">Publier une mission</a>
+        <a class="btn btn-ghost" href="/connexion">Se connecter</a>
       </div>
     </header>
 
-    <section id="missions" class="wrap reveal">
-      <div class="sec-tag">Missions</div>
-      <div class="sec-title">Le flux, en direct dans l'app</div>
-      <div class="sec-sub">
-        Les missions, leurs prix, dates et horaires vivent dans l'application et changent avec les annonces publiées par
-        les structures. Voici à quoi ressemblent les cartes :
-      </div>
-      <div class="cards">
-        <div class="mcard">
-          <div class="price">52,40 €<span class="badge badge-boost">⚡ boostée (base 42 €)</span><span class="badge badge-demo">exemple</span></div>
-          <h3>Renfort service du midi</h3>
-          <div class="org">Brasserie du Beffroi</div>
-          <div class="meta">📍 Lille · samedi · 11:30 · 4 h</div>
-          <a class="cta" href="/demo.html">Postuler</a>
-        </div>
-        <div class="mcard">
-          <div class="price">67,20 €<span class="badge badge-boost">⚡ boostée</span><span class="badge badge-urgent">Urgent</span><span class="badge badge-demo">exemple</span></div>
-          <h3>Inventaire de nuit</h3>
-          <div class="org">Logistique Wazemmes</div>
-          <div class="meta">📍 Lille · ce soir · 22:00 · 5 h</div>
-          <a class="cta" href="/demo.html">Postuler</a>
-        </div>
-        <div class="mcard">
-          <div class="price" style="color: var(--green); font-size: 24px">Solidaire<span class="badge badge-green">0 €</span><span class="badge badge-demo">exemple</span></div>
-          <h3>Distribution alimentaire</h3>
-          <div class="org">Les Restos du Nord</div>
-          <div class="meta">📍 Roubaix · samedi · 09:00 · 3 h</div>
-          <a class="cta solidaire" href="/demo.html">🤝 Participer</a>
-        </div>
-      </div>
-      <div class="cards-note">Cartes illustratives — les vraies missions (prix, dates, horaires) viennent de la base et s'affichent dans <a href="/demo.html" style="color: var(--cyan)">l'application</a>.</div>
-    </section>
+    <!-- ── Démo interactive ── -->
+    <div id="demo" class="phone-zone wrap">
+      <div class="phone" id="phone">
+        <div class="phone-notch"></div>
+        <div class="demo-badge">MODE DÉMO</div>
 
-    <section id="moteur" class="wrap reveal">
-      <div class="sec-tag">⚡ Le moteur</div>
-      <div class="sec-title">Une rémunération qui s'adapte, pas un tarif figé</div>
-      <div class="sec-sub">
-        Chaque structure configure ses règles de majoration. Le moteur les applique automatiquement à la publication, et
-        le travailleur voit le détail noir sur blanc avant de postuler.
-      </div>
-      <div class="engine">
-        <div class="chips">
-          <span class="chip">🌅 Tôt le matin (5h-8h) <b>+10 %</b></span>
-          <span class="chip">🌙 Soir &amp; nuit (21h-6h) <b>+25 %</b></span>
-          <span class="chip">🗓 Week-end <b>+20 %</b></span>
-          <span class="chip">🎆 Jour férié <b>+50 %</b></span>
-          <span class="chip">⚡ Urgence <b>+15 %</b></span>
-          <span class="chip">💪 Difficulté élevée <b>+10 %</b></span>
-          <span class="chip">📍 Site éloigné <b>+3 €</b></span>
-          <span class="chip">📈 Secteur en tension <b>+10 %</b></span>
-          <span class="chip">🎁 Bonus structure <b>+2 €</b></span>
+        <!-- Flux -->
+        <div class="screen on" data-s="flux">
+          <div class="s-head"><span class="s-title">Missions</span><span class="stars" style="font-size:9px">MODE DÉMO · fictif</span></div>
+          <div class="mcard" data-go="mission">
+            <div class="m-amount">72 €</div>
+            <div class="m-title">Service en salle</div>
+            <div class="m-org">Brasserie du Beffroi <span class="stars">★★★★★</span> <span style="color:var(--mu);font-size:9px">4,8</span></div>
+            <div class="m-meta">📍 Lille · sam. 12 · 11:00–15:00 et 18:00–22:00 · 8 h</div>
+          </div>
+          <div class="mcard" data-go="mission">
+            <div class="m-amount">120 €</div>
+            <div class="m-title">Inventaire (2 jours)</div>
+            <div class="m-org">Logistique Wazemmes <span class="stars">★★★★☆</span> <span style="color:var(--mu);font-size:9px">4,3</span></div>
+            <div class="m-meta">📍 Roubaix · lun. 14 – mar. 15 · 2 jours · 12 h</div>
+          </div>
+          <div class="mcard" data-go="mission">
+            <div class="m-amount" style="color:var(--green);font-size:18px">Solidaire <span class="tag tag-g">0 €</span></div>
+            <div class="m-title">Distribution alimentaire</div>
+            <div class="m-org">Les Restos du Nord <span class="stars">★★★★★</span> <span style="color:var(--mu);font-size:9px">4,9</span></div>
+            <div class="m-meta">📍 Roubaix · sam. 12 · 09:00–12:00 · 3 h</div>
+          </div>
         </div>
-        <div class="calc">
-          <div class="calc-row"><span>Base</span><span>42,00 €</span></div>
-          <div class="calc-row plus"><span>Majoration week-end</span><span>+8,40 €</span></div>
-          <div class="calc-row plus"><span>Majoration nuit (21h-6h)</span><span>+10,50 €</span></div>
-          <div class="calc-row plus"><span>Mission urgente</span><span>+6,30 €</span></div>
-          <div class="calc-row total"><span>Payé au travailleur</span><span>67,20 €</span></div>
-          <div class="calc-note">Exemple de calcul : mission de nuit un samedi, publiée en urgence.</div>
+
+        <!-- Mission -->
+        <div class="screen" data-s="mission">
+          <div class="s-head"><button class="s-back" data-go="flux">← Retour</button><span class="s-title">Mission</span><span></span></div>
+          <div class="m-amount">72 €</div>
+          <div class="m-title" style="font-size:15px">Service en salle</div>
+          <div class="m-org" style="margin-bottom:10px">Brasserie du Beffroi <span class="stars">★★★★★</span> <span style="color:var(--mu);font-size:9px">4,8 · 32 avis</span></div>
+          <div class="p-row">📍 12 rue de Béthune, Lille</div>
+          <div class="p-row">🗓 Samedi 12 · 11:00–15:00 puis 18:00–22:00 · 8 h au total</div>
+          <div class="p-row">Renfort service du midi et du soir. Tenue noire, bonne humeur exigée 😄</div>
+          <div class="p-row" style="color:var(--green);font-weight:800">Tu recevras : 72 €</div>
+          <button class="p-btn p-white" data-go="qr">Accepter la mission</button>
+        </div>
+
+        <!-- QR -->
+        <div class="screen" data-s="qr">
+          <div class="s-head"><button class="s-back" data-go="flux">← Missions</button><span class="s-title">C'est validé 🎉</span><span></span></div>
+          <div style="font-size:11px;color:var(--sub);text-align:center">Le jour J, fais scanner ton QR par la structure pour valider ta présence.</div>
+          <div class="qr"></div>
+          <div style="font-size:10px;color:var(--mu);text-align:center;margin-bottom:12px">QR de démonstration</div>
+          <button class="p-btn p-green" data-go="done">▦ Terminer la mission</button>
+        </div>
+
+        <!-- Terminée -->
+        <div class="screen" data-s="done">
+          <div class="big-ok">✓</div>
+          <div style="text-align:center;font-size:15px;font-weight:900;color:var(--green)">Mission terminée !</div>
+          <div style="text-align:center;font-size:11px;color:var(--sub);margin:6px 0 14px">72 € arrivent sur ton wallet.<br />Note la structure :</div>
+          <div style="text-align:center;font-size:26px;letter-spacing:6px;color:var(--amber);cursor:pointer" data-go="wallet">★★★★★</div>
+          <div style="text-align:center;margin-top:16px"><button class="p-btn p-white" style="width:auto;padding:11px 22px" data-go="wallet">Voir mon wallet →</button></div>
+        </div>
+
+        <!-- Wallet -->
+        <div class="screen" data-s="wallet">
+          <div class="s-head"><button class="s-back" data-go="flux">← Missions</button><span class="s-title">Wallet</span><span></span></div>
+          <div style="font-size:9px;font-weight:800;color:var(--mu);text-transform:uppercase">Disponible</div>
+          <div class="w-balance">238,00 €</div>
+          <div class="p-row" style="display:flex;justify-content:space-between"><span>Service en salle — Brasserie</span><span style="color:var(--green);font-weight:800">+72,00 €</span></div>
+          <div class="p-row" style="display:flex;justify-content:space-between"><span>Inventaire — Logistique Waz.</span><span style="color:var(--green);font-weight:800">+120,00 €</span></div>
+          <div class="p-row" style="display:flex;justify-content:space-between"><span>Retrait vers mon compte</span><span style="color:#f87171;font-weight:800">−50,00 €</span></div>
+          <button class="p-btn p-white" data-go="cv">Voir mon CV vivant →</button>
+        </div>
+
+        <!-- CV vivant -->
+        <div class="screen" data-s="cv">
+          <div class="s-head"><button class="s-back" data-go="flux">← Missions</button><span class="s-title">CV vivant</span><span></span></div>
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">
+            <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#f97316,#dc2626);display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff">A</div>
+            <div>
+              <div style="font-size:13px;font-weight:900">Alex M.</div>
+              <div class="stars" style="font-size:11px">★★★★★ <span style="color:var(--sub);font-weight:800">4,8</span> <span style="color:var(--mu);font-size:9px">· 23 missions prouvées</span></div>
+            </div>
+          </div>
+          <div class="p-row" style="display:flex;justify-content:space-between"><span>Service en salle · Brasserie</span><span class="stars">★★★★★</span></div>
+          <div class="p-row" style="display:flex;justify-content:space-between"><span>Inventaire · Logistique Waz.</span><span class="stars">★★★★☆</span></div>
+          <div class="p-row" style="display:flex;justify-content:space-between"><span>Distribution · Restos du Nord</span><span class="tag tag-g">solidaire</span></div>
+          <button class="p-btn p-white" data-go="flux">← Retour au flux</button>
         </div>
       </div>
-    </section>
 
-    <section id="structures" class="wrap reveal">
-      <div class="sec-tag">🏢 Structures</div>
-      <div class="sec-title">Publier, choisir, payer — sans friction</div>
-      <div class="sec-sub">Restaurants, commerces, associations, collectivités : un renfort fiable en quelques heures.</div>
-      <div class="feats">
-        <div class="feat"><div class="ico">📝</div><h3>Publication en 2 minutes</h3><p>Titre, adresse, jour, heure, durée (5h max), tarif de base — le moteur calcule le reste et l'aperçu s'affiche en direct.</p></div>
-        <div class="feat"><div class="ico">⚙️</div><h3>Règles configurables</h3><p>Week-end, fériés, nuit, urgence, distance, tension… active des modèles en un clic ou crée tes propres règles.</p></div>
-        <div class="feat"><div class="ico">👤</div><h3>Candidats prouvés</h3><p>CV vivant : missions réellement effectuées, présence validée par QR, notes des structures. Informatif, jamais bloquant.</p></div>
-        <div class="feat"><div class="ico">💶</div><h3>Wallet &amp; statistiques</h3><p>Paiement automatique à la fin de mission, commission transparente, tableau de bord complet : missions, candidatures, flux payés.</p></div>
-      </div>
-    </section>
+      <div class="dots" id="dots"></div>
+      <div class="phone-hint"><b>Démo interactive</b> — touche l'écran pour explorer librement · <a href="/app" style="color:var(--cyan)">passer aux vraies missions →</a></div>
+    </div>
 
+    <!-- ── 3 étapes ── -->
     <section class="wrap reveal">
-      <div class="sec-tag">🔍 Transparence</div>
-      <div class="sec-title">Tout est visible, rien n'est caché</div>
-      <div class="trans">
-        <ul>
-          <li><span class="check">✓</span><span><b>Le détail du prix est public.</b> Base + majorations, ligne par ligne, affiché au travailleur avant de postuler.</span></li>
-          <li><span class="check">✓</span><span><b>La commission UROSI est affichée</b> à la structure sur chaque paiement — pas de frais cachés.</span></li>
-          <li><span class="check">✓</span><span><b>Les notes sont informatives, jamais bloquantes.</b> Aucun algorithme ne filtre l'accès aux missions (inscrit aux CGU).</span></li>
-          <li><span class="check">✓</span><span><b>Plafonds légaux appliqués en base :</b> 5h par mission, 3 jours consécutifs max chez la même structure pour les non micro-entrepreneurs.</span></li>
-          <li><span class="check">✓</span><span><b>Ta position reste dans ton navigateur.</b> La géolocalisation sert à trier le flux, elle n'est jamais stockée.</span></li>
-        </ul>
+      <div class="sec-title">Comment ça marche</div>
+      <div class="steps">
+        <div class="step"><div class="n">1</div><h3>La structure publie</h3><p>Dates, horaires, montant proposé. Jusqu'à 3 jours par mission.</p></div>
+        <div class="step"><div class="n">2</div><h3>Tu acceptes</h3><p>Tu vois les horaires et le montant. Tu acceptes ou tu passes.</p></div>
+        <div class="step"><div class="n">3</div><h3>Tu es payé·e</h3><p>Présence validée par QR, wallet crédité, note au CV vivant.</p></div>
       </div>
     </section>
 
-    <section id="solidaire" class="wrap reveal">
-      <div class="solid">
-        <div class="sec-tag">🤝 Missions solidaires</div>
-        <div class="sec-title" style="font-size: 24px">Donner un coup de main, ça compte aussi</div>
-        <p>
-          Les associations ESS publient des missions bénévoles à 0 €. Elles rejoignent le CV vivant des participants comme
-          preuve d'engagement — mêmes cartes, même pointage QR, même reconnaissance.
-        </p>
-      </div>
-    </section>
-
-    <section id="faq" class="wrap reveal">
-      <div class="sec-tag">FAQ</div>
+    <!-- ── FAQ ── -->
+    <section class="wrap reveal" style="max-width: 640px">
       <div class="sec-title">Questions fréquentes</div>
       <details>
-        <summary>Comment suis-je payé·e après une mission ?</summary>
-        <p>Dès que la mission est marquée terminée, ton wallet UROSI est crédité automatiquement du montant affiché (base + majorations). Tu peux ensuite demander un retrait vers ton compte bancaire depuis l'app.</p>
+        <summary>Qui fixe le montant d'une mission ?</summary>
+        <p>La structure, librement. UROSI ne fixe aucun prix et le travailleur ne négocie pas : il voit le montant proposé et accepte, ou passe. Le détail (commission incluse) est visible en un clic sur chaque mission.</p>
       </details>
       <details>
-        <summary>Pourquoi le prix d'une mission change selon l'horaire ?</summary>
-        <p>Les structures configurent des règles de majoration (nuit, week-end, férié, urgence…). Le moteur les applique à la publication et le détail complet est affiché sur chaque carte — le prix que tu vois est le prix payé.</p>
+        <summary>Combien de temps dure une mission ?</summary>
+        <p>De quelques heures à 3 jours maximum, avec un planning détaillé par journée pour les missions de plusieurs jours.</p>
+      </details>
+      <details>
+        <summary>Comment suis-je payé·e ?</summary>
+        <p>À la fin de la mission, ton wallet UROSI est crédité automatiquement. Tu peux ensuite demander un virement vers ton compte bancaire.</p>
       </details>
       <details>
         <summary>C'est quoi, le CV vivant ?</summary>
-        <p>Ton historique de missions réellement effectuées : présence validée par QR, notes reçues des structures, compétences. Il se construit tout seul, mission après mission, et remplace le CV déclaratif.</p>
+        <p>Ton historique de missions réellement effectuées : présence validée par QR, notes reçues (★), compétences. Il se construit tout seul.</p>
       </details>
       <details>
         <summary>Une mauvaise note peut-elle me bloquer ?</summary>
-        <p>Non. Les notes sont informatives, jamais bloquantes : aucun filtre automatique ne restreint ton accès aux missions. C'est inscrit dans les CGU et appliqué techniquement.</p>
+        <p>Non. Les étoiles sont informatives : elles n'entraînent aucun blocage automatique de ton accès aux missions.</p>
       </details>
       <details>
-        <summary>Quelles sont les limites légales ?</summary>
-        <p>5 heures maximum par mission et, pour les non micro-entrepreneurs, 3 jours consécutifs maximum chez la même structure. Ces plafonds sont appliqués directement en base de données, pas contournables.</p>
-      </details>
-      <details>
-        <summary>Comment une structure commence-t-elle ?</summary>
-        <p>Inscription avec SIRET, activation de l'abonnement, et la première mission peut être publiée en 2 minutes. Les règles de rémunération et les statistiques sont dans le tableau de bord.</p>
+        <summary>Et les missions solidaires ?</summary>
+        <p>Les associations publient des missions bénévoles à 0 € : elles comptent dans ton CV vivant comme preuve d'engagement.</p>
       </details>
     </section>
 
-    <div class="final wrap reveal">
-      <div class="sec-title">Prêt·e à essayer ?</div>
-      <div class="sec-sub" style="margin: 0 auto 22px; text-align: center">L'application est ouverte — missions réelles, candidatures, wallet, messagerie.</div>
-      <a class="btn btn-grad" style="padding: 16px 36px; font-size: 16px" href="/demo.html">Ouvrir l'app →</a>
+    <div class="wrap reveal" style="text-align:center; padding: 20px 0 50px">
+      <a class="btn btn-grad" style="padding: 15px 32px; font-size: 15px" href="/app">Ouvrir l'app →</a>
     </div>
 
-    <footer>
-      UROSI · micro-missions de la Métropole Européenne de Lille<br />
-      Modèle mandataire · plafond légal 5h/mission · notes informatives, jamais bloquantes
-    </footer>
+    <footer>UROSI · missions courtes de la Métropole Européenne de Lille</footer>
 
     <script>
-      // Animation d'apparition au scroll (progressive enhancement).
+      // Révélation au scroll
       var els = document.querySelectorAll('.reveal');
       if ('IntersectionObserver' in window) {
-        var io = new IntersectionObserver(
-          function (entries) {
-            entries.forEach(function (e) {
-              if (e.isIntersecting) {
-                e.target.classList.add('in');
-                io.unobserve(e.target);
-              }
-            });
-          },
-          { threshold: 0.12 },
-        );
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+        }, { threshold: 0.12 });
         els.forEach(function (el) { io.observe(el); });
-      } else {
-        els.forEach(function (el) { el.classList.add('in'); });
-      }
+      } else { els.forEach(function (el) { el.classList.add('in'); }); }
+
+      // ── Démo interactive : autoplay ~35s en boucle, interrompue au premier
+      // geste, puis navigation libre entre les écrans. Aucune donnée réelle.
+      (function () {
+        var phone = document.getElementById('phone');
+        var screens = phone.querySelectorAll('.screen');
+        var order = ['flux', 'mission', 'qr', 'done', 'wallet', 'cv'];
+        var delays = { flux: 6000, mission: 6500, qr: 6000, done: 5000, wallet: 6000, cv: 6000 }; // ≈ 35 s
+        var dotsEl = document.getElementById('dots');
+        order.forEach(function () { var d = document.createElement('span'); d.className = 'dot'; dotsEl.appendChild(d); });
+        var dots = dotsEl.children;
+        var timer = null;
+        var auto = true;
+
+        function show(name) {
+          screens.forEach(function (s) { s.classList.toggle('on', s.dataset.s === name); });
+          for (var i = 0; i < order.length; i++) dots[i].classList.toggle('on', order[i] === name);
+        }
+        function loop(i) {
+          show(order[i]);
+          timer = setTimeout(function () { loop((i + 1) % order.length); }, delays[order[i]]);
+        }
+        phone.addEventListener('pointerdown', function () {
+          if (auto) { auto = false; clearTimeout(timer); }
+        });
+        phone.addEventListener('click', function (e) {
+          var go = e.target.closest('[data-go]');
+          if (go) { auto = false; clearTimeout(timer); show(go.dataset.go); }
+        });
+        loop(0);
+      })();
     </script>
   </body>
 </html>

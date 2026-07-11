@@ -54,6 +54,13 @@ export interface PricingBreakdown {
   total_cents: number;
 }
 
+// Creneau d'une mission (planning par journee, 3 jours max).
+export interface MissionSlot {
+  date: string; // YYYY-MM-DD
+  start: string; // HH:MM
+  end: string; // HH:MM
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -142,6 +149,8 @@ export interface Database {
           base_rate_cents: number | null;
           pricing_breakdown: PricingBreakdown | null;
           is_solidaire: boolean;
+          places: number;
+          slots: MissionSlot[] | null;
           status: MissionStatus;
           created_at: string;
         };
@@ -165,6 +174,8 @@ export interface Database {
           base_rate_cents?: number | null;
           pricing_breakdown?: PricingBreakdown | null;
           is_solidaire?: boolean;
+          places?: number;
+          slots?: MissionSlot[] | null;
           status?: MissionStatus;
           created_at?: string;
         };
@@ -384,11 +395,13 @@ export interface Database {
         Row: {
           id: boolean;
           commission_pct: number;
+          commission_worker_pct: number;
           updated_at: string;
         };
         Insert: {
           id?: boolean;
           commission_pct?: number;
+          commission_worker_pct?: number;
           updated_at?: string;
         };
         Update: Partial<Database['public']['Tables']['platform_settings']['Insert']>;

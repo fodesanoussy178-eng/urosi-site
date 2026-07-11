@@ -10,7 +10,12 @@ import { NotificationBell } from '@/components/ui/NotificationBell';
 import { ChatSheet } from '@/components/ui/ChatSheet';
 import { WalletCard } from '@/components/ui/WalletCard';
 import { PricingDetails } from '@/components/ui/PricingDetails';
-import { fetchOpenMissions, type MissionWithStructure } from '@/features/missions/missionsService';
+import {
+  fetchOpenMissions,
+  subscribeToMissionFeed,
+  unsubscribeMissionFeed,
+  type MissionWithStructure,
+} from '@/features/missions/missionsService';
 import {
   applyToMission,
   completeApplication,
@@ -22,7 +27,10 @@ import { rate, fetchStructureRatings, fetchWorkerReceivedRatings, type Structure
 import { notifyDelay, submitReport, REPORT_MOTIFS } from '@/features/missions/feedbackService';
 import { fetchUnreadCounts } from '@/features/messages/messagesService';
 import { fetchWorkerStats, type WorkerStats } from '@/features/stats/statsService';
+import { fetchCommissionRates, type CommissionRates } from '@/features/pricing/pricingService';
+import { PriceSplit, splitPrice } from '@/components/ui/PriceSplit';
 import { distanceKm, formatDistance, type LatLng } from '@/lib/geo';
+import { formatDay, groupByDay, scheduleSummary } from '@/lib/slots';
 import type { ReportMotif } from '@/types/database.types';
 import { formatEuros, formatHours } from '@/lib/format';
 
@@ -44,6 +52,8 @@ export function WorkerApp() {
   const [structRatings, setStructRatings] = useState<Map<string, StructureRating>>(new Map());
   const [unread, setUnread] = useState<Map<string, number>>(new Map());
   const [stats, setStats] = useState<WorkerStats | null>(null);
+  const [rates, setRates] = useState<CommissionRates | null>(null);
+  const [showPriceDetail, setShowPriceDetail] = useState(false);
   const [position, setPosition] = useState<LatLng | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -96,6 +106,25 @@ export function WorkerApp() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
+
+  // Flux en direct : toute mission publiée/clôturée rafraîchit la liste.
+  useEffect(() => {
+    const channel = subscribeToMissionFeed(() => {
+      load();
+    });
+    return () => unsubscribeMissionFeed(channel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
+
+  // Taux de commission (configurés dans Supabase) pour « Tu recevras ».
+  useEffect(() => {
+    fetchCommissionRates().then(setRates).catch(() => undefined);
+  }, []);
+
+  // Réinitialise le toggle « Détail du montant » à chaque mission ouverte.
+  useEffect(() => {
+    setShowPriceDetail(false);
+  }, [detail?.id]);
 
   // Position du navigateur (jamais stockee en base) : affiche la distance et
   // trie le flux par proximite.
@@ -214,31 +243,25 @@ export function WorkerApp() {
     }
   }
 
+  // Carte volontairement épurée : titre, structure + étoiles, ville, date,
+  // horaires, durée, montant, « Voir la mission ». Le détail (commission,
+  // planning complet…) n'apparaît qu'après le clic.
   function fluxCard(m: MissionWithStructure) {
     const sr = structRatings.get(m.structure_id);
     const dist = missionDistance(m);
-    const boosted = !m.is_solidaire && m.pricing_breakdown && m.pricing_breakdown.adjustments.length > 0;
     return (
       <div key={m.id} onClick={() => setDetail(m)} style={{ background: T.card, border: `1px solid ${m.is_solidaire ? '#14532d' : T.cb}`, borderRadius: 14, cursor: 'pointer', overflow: 'hidden' }}>
         <div style={{ padding: '15px 15px 12px' }}>
           {m.is_solidaire ? (
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
-              <span style={{ fontSize: 24, fontWeight: 900, color: T.green, letterSpacing: -1 }}>Solidaire</span>
-              <span style={{ fontSize: 15, fontWeight: 800, color: T.sub }}>0 €</span>
+              <span style={{ fontSize: 22, fontWeight: 900, color: T.green, letterSpacing: -1 }}>Solidaire</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: T.sub }}>0 €</span>
             </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 33, fontWeight: 900, color: T.text, letterSpacing: -2, lineHeight: 1 }}>{euros(m.worker_rate_cents)}</span>
-              {boosted && (
-                <span style={{ fontSize: 9, fontWeight: 800, color: '#facc15', background: '#42200620', border: '1px solid #713f12', borderRadius: 10, padding: '2px 7px' }}>
-                  ⚡ boostée{m.base_rate_cents != null ? ` (base ${euros(m.base_rate_cents)})` : ''}
-                </span>
-              )}
-              {m.is_urgent && <span style={{ fontSize: 9, fontWeight: 800, color: T.amber, background: T.amberBg, borderRadius: 10, padding: '2px 7px' }}>Urgent</span>}
-            </div>
+            <div style={{ fontSize: 30, fontWeight: 900, color: T.text, letterSpacing: -1.5, lineHeight: 1, marginBottom: 6 }}>{euros(m.worker_rate_cents)}</div>
           )}
-          <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 5 }}>{m.title}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 4 }}>{m.title}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, flexWrap: 'wrap' }}>
             <span
               onClick={(e) => {
                 e.stopPropagation();
@@ -246,38 +269,32 @@ export function WorkerApp() {
               }}
               style={{ fontSize: 11, fontWeight: 700, color: T.sub, textDecoration: 'underline', textDecorationColor: T.cb, cursor: 'pointer' }}
             >
-              {m.structure?.name ?? 'Structure'} ›
+              {m.structure?.name ?? 'Structure'}
             </span>
-            {m.structure?.is_ess && <span style={{ fontSize: 8, fontWeight: 700, color: T.green, background: T.greenBg, borderRadius: 8, padding: '1px 6px' }}>🤝 Association</span>}
-            {m.structure?.siret && <span style={{ fontSize: 8, fontWeight: 700, color: T.green, background: T.greenBg, borderRadius: 8, padding: '1px 5px' }}>✓ SIRET</span>}
-            {sr ? (
+            {sr && (
               <>
                 <Stars n={sr.average} size={11} />
-                <span style={{ fontSize: 10, color: T.mu }}>
-                  {sr.average.toFixed(1).replace('.', ',')} · {sr.count} avis
-                </span>
+                <span style={{ fontSize: 10, color: T.mu }}>{sr.average.toFixed(1).replace('.', ',')}</span>
               </>
-            ) : (
-              <span style={{ fontSize: 8, fontWeight: 700, color: T.cyan, background: '#22d3ee15', borderRadius: 8, padding: '1px 6px' }}>Nouvelle</span>
             )}
           </div>
-          {m.is_solidaire && <div style={{ fontSize: 9.5, color: T.green, marginTop: 3, marginBottom: 1 }}>Compte dans ton CV vivant · sans rémunération</div>}
-          <div style={{ fontSize: 10, color: T.mu }}>
+          <div style={{ fontSize: 10.5, color: T.mu }}>
             📍 {m.city || 'MEL'}
-            {dist != null && <span style={{ color: T.cyan, fontWeight: 700 }}> · à {formatDistance(dist)}</span>} · {m.scheduled_date}
-            {m.start_time ? ` · ${m.start_time.slice(0, 5)}` : ''} · {formatHours(m.duration_minutes)}
+            {dist != null && <span style={{ color: T.cyan, fontWeight: 700 }}> · {formatDistance(dist)}</span>}
+            {' · '}
+            {scheduleSummary(m.slots, m.scheduled_date, m.start_time)} · {formatHours(m.duration_minutes)}
+            {m.places > 1 ? ` · ${m.places} places` : ''}
           </div>
         </div>
         <div style={{ padding: '0 15px 13px' }}>
           <button
             onClick={(e) => {
               e.stopPropagation();
-              postuler(m);
+              setDetail(m);
             }}
-            disabled={busyId === m.id}
-            style={{ width: '100%', background: m.is_solidaire ? '#16a34a' : '#fff', color: m.is_solidaire ? '#fff' : '#000', border: 'none', borderRadius: 9, padding: '10px 0', fontSize: 13, fontWeight: 900, cursor: 'pointer' }}
+            style={{ width: '100%', background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 9, padding: '10px 0', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}
           >
-            {busyId === m.id ? '…' : m.is_solidaire ? '🤝 Participer' : 'Accepter'}
+            Voir la mission
           </button>
         </div>
       </div>
@@ -495,6 +512,9 @@ export function WorkerApp() {
                 )}
               </div>
               <AideRegles onOpen={setDocKey} />
+              <a href="/#demo" style={{ display: 'block', padding: '8px 4px', fontSize: 11, color: T.cyan, fontWeight: 700, textDecoration: 'none' }}>
+                ▶ Voir la démo
+              </a>
               <button onClick={() => signOut()} style={{ textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 4px', fontSize: 11, color: T.sub, fontWeight: 600 }}>
                 Se déconnecter
               </button>
@@ -539,7 +559,23 @@ export function WorkerApp() {
                 <div style={{ fontSize: 30, fontWeight: 900, color: T.text, letterSpacing: -2, marginBottom: 4 }}>{euros(detail.worker_rate_cents)}</div>
               )}
               <div style={{ fontSize: 15, fontWeight: 800, color: T.text, marginBottom: 10 }}>{detail.title}</div>
-              {!detail.is_solidaire && detail.pricing_breakdown && <PricingDetails breakdown={detail.pricing_breakdown} />}
+              {!detail.is_solidaire && rates && (
+                <div style={{ fontSize: 12.5, fontWeight: 800, color: T.green, marginBottom: 10 }}>
+                  Tu recevras : {euros(splitPrice(detail.worker_rate_cents, rates.structurePct, rates.workerPct).netWorkerCents)}
+                  <button
+                    onClick={() => setShowPriceDetail((v) => !v)}
+                    style={{ marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: 10.5, color: T.mu, textDecoration: 'underline', fontWeight: 600 }}
+                  >
+                    {showPriceDetail ? 'Masquer le détail' : 'Détail du montant'}
+                  </button>
+                </div>
+              )}
+              {!detail.is_solidaire && showPriceDetail && rates && (
+                <>
+                  <PriceSplit values={splitPrice(detail.worker_rate_cents, rates.structurePct, rates.workerPct)} side="worker" />
+                  {detail.pricing_breakdown && detail.pricing_breakdown.adjustments.length > 0 && <PricingDetails breakdown={detail.pricing_breakdown} compact />}
+                </>
+              )}
               <div
                 onClick={() => {
                   setStructSheet(detail);
@@ -549,7 +585,10 @@ export function WorkerApp() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
                   <span style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{detail.structure?.name ?? 'Structure'}</span>
-                  {detail.structure?.siret && <span style={{ fontSize: 8, fontWeight: 700, color: T.green, background: T.greenBg, borderRadius: 8, padding: '1px 5px' }}>✓ SIRET</span>}
+                  {(() => {
+                    const sr = structRatings.get(detail.structure_id);
+                    return sr ? <Stars n={sr.average} size={11} /> : null;
+                  })()}
                   <span style={{ marginLeft: 'auto', fontSize: 10, color: T.cyan, fontWeight: 700 }}>Voir la fiche ›</span>
                 </div>
                 <div style={{ fontSize: 11, color: T.sub }}>
@@ -557,9 +596,28 @@ export function WorkerApp() {
                   {(() => {
                     const d = missionDistance(detail);
                     return d != null ? ` (à ${formatDistance(d)})` : '';
-                  })()}{' '}
-                  · {detail.scheduled_date}
-                  {detail.start_time ? ` · ${detail.start_time.slice(0, 5)}` : ''} · {formatHours(detail.duration_minutes)}
+                  })()}
+                </div>
+              </div>
+              {/* Planning par journée */}
+              <div style={{ background: T.row, borderRadius: 11, padding: '12px 13px', marginBottom: 11 }}>
+                <div style={{ fontSize: 9, fontWeight: 800, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Planning</div>
+                {detail.slots && detail.slots.length > 0 ? (
+                  groupByDay(detail.slots).map((day) => (
+                    <div key={day.date} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: T.sub, padding: '3px 0' }}>
+                      <span style={{ fontWeight: 700, color: T.text }}>{formatDay(day.date)}</span>
+                      <span>{day.ranges.join(' · ')}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ fontSize: 11.5, color: T.sub }}>
+                    {detail.scheduled_date}
+                    {detail.start_time ? ` · ${detail.start_time.slice(0, 5)}` : ''}
+                  </div>
+                )}
+                <div style={{ fontSize: 10, color: T.mu, marginTop: 5 }}>
+                  Durée totale : {formatHours(detail.duration_minutes)}
+                  {detail.places > 1 ? ` · ${detail.places} places` : ''}
                 </div>
               </div>
               {detail.detail && <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.55, marginBottom: 13 }}>{detail.detail}</div>}
@@ -567,7 +625,7 @@ export function WorkerApp() {
                 onClick={() => postuler(detail)}
                 style={{ width: '100%', background: detail.is_solidaire ? '#16a34a' : '#fff', color: detail.is_solidaire ? '#fff' : '#000', border: 'none', borderRadius: 10, padding: '12px 0', fontSize: 14, fontWeight: 900, cursor: 'pointer' }}
               >
-                {detail.is_solidaire ? '🤝 Participer à la mission' : `Accepter — ${euros(detail.worker_rate_cents)}`}
+                {detail.is_solidaire ? '🤝 Participer à la mission' : 'Accepter la mission'}
               </button>
             </div>
           </div>
