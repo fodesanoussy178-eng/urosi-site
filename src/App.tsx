@@ -5,7 +5,6 @@ import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { T, FONT } from '@/components/ui/theme';
 import { EntryPage } from '@/app/EntryPage';
-import { LandingPage } from '@/app/LandingPage';
 import { SignInPage } from '@/features/auth/SignInPage';
 import { WorkerSignupPage } from '@/features/auth/WorkerSignupPage';
 import { StructureSignupPage } from '@/features/auth/StructureSignupPage';
@@ -22,9 +21,8 @@ function Centered({ text }: { text: string }) {
   );
 }
 
-// Le site vitrine (/) est une page statique servie par Vercel, hors React.
-// Quand une navigation interne pointe vers "/", on recharge la page pour que
-// le serveur serve la vitrine.
+// Le site vitrine (/) et la démo (/#demo) sont une page statique servie par
+// Vercel, hors React : une navigation interne vers "/" recharge la page.
 function StaticHome() {
   useEffect(() => {
     window.location.replace('/');
@@ -47,17 +45,15 @@ function AppShell() {
     return (
       <Routes>
         <Route path="/" element={<StaticHome />} />
-        {/* /demo.html : la démo interactive — missions réelles Supabase,
-            postuler => connexion/inscription. */}
-        <Route path="/demo.html" element={<LandingPage />} />
-        <Route path="/app" element={<Navigate to="/demo.html" replace />} />
+        {/* Non connecté : /app passe par la connexion, puis l'app s'ouvre. */}
+        <Route path="/app" element={<Navigate to="/connexion" replace />} />
         <Route path="/acces" element={<EntryPage />} />
         <Route path="/connexion" element={<SignInPage />} />
         <Route path="/inscription/travailleur" element={<WorkerSignupPage />} />
         <Route path="/inscription/structure" element={<StructureSignupPage />} />
         <Route path="/reinitialisation" element={<ResetPasswordPage />} />
         <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
-        <Route path="*" element={<Navigate to="/demo.html" replace />} />
+        <Route path="*" element={<Navigate to="/connexion" replace />} />
       </Routes>
     );
   }
@@ -69,11 +65,10 @@ function AppShell() {
   return (
     <Routes>
       <Route path="/" element={<StaticHome />} />
-      <Route path="/demo.html" element={profile.role === 'structure_admin' ? <StructureApp /> : <WorkerApp />} />
-      <Route path="/app" element={<Navigate to="/demo.html" replace />} />
+      <Route path="/app" element={profile.role === 'structure_admin' ? <StructureApp /> : <WorkerApp />} />
       <Route path="/reinitialisation" element={<ResetPasswordPage />} />
       <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
-      <Route path="*" element={<Navigate to="/demo.html" replace />} />
+      <Route path="*" element={<Navigate to="/app" replace />} />
     </Routes>
   );
 }

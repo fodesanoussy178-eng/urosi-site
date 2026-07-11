@@ -3,8 +3,8 @@ import react from '@vitejs/plugin-react';
 import path from 'node:path';
 
 // Deux pages :
-//  - index.html : site vitrine statique (aucun JS applicatif)
-//  - demo.html  : l'application React (SPA, routes internes /connexion, etc.)
+//  - index.html : site vitrine + démo interactive (aucune donnée réelle)
+//  - app.html   : l'application React (routes internes /app, /connexion, etc.)
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -16,7 +16,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         index: path.resolve(__dirname, 'index.html'),
-        demo: path.resolve(__dirname, 'demo.html'),
+        app: path.resolve(__dirname, 'app.html'),
       },
     },
   },

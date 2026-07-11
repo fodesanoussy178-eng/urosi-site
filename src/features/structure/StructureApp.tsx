@@ -7,9 +7,8 @@ import { DocModal, type DocKey } from '@/components/ui/DocModal';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import { ChatSheet } from '@/components/ui/ChatSheet';
 import { WalletCard } from '@/components/ui/WalletCard';
-import { PricingDetails } from '@/components/ui/PricingDetails';
+import { PriceSplit, splitPrice } from '@/components/ui/PriceSplit';
 import { fetchMyStructures, createStructure, updateStructureAbout, subscribeStructure } from './structureService';
-import { PayRulesPanel } from './PayRulesPanel';
 import { StatsPanel } from './StatsPanel';
 import { fetchMissionsForStructure, createMission } from '@/features/missions/missionsService';
 import {
@@ -20,40 +19,22 @@ import {
 import { rate, fetchRatedApplicationIds, fetchWorkerReputation, type WorkerReputation } from '@/features/missions/ratingsService';
 import { fetchDelaysForApplications } from '@/features/missions/feedbackService';
 import { fetchUnreadCounts } from '@/features/messages/messagesService';
-import { previewPricing } from '@/features/pricing/pricingService';
+import { fetchCommissionRates, type CommissionRates } from '@/features/pricing/pricingService';
 import { geocodeMelCity } from '@/lib/geo';
+import { spanDays, totalMinutes } from '@/lib/slots';
 import type { Mission, Structure } from '@/features/missions/types';
-import type { MissionSector, PricingBreakdown } from '@/types/database.types';
+import type { MissionSlot } from '@/types/database.types';
 import { formatEuros, formatHours } from '@/lib/format';
 
-type Tab = 'missions' | 'candidats' | 'regles' | 'pilotage';
-
-const DAY_OFFSETS = [0, 1, 2];
-const DUREES = [2, 3, 4, 5];
-const SECTORS: [MissionSector, string][] = [
-  ['restauration', 'Restauration'],
-  ['vente', 'Vente'],
-  ['logistique', 'Logistique'],
-  ['evenementiel', 'Événementiel'],
-  ['nettoyage', 'Nettoyage'],
-  ['manutention', 'Manutention'],
-  ['administratif', 'Administratif'],
-  ['autre', 'Autre'],
-];
+type Tab = 'missions' | 'candidats' | 'pilotage';
 
 function euros(cents: number): string {
   return formatEuros(cents).replace(' EUR', ' €');
 }
 
-function dayLabel(o: number): string {
-  if (o === 0) return "Aujourd'hui";
-  if (o === 1) return 'Demain';
-  return 'Après-demain';
-}
-
-function dayToDate(o: number): string {
+function todayPlus(days: number): string {
   const d = new Date();
-  d.setDate(d.getDate() + o);
+  d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
 }
 
@@ -237,6 +218,7 @@ export function StructureApp() {
           </div>
           <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
             {session && <NotificationBell profileId={session.user.id} onDataChanged={() => reload().catch(() => undefined)} />}
+            <a href="/#demo" style={{ fontSize: 10, color: T.cyan, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', textDecoration: 'none' }}>Démo</a>
             <button onClick={() => setDocKey('cgu')} style={{ fontSize: 10, color: T.mu, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>? Aide</button>
             <button onClick={() => signOut()} style={{ fontSize: 10, color: T.mu, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>Déconnexion</button>
           </div>
@@ -297,7 +279,6 @@ export function StructureApp() {
                 [
                   ['missions', 'Missions', mis.length],
                   ['candidats', 'Candidats', pending.length + unreadTotal],
-                  ['regles', 'Règles', 0],
                   ['pilotage', 'Pilotage', 0],
                 ] as [Tab, string, number][]
               ).map(([k, l, n]) => (
@@ -446,9 +427,6 @@ export function StructureApp() {
                 )}
               </div>
             )}
-
-            {/* ── RÈGLES DE RÉMUNÉRATION ── */}
-            {tab === 'regles' && <PayRulesPanel structureId={structure.id} notif={notif} />}
 
             {/* ── PILOTAGE : stats + wallet + habitués ── */}
             {tab === 'pilotage' && session && (
@@ -619,55 +597,31 @@ function AboutEditor({ structure, onSaved, notif }: { structure: Structure; onSa
   );
 }
 
+// Publication volontairement simple : la structure indique le planning
+// (jusqu'à 3 jours), le nombre de places et le montant proposé. Le coût
+// total (commission incluse) est affiché, le détail au clic.
 function PublishModal({ structure, onClose, onPublished }: { structure: Structure; onClose: () => void; onPublished: (m: Mission) => void }) {
-  const [f, setF] = useState({
-    t: '',
-    adr: '',
-    jour: 0,
-    heure: '',
-    duree: 4,
-    pay: 42,
-    desc: '',
-    solid: false,
-    sector: 'autre' as MissionSector,
-    difficulty: 1,
-    urgent: false,
-    distanceKm: '',
-  });
+  const [f, setF] = useState({ t: '', adr: '', pay: 72, desc: '', places: 1, solid: false });
+  const [slots, setSlots] = useState<MissionSlot[]>([{ date: todayPlus(1), start: '11:00', end: '15:00' }]);
+  const [rates, setRates] = useState<CommissionRates | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [preview, setPreview] = useState<PricingBreakdown | null>(null);
-  const previewTimer = useRef<ReturnType<typeof setTimeout>>();
 
-  const ok = f.t.trim().length >= 2 && f.adr.trim().length >= 2 && (f.solid || f.pay > 0);
-
-  // Apercu live de la remuneration finale (meme moteur SQL que la publication).
   useEffect(() => {
-    if (f.solid || f.pay <= 0) {
-      setPreview(null);
-      return;
-    }
-    clearTimeout(previewTimer.current);
-    previewTimer.current = setTimeout(async () => {
-      try {
-        const p = await previewPricing({
-          structureId: structure.id,
-          baseCents: Math.round(f.pay * 100),
-          date: dayToDate(f.jour),
-          startTime: f.heure || null,
-          durationMinutes: f.duree * 60,
-          sector: f.sector,
-          difficulty: f.difficulty,
-          urgent: f.urgent,
-          distanceKm: f.distanceKm ? Number(f.distanceKm.replace(',', '.')) : null,
-        });
-        setPreview(p);
-      } catch {
-        setPreview(null);
-      }
-    }, 350);
-    return () => clearTimeout(previewTimer.current);
-  }, [f.solid, f.pay, f.jour, f.heure, f.duree, f.sector, f.difficulty, f.urgent, f.distanceKm, structure.id]);
+    fetchCommissionRates().then(setRates).catch(() => undefined);
+  }, []);
+
+  const minutes = totalMinutes(slots);
+  const days = spanDays(slots);
+  const tooLong = days > 3;
+  const slotsOk = slots.length > 0 && minutes >= 60 && !tooLong && slots.every((sl) => sl.date && sl.start < sl.end);
+  const ok = f.t.trim().length >= 2 && f.adr.trim().length >= 2 && slotsOk && (f.solid || f.pay > 0);
+  const split = rates && !f.solid ? splitPrice(Math.round(f.pay * 100), rates.structurePct, rates.workerPct) : null;
+
+  function setSlot(i: number, patch: Partial<MissionSlot>) {
+    setSlots((prev) => prev.map((sl, idx) => (idx === i ? { ...sl, ...patch } : sl)));
+  }
 
   async function publish() {
     if (!ok || busy) return;
@@ -682,13 +636,13 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
         city: f.adr.trim(),
         lat: coords?.lat ?? null,
         lng: coords?.lng ?? null,
-        scheduled_date: dayToDate(f.jour),
-        start_time: f.heure || null,
-        duration_minutes: f.duree * 60,
-        sector: f.sector,
-        difficulty: f.difficulty,
-        is_urgent: f.urgent,
-        distance_km: f.distanceKm ? Number(f.distanceKm.replace(',', '.')) : null,
+        // scheduled_date / start_time / duration_minutes sont recalculés par
+        // le serveur à partir du planning (trigger missions_apply_slots).
+        scheduled_date: slots[0]?.date ?? todayPlus(1),
+        start_time: slots[0]?.start ?? null,
+        duration_minutes: minutes,
+        slots,
+        places: f.places,
         worker_rate_cents: f.solid ? 0 : Math.round(f.pay * 100),
         base_rate_cents: f.solid ? null : Math.round(f.pay * 100),
         is_solidaire: f.solid,
@@ -701,20 +655,6 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
     }
   }
 
-  const chip = (selected: boolean) =>
-    ({
-      background: selected ? '#fff' : T.row,
-      color: selected ? '#000' : T.sub,
-      border: `1px solid ${selected ? '#fff' : T.cb}`,
-      borderRadius: 20,
-      padding: '5px 11px',
-      fontSize: 11,
-      fontWeight: 700,
-      cursor: 'pointer',
-    }) as const;
-
-  const totalLabel = preview && preview.adjustments.length > 0 ? euros(preview.total_cents) : `${f.pay} €`;
-
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 400 }} onClick={onClose}>
       <div style={{ width: '100%', maxWidth: 420, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 26px', fontFamily: FONT, maxHeight: '88vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
@@ -722,70 +662,57 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
           <span style={{ fontSize: 15, fontWeight: 900, color: T.text }}>Nouvelle mission</span>
           <button onClick={onClose} style={{ background: T.row, border: 'none', borderRadius: 6, width: 26, height: 26, cursor: 'pointer', color: T.sub, fontSize: 14 }}>×</button>
         </div>
+
         <Fld label="Intitulé de la mission">
-          <input aria-label="Intitulé" value={f.t} onChange={(e) => setF((x) => ({ ...x, t: e.target.value }))} placeholder="Renfort service midi" style={inp} autoFocus />
+          <input aria-label="Intitulé" value={f.t} onChange={(e) => setF((x) => ({ ...x, t: e.target.value }))} placeholder="Intitulé de la mission" style={inp} autoFocus />
         </Fld>
         <Fld label="Adresse / ville">
-          <input aria-label="Adresse" value={f.adr} onChange={(e) => setF((x) => ({ ...x, adr: e.target.value }))} placeholder="12 Rue de Béthune, Lille" style={inp} />
+          <input aria-label="Adresse" value={f.adr} onChange={(e) => setF((x) => ({ ...x, adr: e.target.value }))} placeholder="Adresse ou ville" style={inp} />
         </Fld>
-        <Fld label="Secteur">
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-            {SECTORS.map(([k, l]) => (
-              <button key={k} onClick={() => setF((x) => ({ ...x, sector: k }))} style={chip(f.sector === k)}>
-                {l}
-              </button>
-            ))}
-          </div>
-        </Fld>
-        <Fld label="Jour">
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-            {DAY_OFFSETS.map((o) => (
-              <button key={o} onClick={() => setF((x) => ({ ...x, jour: o }))} style={chip(f.jour === o)}>
-                {dayLabel(o)}
-              </button>
-            ))}
-          </div>
-          <div style={{ fontSize: 9, color: T.mu, marginTop: 7, lineHeight: 1.5 }}>Publication ouverte à 48h à l'avance (flux constant).</div>
-        </Fld>
-        <Fld label="Heure de début (optionnel — déclenche les majorations horaires)">
-          <input aria-label="Heure de début" type="time" value={f.heure} onChange={(e) => setF((x) => ({ ...x, heure: e.target.value }))} style={inp} />
-        </Fld>
-        <Fld label="Durée (plafond légal : 5h)">
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-            {DUREES.map((h) => (
-              <button key={h} onClick={() => setF((x) => ({ ...x, duree: h }))} style={chip(f.duree === h)}>
-                {h}h
-              </button>
-            ))}
-          </div>
-        </Fld>
-        <Fld label="Difficulté">
-          <div style={{ display: 'flex', gap: 5 }}>
-            {([1, 2, 3] as const).map((d) => (
-              <button key={d} onClick={() => setF((x) => ({ ...x, difficulty: d }))} style={chip(f.difficulty === d)}>
-                {d === 1 ? 'Standard' : d === 2 ? 'Soutenue' : 'Exigeante'}
-              </button>
-            ))}
-          </div>
-        </Fld>
-        <Fld label="Options">
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-            <button onClick={() => setF((x) => ({ ...x, urgent: !x.urgent }))} style={chip(f.urgent)}>
-              ⚡ Urgente
+
+        <Fld label="Planning (jusqu'à 3 jours)">
+          {slots.map((sl, i) => (
+            <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}>
+              <input aria-label={`Jour ${i + 1}`} type="date" value={sl.date} onChange={(e) => setSlot(i, { date: e.target.value })} style={{ ...inp, marginBottom: 0, flex: 1.4, padding: '10px 8px', fontSize: 11.5 }} />
+              <input aria-label={`Début ${i + 1}`} type="time" value={sl.start} onChange={(e) => setSlot(i, { start: e.target.value })} style={{ ...inp, marginBottom: 0, flex: 1, padding: '10px 6px', fontSize: 11.5 }} />
+              <span style={{ color: T.mu, fontSize: 11 }}>→</span>
+              <input aria-label={`Fin ${i + 1}`} type="time" value={sl.end} onChange={(e) => setSlot(i, { end: e.target.value })} style={{ ...inp, marginBottom: 0, flex: 1, padding: '10px 6px', fontSize: 11.5 }} />
+              {slots.length > 1 && (
+                <button onClick={() => setSlots((prev) => prev.filter((_, idx) => idx !== i))} aria-label="Supprimer le créneau" style={{ background: T.redBg, color: T.red, border: 'none', borderRadius: 7, width: 26, height: 26, cursor: 'pointer', fontSize: 12, flexShrink: 0 }}>
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
+          {slots.length < 12 && (
+            <button
+              onClick={() => setSlots((prev) => [...prev, { date: prev[prev.length - 1]?.date ?? todayPlus(1), start: '18:00', end: '22:00' }])}
+              style={{ background: 'none', border: `1px dashed ${T.cb}`, color: T.sub, borderRadius: 8, padding: '7px 0', width: '100%', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+            >
+              ＋ Ajouter un créneau
             </button>
-            <input
-              aria-label="Éloignement du site (km)"
-              value={f.distanceKm}
-              onChange={(e) => setF((x) => ({ ...x, distanceKm: e.target.value }))}
-              placeholder="Site éloigné (km) ?"
-              inputMode="decimal"
-              style={{ ...inp, marginBottom: 0, width: 150, padding: '6px 10px', fontSize: 11 }}
-            />
+          )}
+          <div style={{ fontSize: 10, color: tooLong ? T.red : T.mu, marginTop: 6 }}>
+            {tooLong
+              ? 'Une mission dure 3 jours maximum.'
+              : minutes > 0
+                ? `Durée totale : ${formatHours(minutes)}${days > 1 ? ` sur ${days} jours` : ''}`
+                : 'Ajoute au moins un créneau (1h minimum).'}
           </div>
         </Fld>
-        <Fld label="Descriptif de la mission">
+
+        <Fld label="Nombre de places">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button onClick={() => setF((x) => ({ ...x, places: Math.max(1, x.places - 1) }))} style={{ width: 30, height: 30, borderRadius: '50%', background: T.row, border: `1px solid ${T.cb}`, color: T.text, fontSize: 15, cursor: 'pointer' }}>−</button>
+            <span style={{ fontSize: 15, fontWeight: 900, color: T.text, minWidth: 70, textAlign: 'center' }}>{f.places} place{f.places > 1 ? 's' : ''}</span>
+            <button onClick={() => setF((x) => ({ ...x, places: Math.min(20, x.places + 1) }))} style={{ width: 30, height: 30, borderRadius: '50%', background: T.grad, border: 'none', color: '#fff', fontSize: 15, cursor: 'pointer' }}>＋</button>
+          </div>
+        </Fld>
+
+        <Fld label="Descriptif">
           <textarea aria-label="Descriptif" value={f.desc} onChange={(e) => setF((x) => ({ ...x, desc: e.target.value }))} rows={3} placeholder="Ce que le travailleur fera concrètement…" style={{ ...inp, resize: 'none', lineHeight: 1.5 }} />
         </Fld>
+
         {structure.is_ess && (
           <Fld label="Type de mission">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
@@ -798,29 +725,54 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
             </div>
           </Fld>
         )}
+
         {f.solid ? (
           <div style={{ background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 9, padding: '11px 13px', marginBottom: 12, fontSize: 10.5, color: T.green, lineHeight: 1.55 }}>
-            🤝 Mission bénévole à 0 €. Elle comptera dans le CV vivant des participants comme preuve d'engagement.
+            🤝 Mission bénévole à 0 €. Elle comptera dans le CV vivant des participants.
           </div>
         ) : (
           <>
-            <Fld label="Rémunération de base (€) — les règles s'appliquent dessus">
+            <Fld label="Montant proposé (€)">
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <button onClick={() => setF((x) => ({ ...x, pay: Math.max(10, x.pay - 5) }))} style={{ width: 34, height: 34, borderRadius: '50%', background: T.row, border: `1px solid ${T.cb}`, color: T.text, fontSize: 18, cursor: 'pointer' }}>
+                <button onClick={() => setF((x) => ({ ...x, pay: Math.max(5, x.pay - 5) }))} style={{ width: 34, height: 34, borderRadius: '50%', background: T.row, border: `1px solid ${T.cb}`, color: T.text, fontSize: 18, cursor: 'pointer' }}>
                   −
                 </button>
-                <span style={{ fontSize: 24, fontWeight: 900, color: T.text, minWidth: 70, textAlign: 'center' }}>{f.pay} €</span>
+                <input
+                  aria-label="Montant proposé"
+                  value={String(f.pay)}
+                  onChange={(e) => setF((x) => ({ ...x, pay: Math.max(0, Number(e.target.value.replace(',', '.')) || 0) }))}
+                  inputMode="decimal"
+                  style={{ ...inp, marginBottom: 0, width: 90, textAlign: 'center', fontSize: 18, fontWeight: 900 }}
+                />
                 <button onClick={() => setF((x) => ({ ...x, pay: x.pay + 5 }))} style={{ width: 34, height: 34, borderRadius: '50%', background: T.grad, border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer' }}>
                   +
                 </button>
               </div>
             </Fld>
-            {preview && preview.adjustments.length > 0 && <PricingDetails breakdown={preview} compact />}
+            {split && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 800, color: T.text }}>
+                  Coût total estimé : {euros(split.totalStructureCents)}
+                  <button
+                    onClick={() => setShowDetail((v) => !v)}
+                    style={{ marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: 10.5, color: T.mu, textDecoration: 'underline', fontWeight: 600 }}
+                  >
+                    {showDetail ? 'Masquer' : 'Voir le détail'}
+                  </button>
+                </div>
+                {showDetail && (
+                  <div style={{ marginTop: 8 }}>
+                    <PriceSplit values={split} side="structure" />
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
+
         {error && <div style={{ fontSize: 11, color: T.red, marginBottom: 10 }}>{error}</div>}
         <button onClick={publish} disabled={!ok || busy} style={{ width: '100%', background: ok && !busy ? '#fff' : T.row, color: ok && !busy ? '#000' : T.mu, border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: ok && !busy ? 'pointer' : 'not-allowed' }}>
-          {busy ? '…' : ok ? (f.solid ? 'Publier — Solidaire (0 €)' : `Publier — ${totalLabel}`) : "Remplis l'intitulé et l'adresse"}
+          {busy ? '…' : ok ? (f.solid ? 'Publier — Solidaire (0 €)' : `Publier — ${f.pay} €`) : 'Complète la mission'}
         </button>
       </div>
     </div>

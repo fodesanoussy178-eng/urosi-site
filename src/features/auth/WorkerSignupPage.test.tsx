@@ -8,6 +8,9 @@ import * as authService from './authService';
 vi.mock('./authService', () => ({
   signIn: vi.fn(),
   signUp: vi.fn(),
+  requestPasswordReset: vi.fn(),
+  resendConfirmationEmail: vi.fn(),
+  isUnconfirmedEmailError: () => false,
 }));
 
 describe('WorkerSignupPage', () => {
@@ -15,7 +18,20 @@ describe('WorkerSignupPage', () => {
     vi.clearAllMocks();
   });
 
-  it('signs up a worker with full name, city and role', async () => {
+  it('ouvre avec des champs vides et des placeholders neutres', () => {
+    render(
+      <MemoryRouter>
+        <WorkerSignupPage />
+      </MemoryRouter>,
+    );
+    const prenom = screen.getByLabelText('Prénom') as HTMLInputElement;
+    expect(prenom.value).toBe('');
+    expect(prenom.placeholder).toBe('Prénom');
+    expect((screen.getByLabelText('Ville') as HTMLInputElement).placeholder).toBe('Ville');
+    expect((screen.getByLabelText('Email') as HTMLInputElement).value).toBe('');
+  });
+
+  it('exige la confirmation du mot de passe et les CGU puis inscrit le travailleur', async () => {
     const user = userEvent.setup();
     vi.mocked(authService.signUp).mockResolvedValue({ session: null } as never);
     render(
@@ -24,21 +40,25 @@ describe('WorkerSignupPage', () => {
       </MemoryRouter>,
     );
 
-    await user.type(screen.getByLabelText('Prénom'), 'Fodé');
-    await user.type(screen.getByLabelText('Nom'), 'Diallo');
-    await user.type(screen.getByLabelText('Email'), 'fode@email.com');
+    await user.type(screen.getByLabelText('Prénom'), 'Camille');
+    await user.type(screen.getByLabelText('Nom'), 'Durand');
+    await user.type(screen.getByLabelText('Email'), 'camille@exemple.fr');
     await user.type(screen.getByLabelText('Mot de passe'), 'secret123');
-    await user.type(screen.getByLabelText('Ville'), 'Tourcoing');
+    await user.type(screen.getByLabelText('Confirmer le mot de passe'), 'secret123');
+    await user.type(screen.getByLabelText('Ville'), 'Lille');
+
+    // CGU non cochées : bouton désactivé
+    expect(screen.getByRole('button', { name: /Remplis tes infos|Créer mon compte/ })).toBeDisabled();
+    await user.click(screen.getByLabelText("J'accepte les conditions d'utilisation"));
     await user.click(screen.getByRole('button', { name: 'Créer mon compte' }));
 
     await waitFor(() =>
       expect(authService.signUp).toHaveBeenCalledWith({
-        email: 'fode@email.com',
+        email: 'camille@exemple.fr',
         password: 'secret123',
-        fullName: 'Fodé Diallo',
+        fullName: 'Camille Durand',
         role: 'worker',
-        city: 'Tourcoing',
-        phone: undefined,
+        city: 'Lille',
       }),
     );
   });
