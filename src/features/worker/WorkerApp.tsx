@@ -18,20 +18,26 @@ import {
 } from '@/features/missions/missionsService';
 import {
   applyToMission,
-  completeApplication,
   updateApplicationStatus,
   fetchMyApplications,
   type ApplicationWithMission,
 } from '@/features/missions/applicationsService';
 import { rate, fetchStructureRatings, fetchWorkerReceivedRatings, type StructureRating } from '@/features/missions/ratingsService';
-import { notifyDelay, submitReport, REPORT_MOTIFS } from '@/features/missions/feedbackService';
+import { notifyDelay } from '@/features/missions/feedbackService';
+import {
+  attendanceEventLabel,
+  createAttendanceQR,
+  fetchAttendanceEvents,
+  reportMissionIssue,
+  requestRemoteAttendance,
+  type AttendanceEvent,
+} from '@/features/missions/attendanceService';
 import { fetchUnreadCounts } from '@/features/messages/messagesService';
 import { fetchWorkerStats, type WorkerStats } from '@/features/stats/statsService';
 import { fetchCommissionRates, type CommissionRates } from '@/features/pricing/pricingService';
 import { PriceSplit, splitPrice } from '@/components/ui/PriceSplit';
 import { distanceKm, formatDistance, type LatLng } from '@/lib/geo';
 import { formatDay, groupByDay, scheduleSummary } from '@/lib/slots';
-import type { ReportMotif } from '@/types/database.types';
 import { formatEuros, formatHours } from '@/lib/format';
 
 type Tab = 'flux' | 'moi' | 'profil';
@@ -43,11 +49,29 @@ function euros(cents: number): string {
 const SHEET = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 50 } as const;
 const SHEET_BODY = { width: '100%', maxWidth: 430, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 28px' } as const;
 
+const WORKER_REPORT_MOTIFS: Record<string, string> = {
+  structure_absent: 'Aucun responsable présent',
+  closed_place: 'Établissement fermé',
+  wrong_address: 'Adresse incorrecte',
+  conditions_differentes: "Conditions différentes de l'annonce",
+  task_unplanned: 'Tâche non prévue',
+  hours_changed: 'Horaires modifiés',
+  inappropriate_behavior: 'Comportement inapproprié',
+  danger: 'Danger ou sécurité',
+  discrimination: 'Discrimination',
+  harcelement: 'Harcèlement',
+  missing_equipment: 'Matériel absent',
+  break_not_respected: 'Pause non respectée',
+  overtime_request: 'Demande de rester plus longtemps',
+  other: 'Autre',
+};
+
 export function WorkerApp() {
   const { session, profile, refreshProfile } = useAuth();
   const [tab, setTab] = useState<Tab>('flux');
   const [flux, setFlux] = useState<MissionWithStructure[]>([]);
   const [apps, setApps] = useState<ApplicationWithMission[]>([]);
+  const [attendance, setAttendance] = useState<Map<string, AttendanceEvent[]>>(new Map());
   const [receivedRatings, setReceivedRatings] = useState<Map<string, number>>(new Map());
   const [structRatings, setStructRatings] = useState<Map<string, StructureRating>>(new Map());
   const [unread, setUnread] = useState<Map<string, number>>(new Map());
@@ -63,8 +87,9 @@ export function WorkerApp() {
   const [chatFor, setChatFor] = useState<ApplicationWithMission | null>(null);
   const [alrt, setAlrt] = useState<{ app: ApplicationWithMission; type: 'retard' | 'annulation' } | null>(null);
   const [signal, setSignal] = useState<ApplicationWithMission | null>(null);
-  const [sigMotif, setSigMotif] = useState<ReportMotif | null>(null);
+  const [sigMotif, setSigMotif] = useState<string | null>(null);
   const [sigNote, setSigNote] = useState('');
+  const [qrFor, setQrFor] = useState<{ app: ApplicationWithMission; type: 'start' | 'end'; token: string; expiresAt: string } | null>(null);
   const [docKey, setDocKey] = useState<DocKey | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout>>();
@@ -93,8 +118,13 @@ export function WorkerApp() {
       if (myStats) setStats(myStats);
       const structureIds = [...new Set(missions.map((m) => m.structure_id))];
       setStructRatings(await fetchStructureRatings(structureIds));
-      const activeIds = myApps.filter((a) => a.status === 'accepted' || a.status === 'completed').map((a) => a.id);
-      setUnread(await fetchUnreadCounts(activeIds, session.user.id));
+      const activeIds = myApps.filter((a) => ['accepted', 'in_progress', 'payment_pending', 'completed'].includes(a.status)).map((a) => a.id);
+      const [unreadMap, attendanceMap] = await Promise.all([
+        fetchUnreadCounts(activeIds, session.user.id),
+        fetchAttendanceEvents(myApps.map((a) => a.id)).catch(() => new Map<string, AttendanceEvent[]>()),
+      ]);
+      setUnread(unreadMap);
+      setAttendance(attendanceMap);
     } catch {
       notif('Impossible de charger les missions.');
     } finally {
@@ -155,7 +185,7 @@ export function WorkerApp() {
       if (db == null) return -1;
       return da - db;
     });
-  const acceptedApps = apps.filter((a) => a.status === 'accepted');
+  const acceptedApps = apps.filter((a) => a.status === 'accepted' || a.status === 'in_progress' || a.status === 'payment_pending');
   const pendingCount = apps.filter((a) => a.status === 'pending').length;
   const completedApps = apps.filter((a) => a.status === 'completed');
   const cvCount = completedApps.length;
@@ -173,20 +203,6 @@ export function WorkerApp() {
       notif('✓ Candidature envoyée. Elle apparaîtra dans Missions si la structure accepte.');
     } catch (e) {
       notif(e instanceof Error ? e.message : 'Impossible de postuler.');
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function terminer(a: ApplicationWithMission) {
-    if (busyId) return;
-    setBusyId(a.id);
-    try {
-      await completeApplication(a.id);
-      await load();
-      setRatingFor(a);
-    } catch (e) {
-      notif(e instanceof Error ? e.message : 'Action impossible.');
     } finally {
       setBusyId(null);
     }
@@ -232,14 +248,42 @@ export function WorkerApp() {
   async function envoyerSignalement() {
     if (!session || !signal || !sigMotif) return;
     try {
-      await submitReport({ applicationId: signal.id, workerId: session.user.id, motif: sigMotif, note: sigNote });
-      notif('Signalement transmis — on revient vers toi sous 24h.');
+      await reportMissionIssue({
+        applicationId: signal.id,
+        category: sigMotif,
+        description: sigNote,
+        severity: ['danger', 'violence', 'harcelement', 'discrimination', 'accident', 'menace'].includes(sigMotif) ? 'critical' : 'medium',
+      });
+      await load();
+      notif('Signalement transmis à Support UROSI — aucun impact automatique sur ton accès.');
     } catch (e) {
       notif(e instanceof Error ? e.message : 'Envoi impossible.');
     } finally {
       setSignal(null);
       setSigMotif(null);
       setSigNote('');
+    }
+  }
+
+  async function afficherQr(app: ApplicationWithMission, type: 'start' | 'end') {
+    try {
+      const created = await createAttendanceQR(app.id, type);
+      setQrFor({ app, type, token: created.token, expiresAt: created.expires_at });
+      await load();
+    } catch (e) {
+      notif(e instanceof Error ? e.message : 'QR impossible à générer.');
+    }
+  }
+
+  async function demanderValidationDistance() {
+    if (!qrFor) return;
+    try {
+      await requestRemoteAttendance(qrFor.app.id, qrFor.type, 'QR impossible à scanner');
+      setQrFor(null);
+      await load();
+      notif('Demande envoyée à la structure.');
+    } catch (e) {
+      notif(e instanceof Error ? e.message : 'Demande impossible.');
     }
   }
 
@@ -357,6 +401,10 @@ export function WorkerApp() {
               )}
               {acceptedApps.map((a) => {
                 const unreadCount = unread.get(a.id) ?? 0;
+                const events = attendance.get(a.id) ?? [];
+                const startDone = Boolean(a.actual_start_at || a.checked_in_at);
+                const endDone = Boolean(a.actual_end_at);
+                const paymentPending = a.status === 'payment_pending';
                 return (
                   <div key={a.id} style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 15 }}>
                     <div style={{ fontSize: 14, fontWeight: 800, color: T.text, marginBottom: 2 }}>{a.mission?.title ?? 'Mission'}</div>
@@ -364,12 +412,59 @@ export function WorkerApp() {
                       {a.mission?.city ? `📍 ${a.mission.city} · ` : ''}
                       {a.mission?.scheduled_date ?? ''}
                     </div>
-                    <div style={{ background: '#fff', borderRadius: 11, padding: '14px 0 9px', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 11 }}>
-                      <QRBadge value={`${window.location.origin}/pointage/${a.id}/${a.checkin_token}`} />
-                      <div style={{ fontSize: 10, color: '#64748b', marginTop: 6, fontWeight: 600 }}>
-                        {a.checked_in_at ? '✓ Présence validée' : 'À faire scanner par la structure sur place'}
+                    <div style={{ background: T.row, border: `1px solid ${startDone ? T.greenBorder : T.cb}`, borderRadius: 12, padding: '11px 12px', marginBottom: 10 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 900, color: startDone ? T.green : T.text }}>Début de mission</div>
+                          <div style={{ fontSize: 9.5, color: T.mu, marginTop: 2 }}>
+                            {startDone ? `Confirmé à ${new Date(a.actual_start_at || a.checked_in_at || '').toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : 'QR temporaire, valable 10 min'}
+                          </div>
+                        </div>
+                        {!startDone && (
+                          <button onClick={() => afficherQr(a, 'start')} style={{ background: '#fff', color: '#000', border: 'none', borderRadius: 8, padding: '8px 10px', fontSize: 11, fontWeight: 900, cursor: 'pointer' }}>
+                            Afficher mon QR
+                          </button>
+                        )}
                       </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 900, color: endDone ? T.green : startDone ? T.text : T.mu }}>Fin de mission</div>
+                          <div style={{ fontSize: 9.5, color: T.mu, marginTop: 2 }}>
+                            {endDone
+                              ? `Confirmée à ${new Date(a.actual_end_at || '').toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+                              : startDone
+                                ? 'Disponible depuis la confirmation du début'
+                                : 'Disponible après le début'}
+                          </div>
+                        </div>
+                        {startDone && !endDone && (
+                          <button onClick={() => afficherQr(a, 'end')} style={{ background: T.grad, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 10px', fontSize: 11, fontWeight: 900, cursor: 'pointer' }}>
+                            QR de fin
+                          </button>
+                        )}
+                      </div>
+                      {a.delay_minutes > 0 && (
+                        <div style={{ marginTop: 8, fontSize: 9.5, color: a.delay_minutes <= 5 ? T.amber : T.red }}>
+                          Retard calculé : {a.delay_minutes} min · {a.delay_status === 'tolerated' ? 'toléré' : a.delay_status}
+                        </div>
+                      )}
+                      {paymentPending && (
+                        <div style={{ marginTop: 8, fontSize: 9.5, color: T.cyan }}>
+                          Mission terminée · paiement préparé pour J+3.
+                        </div>
+                      )}
                     </div>
+                    {events.length > 0 && (
+                      <div style={{ background: '#02061755', border: `1px solid ${T.cb}`, borderRadius: 10, padding: '9px 10px', marginBottom: 10 }}>
+                        <div style={{ fontSize: 9, fontWeight: 800, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Historique pointage</div>
+                        {events.slice(-4).map((ev) => (
+                          <div key={ev.id} style={{ display: 'flex', gap: 7, alignItems: 'baseline', fontSize: 10, color: T.sub, padding: '3px 0' }}>
+                            <span style={{ color: T.mu, minWidth: 42 }}>{new Date(ev.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span>{attendanceEventLabel(ev)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <button
                       onClick={() => setChatFor(a)}
                       style={{ position: 'relative', width: '100%', background: '#1d4ed815', color: '#93c5fd', border: '1px solid #1e40af', borderRadius: 8, padding: '9px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer', marginBottom: 7 }}
@@ -389,13 +484,18 @@ export function WorkerApp() {
                         ✕ Annuler
                       </button>
                     </div>
-                    <button
-                      onClick={() => terminer(a)}
-                      disabled={busyId === a.id}
-                      style={{ width: '100%', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 9, padding: '11px 0', fontSize: 13, fontWeight: 900, cursor: 'pointer', marginBottom: 6 }}
-                    >
-                      {busyId === a.id ? '…' : '▦ Terminer la mission'}
-                    </button>
+                    {endDone ? (
+                      <div style={{ width: '100%', background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 900, textAlign: 'center', marginBottom: 6 }}>
+                        Fin enregistrée · paiement en préparation
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => afficherQr(a, startDone ? 'end' : 'start')}
+                        style={{ width: '100%', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 9, padding: '11px 0', fontSize: 13, fontWeight: 900, cursor: 'pointer', marginBottom: 6 }}
+                      >
+                        {startDone ? 'Afficher mon QR de fin' : 'Afficher mon QR de début'}
+                      </button>
+                    )}
                     <button onClick={() => setSignal(a)} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#f59e0b', textDecoration: 'underline' }}>
                       ⚠ Signaler un problème
                     </button>
@@ -712,6 +812,29 @@ export function WorkerApp() {
           </div>
         )}
 
+        {/* QR debut / fin */}
+        {qrFor && (
+          <div style={{ ...SHEET, background: 'rgba(0,0,0,.92)' }} onClick={() => setQrFor(null)}>
+            <div style={{ ...SHEET_BODY, textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ fontSize: 15, fontWeight: 900, color: T.text, marginBottom: 4 }}>
+                {qrFor.type === 'start' ? 'QR de début de mission' : 'QR de fin de mission'}
+              </div>
+              <div style={{ fontSize: 10.5, color: T.sub, lineHeight: 1.5, marginBottom: 13 }}>
+                Fais scanner ce QR avec l’appareil photo du responsable. Il expire à {new Date(qrFor.expiresAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}.
+              </div>
+              <div style={{ display: 'inline-flex', background: '#fff', borderRadius: 14, padding: 12, marginBottom: 12 }}>
+                <QRBadge value={`${window.location.origin}/scan/${qrFor.token}`} size={190} />
+              </div>
+              <button onClick={demanderValidationDistance} style={{ width: '100%', background: '#1d4ed815', color: '#93c5fd', border: '1px solid #1e40af', borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer', marginBottom: 7 }}>
+                Problème de scan · demander une validation à distance
+              </button>
+              <button onClick={() => { setSignal(qrFor.app); setQrFor(null); }} style={{ width: '100%', background: T.row, color: T.sub, border: `1px solid ${T.cb}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                Aucun responsable présent / autre problème
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Signalement */}
         {signal && (
           <div style={SHEET} onClick={() => { setSignal(null); setSigMotif(null); setSigNote(''); }}>
@@ -723,7 +846,7 @@ export function WorkerApp() {
               </div>
               <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 7 }}>Motif</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-                {(Object.entries(REPORT_MOTIFS) as [ReportMotif, string][]).map(([k, l]) => (
+                {Object.entries(WORKER_REPORT_MOTIFS).map(([k, l]) => (
                   <button key={k} onClick={() => setSigMotif(k)} style={{ textAlign: 'left', display: 'flex', alignItems: 'center', gap: 9, background: sigMotif === k ? T.amberBg : T.row, color: sigMotif === k ? '#f59e0b' : T.text, border: `1.5px solid ${sigMotif === k ? '#f59e0b' : T.cb}`, borderRadius: 8, padding: '11px 13px', fontSize: 12, fontWeight: sigMotif === k ? 800 : 600, cursor: 'pointer' }}>
                     <span style={{ width: 15, height: 15, borderRadius: '50%', border: `2px solid ${sigMotif === k ? '#f59e0b' : T.cb}`, background: sigMotif === k ? '#f59e0b' : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#000', fontWeight: 900 }}>
                       {sigMotif === k ? '✓' : ''}

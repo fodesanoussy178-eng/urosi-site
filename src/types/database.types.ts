@@ -15,12 +15,51 @@ export type MissionSector =
   | 'manutention'
   | 'administratif'
   | 'autre';
-export type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled' | 'completed';
+export type ApplicationStatus =
+  | 'pending'
+  | 'accepted'
+  | 'in_progress'
+  | 'payment_pending'
+  | 'rejected'
+  | 'cancelled'
+  | 'completed'
+  | 'disputed';
 export type PaymentStatus = 'pending' | 'held' | 'released' | 'failed';
 export type PaymentProvider = 'internal' | 'stripe' | 'lemonway';
 export type RatingDirection = 'worker_to_structure' | 'structure_to_worker';
 export type ReportMotif = 'absent' | 'conditions' | 'securite' | 'autre';
 export type DisputeStatus = 'open' | 'reviewing' | 'resolved' | 'rejected';
+export type AttendanceStatus = 'not_started' | 'start_confirmed' | 'end_confirmed' | 'remote_pending' | 'paper_pending' | 'disputed';
+export type AttendanceMethod = 'qr' | 'remote' | 'paper' | 'support';
+export type AttendanceEventType =
+  | 'start_requested'
+  | 'start_confirmed'
+  | 'end_requested'
+  | 'end_confirmed'
+  | 'delay_reported'
+  | 'delay_confirmed'
+  | 'absence_reported'
+  | 'absence_confirmed'
+  | 'issue_reported'
+  | 'remote_requested'
+  | 'paper_submitted';
+export type DelayStatus = 'on_time' | 'tolerated' | 'late' | 'disputed' | 'justified';
+export type MissionReportSeverity = 'low' | 'medium' | 'high' | 'critical';
+export type MissionReportStatus = 'open' | 'awaiting_response' | 'reviewing' | 'resolved' | 'rejected';
+export type ReliabilitySubjectType = 'worker' | 'structure';
+export type ReliabilityEventType =
+  | 'presence_confirmed'
+  | 'mission_completed'
+  | 'delay_reported'
+  | 'delay_confirmed'
+  | 'absence_reported'
+  | 'absence_confirmed'
+  | 'early_departure_reported'
+  | 'mission_disputed'
+  | 'report_opened'
+  | 'report_resolved';
+export type ReliabilityEventStatus = 'pending' | 'confirmed' | 'disputed' | 'dismissed';
+export type QRTokenType = 'start' | 'end';
 export type PayRuleKind =
   | 'day_of_week'
   | 'holiday'
@@ -198,6 +237,21 @@ export interface Database {
           status: ApplicationStatus;
           checkin_token: string;
           checked_in_at: string | null;
+          scheduled_start_at: string | null;
+          scheduled_end_at: string | null;
+          actual_start_at: string | null;
+          actual_end_at: string | null;
+          attendance_status: AttendanceStatus;
+          attendance_method_start: AttendanceMethod | null;
+          attendance_method_end: AttendanceMethod | null;
+          start_validated_by: string | null;
+          end_validated_by: string | null;
+          delay_minutes: number;
+          delay_status: DelayStatus;
+          delay_reason: string | null;
+          delay_reported_by: string | null;
+          delay_confirmed_by: string | null;
+          payment_ready_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -207,6 +261,21 @@ export interface Database {
           status?: ApplicationStatus;
           checkin_token?: string;
           checked_in_at?: string | null;
+          scheduled_start_at?: string | null;
+          scheduled_end_at?: string | null;
+          actual_start_at?: string | null;
+          actual_end_at?: string | null;
+          attendance_status?: AttendanceStatus;
+          attendance_method_start?: AttendanceMethod | null;
+          attendance_method_end?: AttendanceMethod | null;
+          start_validated_by?: string | null;
+          end_validated_by?: string | null;
+          delay_minutes?: number;
+          delay_status?: DelayStatus;
+          delay_reason?: string | null;
+          delay_reported_by?: string | null;
+          delay_confirmed_by?: string | null;
+          payment_ready_at?: string | null;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['applications']['Insert']>;
@@ -522,12 +591,20 @@ export interface Database {
           id: string;
           application_id: string;
           minutes: number;
+          reason: string | null;
+          estimated_arrival_at: string | null;
+          acknowledged_at: string | null;
+          structure_response: 'acknowledged' | 'accepted_delay' | 'need_precision' | 'mission_at_risk' | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           application_id: string;
           minutes: number;
+          reason?: string | null;
+          estimated_arrival_at?: string | null;
+          acknowledged_at?: string | null;
+          structure_response?: 'acknowledged' | 'accepted_delay' | 'need_precision' | 'mission_at_risk' | null;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['delay_notices']['Insert']>;
@@ -577,6 +654,202 @@ export interface Database {
             referencedColumns: ['id'];
           },
         ];
+      };
+      structure_members: {
+        Row: {
+          id: string;
+          structure_id: string;
+          user_id: string;
+          role: 'owner' | 'manager' | 'member';
+          can_validate_attendance: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          structure_id: string;
+          user_id: string;
+          role?: 'owner' | 'manager' | 'member';
+          can_validate_attendance?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['structure_members']['Insert']>;
+        Relationships: [];
+      };
+      mission_qr_tokens: {
+        Row: {
+          id: string;
+          mission_id: string;
+          application_id: string;
+          worker_id: string;
+          structure_id: string;
+          type: QRTokenType;
+          token_hash: string;
+          expires_at: string;
+          used_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          mission_id: string;
+          application_id: string;
+          worker_id: string;
+          structure_id: string;
+          type: QRTokenType;
+          token_hash: string;
+          expires_at: string;
+          used_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['mission_qr_tokens']['Insert']>;
+        Relationships: [];
+      };
+      attendance_events: {
+        Row: {
+          id: string;
+          mission_id: string;
+          application_id: string;
+          worker_id: string;
+          structure_id: string;
+          event_type: AttendanceEventType;
+          method: AttendanceMethod;
+          validated_by: string | null;
+          declared_time: string | null;
+          confirmed_time: string | null;
+          evidence_id: string | null;
+          note: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          mission_id: string;
+          application_id: string;
+          worker_id: string;
+          structure_id: string;
+          event_type: AttendanceEventType;
+          method: AttendanceMethod;
+          validated_by?: string | null;
+          declared_time?: string | null;
+          confirmed_time?: string | null;
+          evidence_id?: string | null;
+          note?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['attendance_events']['Insert']>;
+        Relationships: [];
+      };
+      attendance_evidence: {
+        Row: {
+          id: string;
+          mission_id: string;
+          application_id: string;
+          uploaded_by: string;
+          file_path: string;
+          method: 'paper' | 'other';
+          status: 'pending' | 'confirmed' | 'rejected' | 'disputed';
+          created_at: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          mission_id: string;
+          application_id: string;
+          uploaded_by: string;
+          file_path: string;
+          method: 'paper' | 'other';
+          status?: 'pending' | 'confirmed' | 'rejected' | 'disputed';
+          created_at?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['attendance_evidence']['Insert']>;
+        Relationships: [];
+      };
+      mission_reports: {
+        Row: {
+          id: string;
+          mission_id: string;
+          application_id: string | null;
+          reporter_id: string;
+          reported_user_id: string | null;
+          structure_id: string;
+          category: string;
+          description: string | null;
+          severity: MissionReportSeverity;
+          status: MissionReportStatus;
+          created_at: string;
+          responded_at: string | null;
+          resolved_at: string | null;
+          resolved_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          mission_id: string;
+          application_id?: string | null;
+          reporter_id: string;
+          reported_user_id?: string | null;
+          structure_id: string;
+          category: string;
+          description?: string | null;
+          severity?: MissionReportSeverity;
+          status?: MissionReportStatus;
+          created_at?: string;
+          responded_at?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['mission_reports']['Insert']>;
+        Relationships: [];
+      };
+      mission_report_evidence: {
+        Row: {
+          id: string;
+          report_id: string;
+          uploaded_by: string;
+          file_path: string;
+          mime_type: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          report_id: string;
+          uploaded_by: string;
+          file_path: string;
+          mime_type?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['mission_report_evidence']['Insert']>;
+        Relationships: [];
+      };
+      reliability_events: {
+        Row: {
+          id: string;
+          subject_type: ReliabilitySubjectType;
+          subject_id: string;
+          mission_id: string | null;
+          application_id: string | null;
+          event_type: ReliabilityEventType;
+          status: ReliabilityEventStatus;
+          source: 'system' | 'qr' | 'remote' | 'paper' | 'support';
+          weight: number;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          subject_type: ReliabilitySubjectType;
+          subject_id: string;
+          mission_id?: string | null;
+          application_id?: string | null;
+          event_type: ReliabilityEventType;
+          status?: ReliabilityEventStatus;
+          source?: 'system' | 'qr' | 'remote' | 'paper' | 'support';
+          weight?: number;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['reliability_events']['Insert']>;
+        Relationships: [];
       };
       reliability_disputes: {
         Row: {
@@ -658,6 +931,48 @@ export interface Database {
         Returns: Json;
       };
       process_mission_payment: {
+        Args: { p_application_id: string };
+        Returns: string | null;
+      };
+      create_mission_qr_token: {
+        Args: { p_application_id: string; p_type: QRTokenType };
+        Returns: Json;
+      };
+      get_scan_context: {
+        Args: { p_token: string };
+        Returns: Json;
+      };
+      confirm_attendance_qr: {
+        Args: { p_token: string };
+        Returns: Json;
+      };
+      request_remote_attendance: {
+        Args: { p_application_id: string; p_type: QRTokenType; p_reason?: string | null };
+        Returns: string;
+      };
+      confirm_remote_attendance: {
+        Args: { p_application_id: string; p_type: QRTokenType };
+        Returns: Json;
+      };
+      report_worker_delay: {
+        Args: { p_application_id: string; p_minutes: number; p_reason?: string | null; p_eta?: string | null };
+        Returns: string;
+      };
+      report_mission_issue: {
+        Args: {
+          p_application_id: string;
+          p_category: string;
+          p_description?: string | null;
+          p_severity?: MissionReportSeverity;
+          p_reported_user_id?: string | null;
+        };
+        Returns: string;
+      };
+      report_worker_absence: {
+        Args: { p_application_id: string; p_reason: string };
+        Returns: string;
+      };
+      release_payment_ready_mission: {
         Args: { p_application_id: string };
         Returns: string | null;
       };

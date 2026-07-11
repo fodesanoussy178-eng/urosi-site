@@ -12,6 +12,7 @@ import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage';
 import { WorkerApp } from '@/features/worker/WorkerApp';
 import { StructureApp } from '@/features/structure/StructureApp';
 import { CheckinPage } from '@/features/missions/CheckinPage';
+import { ScanPage } from '@/features/missions/ScanPage';
 
 function Centered({ text }: { text: string }) {
   return (
@@ -53,6 +54,7 @@ function AppShell() {
         <Route path="/inscription/structure" element={<StructureSignupPage />} />
         <Route path="/reinitialisation" element={<ResetPasswordPage />} />
         <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
+        <Route path="/scan/:token" element={<ScanPage />} />
         <Route path="*" element={<Navigate to="/connexion" replace />} />
       </Routes>
     );
@@ -68,6 +70,7 @@ function AppShell() {
       <Route path="/app" element={profile.role === 'structure_admin' ? <StructureApp /> : <WorkerApp />} />
       <Route path="/reinitialisation" element={<ResetPasswordPage />} />
       <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
+      <Route path="/scan/:token" element={<ScanPage />} />
       <Route path="*" element={<Navigate to="/app" replace />} />
     </Routes>
   );

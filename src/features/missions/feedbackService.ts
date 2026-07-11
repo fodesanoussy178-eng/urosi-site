@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { ReportMotif } from '@/types/database.types';
+import { reportWorkerDelay } from './attendanceService';
 
 export const REPORT_MOTIFS: Record<ReportMotif, string> = {
   absent: 'Structure absente / pas au rendez-vous',
@@ -9,8 +10,7 @@ export const REPORT_MOTIFS: Record<ReportMotif, string> = {
 };
 
 export async function notifyDelay(applicationId: string, minutes: number): Promise<void> {
-  const { error } = await supabase.from('delay_notices').insert({ application_id: applicationId, minutes });
-  if (error) throw error;
+  await reportWorkerDelay({ applicationId, minutes });
 }
 
 export async function submitReport(input: {

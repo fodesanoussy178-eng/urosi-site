@@ -8,6 +8,7 @@ import * as authService from './authService';
 vi.mock('./authService', () => ({
   signIn: vi.fn(),
   signUp: vi.fn(),
+  isUnconfirmedEmailError: vi.fn(() => false),
 }));
 
 function renderPage() {

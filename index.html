@@ -98,6 +98,24 @@
       .kind-btn { border: 1px solid var(--cb); border-radius: 11px; background: var(--row); color: var(--sub); font: inherit; font-size: 11px; font-weight: 900; padding: 10px 6px; cursor: pointer; }
       .kind-btn.on { background: #fff; color: #000; border-color: #fff; }
       .kind-btn[data-kind="asso"].on { background: #16a34a; color: #fff; border-color: #16a34a; }
+      .chip-row { display: flex; flex-wrap: wrap; gap: 7px; margin: 8px 0 12px; }
+      .chip-btn { border: 1px solid var(--cb); border-radius: 999px; background: var(--row); color: var(--sub); font: inherit; font-size: 10.5px; font-weight: 900; padding: 7px 10px; cursor: pointer; }
+      .chip-btn.on { background: #fff; color: #000; border-color: #fff; }
+      .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 10px; }
+      .step-card { background: var(--row); border: 1px solid var(--cb); border-radius: 13px; padding: 12px; }
+      .step-card small { display: block; color: var(--mu); font-size: 8px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; margin-bottom: 8px; }
+      .step-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+      .round-btn { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--cb); background: #eaf2ff; color: #111827; font: inherit; font-size: 16px; font-weight: 900; cursor: pointer; }
+      .step-value { min-width: 42px; text-align: center; color: var(--text); font-size: 22px; font-weight: 900; letter-spacing: -1px; }
+      .duration-row { display: flex; gap: 7px; margin: 8px 0 11px; }
+      .duration-btn { flex: 1; border: 1px solid var(--cb); border-radius: 999px; background: transparent; color: var(--sub); font: inherit; font-size: 11px; font-weight: 900; padding: 9px 0; cursor: pointer; }
+      .duration-btn.on { background: #fff; color: #000; border-color: #fff; }
+      .solid-toggle { width: 100%; border: 1px solid var(--cb); border-radius: 12px; background: var(--row); color: var(--sub); font: inherit; font-size: 11px; font-weight: 900; padding: 12px; cursor: pointer; text-align: left; margin-bottom: 10px; }
+      .solid-toggle.on { color: var(--green); border-color: #14532d; background: #052e16; }
+      .summary-box { background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.18); border-radius: 13px; padding: 12px; margin-bottom: 10px; }
+      .summary-row { display: flex; justify-content: space-between; gap: 10px; color: var(--sub); font-size: 11px; margin-bottom: 6px; }
+      .summary-row strong { color: var(--text); }
+      .summary-total { border-top: 1px solid rgba(255,255,255,.08); padding-top: 8px; margin-top: 8px; color: var(--text); font-size: 13px; font-weight: 900; }
       .amount-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--row); border: 1px solid var(--cb); border-radius: 12px; padding: 11px 12px; margin-bottom: 10px; }
       .amount-row b { font-size: 22px; letter-spacing: -1px; }
       .mini-note { font-size: 10.5px; color: var(--sub); line-height: 1.45; }
@@ -274,9 +292,13 @@
         <!-- Structure : publication -->
         <div class="screen" data-s="struct-publish">
           <div class="s-head"><button class="s-back" data-go="struct-home">← Structure</button><span class="s-title">Nouvelle mission</span><span></span></div>
-          <div class="kind-grid">
-            <button class="kind-btn on" type="button" data-demo-kind="paid">€ Rémunérée</button>
-            <button class="kind-btn" type="button" data-demo-kind="asso">ESS · 0 €</button>
+          <div style="font-size:14px;font-weight:900;color:var(--sub);margin-bottom:4px">Quel renfort cherchez-vous ?</div>
+          <div class="chip-row">
+            <button class="chip-btn on" type="button" data-mission-type="Renfort service">Renfort service</button>
+            <button class="chip-btn" type="button" data-mission-type="Runner">Runner</button>
+            <button class="chip-btn" type="button" data-mission-type="Accueil">Accueil</button>
+            <button class="chip-btn" type="button" data-mission-type="Inventaire">Inventaire</button>
+            <button class="chip-btn" type="button" data-mission-type="Distribution">Distribution</button>
           </div>
           <div class="publish-field">
             <label for="demoMissionTitle">Intitulé</label>
@@ -286,11 +308,41 @@
             <label for="demoMissionPlace">Lieu</label>
             <input id="demoMissionPlace" value="Lille centre" autocomplete="off" />
           </div>
-          <div class="amount-row">
-            <div><div style="font-size:9px;color:var(--mu);font-weight:900;text-transform:uppercase">Montant affiché</div><b id="demoAmount">72 €</b></div>
-            <span id="demoKindBadge" class="tag" style="color:var(--cyan);background:#22d3ee15">PME</span>
+          <div class="control-grid">
+            <div class="step-card">
+              <small>€ / personne</small>
+              <div class="step-line">
+                <button class="round-btn" type="button" data-price-step="-1">−</button>
+                <div class="step-value"><span id="demoPrice">15</span>€</div>
+                <button class="round-btn" type="button" data-price-step="1">+</button>
+              </div>
+              <div style="font-size:9px;color:var(--mu);text-align:center;margin-top:5px">suggestion UROSI</div>
+            </div>
+            <div class="step-card">
+              <small>Places</small>
+              <div class="step-line">
+                <button class="round-btn" type="button" data-places-step="-1">−</button>
+                <div class="step-value" id="demoPlaces">2</div>
+                <button class="round-btn" type="button" data-places-step="1">+</button>
+              </div>
+            </div>
           </div>
+          <div style="font-size:9px;color:var(--mu);font-weight:900;text-transform:uppercase">Durée · plafond 5 h</div>
+          <div class="duration-row">
+            <button class="duration-btn" type="button" data-duration="1">1h</button>
+            <button class="duration-btn" type="button" data-duration="2">2h</button>
+            <button class="duration-btn on" type="button" data-duration="3">3h</button>
+            <button class="duration-btn" type="button" data-duration="4">4h</button>
+            <button class="duration-btn" type="button" data-duration="5">5h</button>
+          </div>
+          <button class="solid-toggle" type="button" data-solid-toggle><span id="demoSolidCheck">○</span> Mission solidaire — 0 €, sans commission</button>
           <div id="demoSolidNote" class="p-row" style="display:none;color:var(--green);background:#052e16;border:1px solid #14532d">Mission association : le montant passe à 0 €, mais elle compte dans le CV vivant.</div>
+          <div class="summary-box">
+            <div class="summary-row"><span>Rémunération × <span id="summaryPlaces">2</span></span><strong id="summaryPay">30 €</strong></div>
+            <div class="summary-row"><span>Commission structure 18 %</span><strong id="summaryFee">5 €</strong></div>
+            <div class="summary-row summary-total"><span>Total wallet</span><strong id="summaryTotal">35 €</strong></div>
+            <div id="summarySolde" style="color:var(--green);font-size:10.5px;font-weight:900;margin-top:7px">✓ Solde suffisant (1480 € dispo)</div>
+          </div>
           <button class="p-btn p-white" data-demo-publish>Publier la mission</button>
         </div>
 
@@ -431,6 +483,17 @@
         var autoDelay = 4200;
         var resumeDelay = 9000;
         var demoKind = 'paid';
+        var demoMissionType = 'Renfort service';
+        var demoPrice = 15;
+        var demoPlaces = 2;
+        var demoDuration = 3;
+        var suggestedPrices = {
+          'Renfort service': 15,
+          'Runner': 13,
+          'Accueil': 14,
+          'Inventaire': 12,
+          'Distribution': 10
+        };
 
         function setStatus(name, manual) {
           if (statusEl) statusEl.textContent = manual ? labels[name] + ' · contrôle manuel' : labels[name] + ' · démo automatique';
@@ -468,6 +531,38 @@
           var index = order.indexOf(name);
           if (index !== -1) manualShow(index);
         }
+        function renderPublishControls() {
+          var isAsso = demoKind === 'asso';
+          document.querySelectorAll('[data-mission-type]').forEach(function (button) {
+            button.classList.toggle('on', button.dataset.missionType === demoMissionType);
+          });
+          document.querySelectorAll('[data-duration]').forEach(function (button) {
+            button.classList.toggle('on', Number(button.dataset.duration) === demoDuration);
+          });
+          var solidToggle = document.querySelector('[data-solid-toggle]');
+          if (solidToggle) solidToggle.classList.toggle('on', isAsso);
+          var solidCheck = document.getElementById('demoSolidCheck');
+          if (solidCheck) solidCheck.textContent = isAsso ? '●' : '○';
+          var note = document.getElementById('demoSolidNote');
+          if (note) note.style.display = isAsso ? 'block' : 'none';
+          var priceEl = document.getElementById('demoPrice');
+          if (priceEl) priceEl.textContent = isAsso ? '0' : String(demoPrice);
+          var placesEl = document.getElementById('demoPlaces');
+          if (placesEl) placesEl.textContent = String(demoPlaces);
+          var summaryPlaces = document.getElementById('summaryPlaces');
+          if (summaryPlaces) summaryPlaces.textContent = String(demoPlaces);
+          var pay = isAsso ? 0 : demoPrice * demoPlaces;
+          var fee = isAsso ? 0 : Math.round(pay * 0.18);
+          var total = pay + fee;
+          var summaryPay = document.getElementById('summaryPay');
+          var summaryFee = document.getElementById('summaryFee');
+          var summaryTotal = document.getElementById('summaryTotal');
+          var summarySolde = document.getElementById('summarySolde');
+          if (summaryPay) summaryPay.textContent = pay + ' €';
+          if (summaryFee) summaryFee.textContent = fee + ' €';
+          if (summaryTotal) summaryTotal.textContent = total + ' €';
+          if (summarySolde) summarySolde.textContent = isAsso ? '✓ Mission ESS sans avance wallet' : '✓ Solde suffisant (1480 € dispo)';
+        }
         function setDemoKind(kind) {
           demoKind = kind === 'asso' ? 'asso' : 'paid';
           document.querySelectorAll('[data-demo-kind]').forEach(function (button) {
@@ -475,42 +570,38 @@
           });
           var title = document.getElementById('demoMissionTitle');
           var place = document.getElementById('demoMissionPlace');
-          var amount = document.getElementById('demoAmount');
-          var badge = document.getElementById('demoKindBadge');
-          var note = document.getElementById('demoSolidNote');
           if (demoKind === 'asso') {
+            demoMissionType = 'Distribution';
             if (title) title.value = 'Distribution alimentaire';
             if (place) place.value = 'Rue Nationale, Lille';
-            if (amount) { amount.textContent = '0 €'; amount.style.color = 'var(--green)'; }
-            if (badge) { badge.textContent = 'Association ESS'; badge.className = 'tag tag-g'; badge.style.color = ''; badge.style.background = ''; }
-            if (note) note.style.display = 'block';
           } else {
+            if (demoMissionType === 'Distribution') demoMissionType = 'Renfort service';
+            demoPrice = suggestedPrices[demoMissionType] || 15;
             if (title) title.value = 'Renfort service du midi';
             if (place) place.value = 'Lille centre';
-            if (amount) { amount.textContent = '72 €'; amount.style.color = ''; }
-            if (badge) { badge.textContent = 'PME'; badge.className = 'tag'; badge.style.color = 'var(--cyan)'; badge.style.background = '#22d3ee15'; }
-            if (note) note.style.display = 'none';
           }
+          renderPublishControls();
         }
         function publishDemoMission() {
           var titleValue = (document.getElementById('demoMissionTitle') || {}).value || 'Nouvelle mission';
           var placeValue = (document.getElementById('demoMissionPlace') || {}).value || 'Lille';
           var isAsso = demoKind === 'asso';
+          var pay = isAsso ? 0 : demoPrice;
           var publishedAmount = document.getElementById('publishedAmount');
           var publishedTitle = document.getElementById('publishedTitle');
           var publishedOrg = document.getElementById('publishedOrg');
           var publishedMeta = document.getElementById('publishedMeta');
           var publishedPayment = document.getElementById('publishedPayment');
           if (publishedAmount) {
-            publishedAmount.textContent = isAsso ? 'Solidaire · 0 €' : '72 €';
+            publishedAmount.textContent = isAsso ? 'Solidaire · 0 €' : pay + ' € / pers.';
             publishedAmount.style.color = isAsso ? 'var(--green)' : '';
             publishedAmount.style.fontSize = isAsso ? '19px' : '';
           }
           if (publishedTitle) publishedTitle.textContent = titleValue.trim() || 'Nouvelle mission';
           if (publishedOrg) publishedOrg.textContent = isAsso ? 'Banque Alimentaire · Association ESS' : 'Burger Nord · PME vérifiée';
-          if (publishedMeta) publishedMeta.textContent = "📍 " + (placeValue.trim() || "Lille") + " · aujourd'hui · 4 h";
+          if (publishedMeta) publishedMeta.textContent = "📍 " + (placeValue.trim() || "Lille") + " · " + demoPlaces + " place" + (demoPlaces > 1 ? "s" : "") + " · " + demoDuration + " h";
           if (publishedPayment) {
-            publishedPayment.textContent = isAsso ? '0 € · bénévole' : 'Provisionné';
+            publishedPayment.textContent = isAsso ? '0 € · bénévole' : 'Total ' + (demoPrice * demoPlaces + Math.round(demoPrice * demoPlaces * 0.18)) + ' €';
             publishedPayment.style.color = isAsso ? 'var(--green)' : 'var(--green)';
           }
           goToName('struct-live');
@@ -541,11 +632,11 @@
 
         var startPoint = null;
         phone.addEventListener('pointerdown', function (e) {
-          if (e.target.closest('[data-go], .s-back, .p-btn, .role-card, .kind-btn, input, [data-demo-publish], [data-candidate-action]')) return;
+          if (e.target.closest('[data-go], .s-back, .p-btn, .role-card, .kind-btn, .chip-btn, .round-btn, .duration-btn, .solid-toggle, input, [data-demo-publish], [data-candidate-action]')) return;
           startPoint = { x: e.clientX, y: e.clientY };
         }, { passive: true });
         phone.addEventListener('pointerup', function (e) {
-          if (!startPoint || e.target.closest('[data-go], .s-back, .p-btn, .role-card, .kind-btn, input, [data-demo-publish], [data-candidate-action]')) return;
+          if (!startPoint || e.target.closest('[data-go], .s-back, .p-btn, .role-card, .kind-btn, .chip-btn, .round-btn, .duration-btn, .solid-toggle, input, [data-demo-publish], [data-candidate-action]')) return;
           var dx = e.clientX - startPoint.x;
           var dy = e.clientY - startPoint.y;
           startPoint = null;
@@ -556,6 +647,38 @@
           if (Math.abs(dx) < 8 && Math.abs(dy) < 8) manualShow(active + 1);
         }, { passive: true });
         phone.addEventListener('click', function (e) {
+          var missionType = e.target.closest('[data-mission-type]');
+          if (missionType) {
+            demoMissionType = missionType.dataset.missionType;
+            demoPrice = suggestedPrices[demoMissionType] || demoPrice;
+            var title = document.getElementById('demoMissionTitle');
+            if (title) title.value = demoMissionType === 'Distribution' ? 'Distribution alimentaire' : demoMissionType + ' du midi';
+            renderPublishControls();
+            return;
+          }
+          var priceStep = e.target.closest('[data-price-step]');
+          if (priceStep) {
+            if (demoKind !== 'asso') demoPrice = Math.max(10, Math.min(50, demoPrice + Number(priceStep.dataset.priceStep)));
+            renderPublishControls();
+            return;
+          }
+          var placesStep = e.target.closest('[data-places-step]');
+          if (placesStep) {
+            demoPlaces = Math.max(1, Math.min(12, demoPlaces + Number(placesStep.dataset.placesStep)));
+            renderPublishControls();
+            return;
+          }
+          var duration = e.target.closest('[data-duration]');
+          if (duration) {
+            demoDuration = Number(duration.dataset.duration);
+            renderPublishControls();
+            return;
+          }
+          var solidToggle = e.target.closest('[data-solid-toggle]');
+          if (solidToggle) {
+            setDemoKind(demoKind === 'asso' ? 'paid' : 'asso');
+            return;
+          }
           var kind = e.target.closest('[data-demo-kind]');
           if (kind) {
             setDemoKind(kind.dataset.demoKind);

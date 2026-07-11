@@ -18,6 +18,7 @@ import {
 } from '@/features/missions/applicationsService';
 import { rate, fetchRatedApplicationIds, fetchWorkerReputation, type WorkerReputation } from '@/features/missions/ratingsService';
 import { fetchDelaysForApplications } from '@/features/missions/feedbackService';
+import { confirmRemoteAttendance, reportWorkerAbsence } from '@/features/missions/attendanceService';
 import { fetchUnreadCounts } from '@/features/messages/messagesService';
 import { fetchCommissionRates, type CommissionRates } from '@/features/pricing/pricingService';
 import { geocodeMelCity } from '@/lib/geo';
@@ -177,6 +178,26 @@ export function StructureApp() {
       notif(e instanceof Error ? e.message : 'Notation impossible.');
     } finally {
       setRatingCand(null);
+    }
+  }
+
+  async function validationDistance(c: CandWithMission, type: 'start' | 'end') {
+    try {
+      await confirmRemoteAttendance(c.id, type);
+      await loadMissionData(mis);
+      notif(type === 'start' ? 'Début validé à distance.' : 'Fin validée à distance — paiement préparé pour J+3.');
+    } catch (e) {
+      notif(e instanceof Error ? e.message : 'Validation impossible.');
+    }
+  }
+
+  async function signalerAbsence(c: CandWithMission) {
+    try {
+      await reportWorkerAbsence(c.id, 'travailleur absent / impossible à joindre');
+      await loadMissionData(mis);
+      notif('Absence signalée — le travailleur peut répondre, aucune sanction automatique.');
+    } catch (e) {
+      notif(e instanceof Error ? e.message : 'Signalement impossible.');
     }
   }
 
@@ -385,8 +406,20 @@ export function StructureApp() {
                           <div style={{ fontSize: 10, color: T.mu, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{misTitle(c.mission_id)}</div>
                         </div>
                         {c.status !== 'pending' && (
-                          <span style={{ fontSize: 10, fontWeight: 800, color: c.status === 'accepted' ? T.green : c.status === 'completed' ? T.cyan : T.red, flexShrink: 0 }}>
-                            {c.status === 'accepted' ? 'accepté' : c.status === 'completed' ? 'terminée' : c.status === 'rejected' ? 'refusé' : c.status === 'cancelled' ? 'annulée' : c.status}
+                          <span style={{ fontSize: 10, fontWeight: 800, color: c.status === 'accepted' || c.status === 'in_progress' ? T.green : c.status === 'completed' || c.status === 'payment_pending' ? T.cyan : T.red, flexShrink: 0 }}>
+                            {c.status === 'accepted'
+                              ? 'accepté'
+                              : c.status === 'in_progress'
+                                ? 'en cours'
+                                : c.status === 'payment_pending'
+                                  ? 'paiement J+3'
+                                  : c.status === 'completed'
+                                    ? 'terminée'
+                                    : c.status === 'rejected'
+                                      ? 'refusé'
+                                      : c.status === 'cancelled'
+                                        ? 'annulée'
+                                        : c.status}
                           </span>
                         )}
                       </div>
@@ -400,7 +433,7 @@ export function StructureApp() {
                           </button>
                         </div>
                       )}
-                      {(c.status === 'accepted' || c.status === 'completed') && (
+                      {['accepted', 'in_progress', 'payment_pending', 'completed'].includes(c.status) && (
                         <div style={{ padding: '0 14px 12px', display: 'grid', gridTemplateColumns: c.status === 'completed' && !ratedIds.has(c.id) ? '1fr 1fr' : '1fr', gap: 6 }}>
                           <button onClick={() => setChatFor(c)} style={{ position: 'relative', background: '#1d4ed815', color: '#93c5fd', border: '1px solid #1e40af', borderRadius: 8, padding: '9px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
                             💬 Message
@@ -413,6 +446,21 @@ export function StructureApp() {
                           {c.status === 'completed' && !ratedIds.has(c.id) && (
                             <button onClick={() => setRatingCand(c)} style={{ background: '#22d3ee15', color: T.cyan, border: '1px solid #0e7490', borderRadius: 8, padding: '9px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
                               ★ Noter
+                            </button>
+                          )}
+                          {c.status === 'accepted' && (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                              <button onClick={() => validationDistance(c, 'start')} style={{ background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+                                Début à distance
+                              </button>
+                              <button onClick={() => signalerAbsence(c)} style={{ background: T.redBg, color: T.red, border: `1px solid ${T.redBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+                                Signaler absence
+                              </button>
+                            </div>
+                          )}
+                          {c.status === 'in_progress' && (
+                            <button onClick={() => validationDistance(c, 'end')} style={{ background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+                              Fin à distance
                             </button>
                           )}
                         </div>
