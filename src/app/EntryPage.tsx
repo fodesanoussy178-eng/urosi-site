@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Logo } from '@/components/ui/Logo';
 import { T, FONT } from '@/components/ui/theme';
+import { FOUNDER_CODE } from '@/app/DemoExperience';
 
 export function EntryPage() {
   const nav = useNavigate();
@@ -29,6 +30,21 @@ export function EntryPage() {
             <div style={{ fontSize: 12, color: '#bfdbfe' }}>Publier des missions, gérer mes candidats</div>
           </button>
         </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 14 }}>
+          <button
+            onClick={() => nav('/demo?role=worker')}
+            style={{ background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 11, padding: '10px 8px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
+          >
+            Démo travailleur
+          </button>
+          <button
+            onClick={() => nav('/demo?role=structure')}
+            style={{ background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 11, padding: '10px 8px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
+          >
+            Démo structure
+          </button>
+        </div>
+        <div style={{ color: T.mu, fontSize: 10, marginTop: 9 }}>Clé fondateur : {FOUNDER_CODE}</div>
         <button
           onClick={() => nav('/connexion')}
           style={{ marginTop: 22, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: T.sub, textDecoration: 'underline', fontWeight: 700 }}

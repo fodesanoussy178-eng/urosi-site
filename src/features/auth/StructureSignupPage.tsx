@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Logo } from '@/components/ui/Logo';
 import { Fld } from '@/components/ui/Fld';
 import { T, FONT, inp } from '@/components/ui/theme';
+import { SignupDemoPanel } from '@/app/DemoExperience';
 import { signUp } from './authService';
 import { AuthTabs, type AuthMode } from './AuthTabs';
 import { SignInForm } from './SignInForm';
@@ -46,12 +47,13 @@ export function StructureSignupPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', justifyContent: 'center', fontFamily: FONT, padding: '24px 16px' }}>
-      <div style={{ width: '100%', maxWidth: 400 }}>
+    <div className="auth-demo-shell" style={{ fontFamily: FONT }}>
+      <div className="auth-demo-layout">
+        <div className="auth-form-column">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <span style={{ fontWeight: 900, fontSize: 15, color: T.text }}>Espace structure</span>
           <div style={{ display: 'flex', gap: 6 }}>
-            <a href="/#demo" style={{ fontSize: 10, color: T.cyan, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', textDecoration: 'none' }}>
+            <a href="/demo?role=structure" style={{ fontSize: 10, color: T.cyan, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', textDecoration: 'none' }}>
               Voir la démo
             </a>
             <button onClick={() => nav('/')} style={{ fontSize: 10, color: T.mu, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>
@@ -111,6 +113,8 @@ export function StructureSignupPage() {
           <br />
           Aucun lien de subordination n'est créé.
         </div>
+      </div>
+        <SignupDemoPanel role="structure" />
       </div>
     </div>
   );

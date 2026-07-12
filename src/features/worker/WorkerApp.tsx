@@ -612,7 +612,7 @@ export function WorkerApp() {
                 )}
               </div>
               <AideRegles onOpen={setDocKey} />
-              <a href="/#demo" style={{ display: 'block', padding: '8px 4px', fontSize: 11, color: T.cyan, fontWeight: 700, textDecoration: 'none' }}>
+              <a href="/demo?role=worker" style={{ display: 'block', padding: '8px 4px', fontSize: 11, color: T.cyan, fontWeight: 700, textDecoration: 'none' }}>
                 ▶ Voir la démo
               </a>
               <button onClick={() => signOut()} style={{ textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 4px', fontSize: 11, color: T.sub, fontWeight: 600 }}>

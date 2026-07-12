@@ -5,6 +5,7 @@ import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { T, FONT } from '@/components/ui/theme';
 import { EntryPage } from '@/app/EntryPage';
+import { DemoExperience } from '@/app/DemoExperience';
 import { SignInPage } from '@/features/auth/SignInPage';
 import { WorkerSignupPage } from '@/features/auth/WorkerSignupPage';
 import { StructureSignupPage } from '@/features/auth/StructureSignupPage';
@@ -22,8 +23,8 @@ function Centered({ text }: { text: string }) {
   );
 }
 
-// Le site vitrine (/) et la démo (/#demo) sont une page statique servie par
-// Vercel, hors React : une navigation interne vers "/" recharge la page.
+// Le site vitrine (/) est une page statique servie par Vercel, hors React :
+// une navigation interne vers "/" recharge la page.
 function StaticHome() {
   useEffect(() => {
     window.location.replace('/');
@@ -49,6 +50,7 @@ function AppShell() {
         {/* Non connecté : /app passe par la connexion, puis l'app s'ouvre. */}
         <Route path="/app" element={<Navigate to="/connexion" replace />} />
         <Route path="/acces" element={<EntryPage />} />
+        <Route path="/demo" element={<DemoExperience />} />
         <Route path="/connexion" element={<SignInPage />} />
         <Route path="/inscription/travailleur" element={<WorkerSignupPage />} />
         <Route path="/inscription/structure" element={<StructureSignupPage />} />
@@ -67,6 +69,7 @@ function AppShell() {
   return (
     <Routes>
       <Route path="/" element={<StaticHome />} />
+      <Route path="/demo" element={<DemoExperience />} />
       <Route path="/app" element={profile.role === 'structure_admin' ? <StructureApp /> : <WorkerApp />} />
       <Route path="/reinitialisation" element={<ResetPasswordPage />} />
       <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
