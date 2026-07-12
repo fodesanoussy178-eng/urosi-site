@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0a0a14" />
-    <meta name="description" content="UROSI — des missions courtes, simplement. Les structures publient leurs besoins, tu consultes les horaires et le montant, tu acceptes." />
-    <title>UROSI — Des missions courtes, simplement</title>
+    <meta name="theme-color" content="#f7f5ef" />
+    <meta name="description" content="UROSI — des missions courtes qui construisent ton CV vivant par l'expérience." />
+    <title>UROSI — Le CV par l'expérience</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -14,135 +14,178 @@
     />
     <style>
       :root {
-        --bg: #0a0a14; --card: #111827; --cb: #1f2937; --row: #0f172a;
-        --text: #f1f5f9; --sub: #9ca3af; --mu: #6b7280;
-        --cyan: #22d3ee; --green: #4ade80; --green-bg: #052e16;
-        --amber: #fbbf24; --grad: linear-gradient(135deg, #1d4ed8, #0891b2);
+        --page: #1f2423; --bg: #f8f6ef; --card: #ffffff; --cb: #e2ded4; --row: #f0eee7;
+        --text: #1d2a2e; --sub: #748084; --mu: #9aa2a4;
+        --cyan: #0891b2; --cyan-soft: #e0f7fb; --green: #5f9271; --green-bg: #e7f4eb;
+        --amber: #b98318; --grad: linear-gradient(135deg, #1d4ed8, #0891b2);
+        --luminosity: .45;
       }
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html { scroll-behavior: smooth; }
-      body { background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; line-height: 1.5; overflow-x: hidden; }
+      html, body { min-height: 100%; }
+      body {
+        position: relative; background: var(--page); color: var(--text);
+        font-family: 'DM Sans', system-ui, sans-serif; line-height: 1.5; overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+      }
+      body::before {
+        content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+        background: linear-gradient(120deg, #f9f8f2 0%, #edf7f8 50%, #f4f0e8 100%);
+        opacity: var(--luminosity);
+      }
       @media (prefers-reduced-motion: reduce) {
         html { scroll-behavior: auto; }
         *, *::before, *::after { animation: none !important; transition: none !important; }
       }
       a { color: inherit; text-decoration: none; }
-      .wrap { max-width: 880px; margin: 0 auto; padding: 0 20px; }
+      .site-shell {
+        position: relative; width: min(1560px, calc(100vw - 48px)); min-height: calc(100vh - 48px); margin: 24px auto;
+        overflow: hidden; border: 1px solid rgba(255,255,255,.45); border-radius: 28px;
+        background:
+          linear-gradient(120deg, rgba(255,255,255,.92) 0%, rgba(249,248,243,.9) 45%, rgba(237,247,248,.92) 100%),
+          var(--bg);
+        box-shadow: 0 24px 90px rgba(0,0,0,.18);
+      }
+      .site-shell::before {
+        content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+        background: linear-gradient(145deg, rgba(255,255,255,.42), rgba(8,145,178,.12) 55%, rgba(255,255,255,.2));
+        opacity: var(--luminosity);
+      }
+      .site-shell > * { position: relative; z-index: 1; }
+      .wrap { max-width: 1380px; margin: 0 auto; padding: 0 32px; }
 
-      nav { position: sticky; top: 0; z-index: 50; background: rgba(10,10,20,.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--cb); }
-      .nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; max-width: 880px; margin: 0 auto; }
-      .brand { display: flex; align-items: center; gap: 9px; font-weight: 900; font-size: 17px; letter-spacing: 1px; }
-      .brand-dot { width: 30px; height: 30px; border-radius: 9px; background: var(--grad); display: flex; align-items: center; justify-content: center; font-size: 15px; color: #fff; }
-      .btn { display: inline-block; border: none; cursor: pointer; font-family: inherit; border-radius: 12px; font-weight: 900; transition: transform .15s ease, opacity .15s ease; text-align: center; }
+      nav { position: sticky; top: 0; z-index: 50; background: rgba(248,246,239,.84); backdrop-filter: blur(18px); border-bottom: 1px solid rgba(226,222,212,.72); }
+      .nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 17px 32px; max-width: 1500px; margin: 0 auto; }
+      .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 13px; color: #a9b0b1; }
+      .brand-dot { width: 26px; height: 26px; border-radius: 8px; background: var(--grad); display: flex; align-items: center; justify-content: center; font-size: 13px; color: #fff; }
+      .nav-actions { display: flex; align-items: center; gap: 10px; }
+      .btn { display: inline-flex; align-items: center; justify-content: center; border: none; cursor: pointer; font-family: inherit; border-radius: 18px; font-weight: 900; transition: transform .15s ease, box-shadow .15s ease, background .15s ease; text-align: center; min-height: 44px; }
       .btn:hover { transform: translateY(-1px); }
-      .btn-grad { background: var(--grad); color: #fff; padding: 11px 20px; font-size: 13px; box-shadow: 0 4px 18px rgba(8,145,178,.35); }
-      .btn-white { background: #fff; color: #000; padding: 14px 24px; font-size: 14px; }
-      .btn-ghost { background: var(--card); color: var(--text); border: 1px solid var(--cb); padding: 14px 24px; font-size: 14px; font-weight: 800; }
+      .btn-grad, .btn-dark { background: var(--text); color: #fff; padding: 11px 24px; font-size: 15px; box-shadow: 0 12px 30px rgba(29,42,46,.12); }
+      .btn-white { background: #fff; color: var(--text); border: 1px solid var(--cb); padding: 11px 24px; font-size: 15px; }
+      .btn-ghost { background: rgba(255,255,255,.62); color: var(--text); border: 1px solid var(--cb); padding: 11px 24px; font-size: 15px; font-weight: 900; }
 
-      .hero { position: relative; text-align: center; padding: 60px 0 30px; }
-      .hero-blob { position: absolute; top: -100px; left: 50%; transform: translateX(-50%); width: 540px; height: 540px; border-radius: 50%; background: radial-gradient(circle, rgba(8,145,178,.2), transparent 65%); pointer-events: none; animation: pulse 7s ease-in-out infinite; }
-      @keyframes pulse { 0%,100% { opacity: .7; } 50% { opacity: 1; } }
-      .hero h1 { font-size: clamp(32px, 7vw, 52px); font-weight: 900; letter-spacing: -1.8px; line-height: 1.1; margin-bottom: 14px; }
-      .grad-text { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-      .hero p { font-size: 15px; color: var(--sub); max-width: 480px; margin: 0 auto 24px; }
-      .hero-ctas { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+      .hero-stage {
+        position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(390px, 500px);
+        gap: 70px; align-items: center; min-height: calc(100vh - 118px); padding-top: 34px; padding-bottom: 34px;
+      }
+      .hero { position: relative; text-align: left; padding: 0; }
+      .hero-blob { display: none; }
+      .hero-kicker { color: #9aa2a4; font-size: 13px; font-weight: 900; margin-bottom: 22px; }
+      .hero h1 { font-size: 86px; font-weight: 900; letter-spacing: 0; line-height: .95; margin-bottom: 26px; max-width: 760px; }
+      .grad-text { color: var(--cyan); }
+      .hero p { font-size: 23px; color: var(--sub); max-width: 640px; margin: 0 0 32px; line-height: 1.7; }
+      .hero-ctas { display: flex; gap: 14px; justify-content: flex-start; flex-wrap: wrap; }
+      .hero-note { color: #9aa2a4; font-size: 15px; margin-top: 30px; }
+      .float-card {
+        position: absolute; z-index: 4; min-width: 150px; border: 1px solid rgba(226,222,212,.78);
+        border-radius: 8px; background: rgba(255,255,255,.88); backdrop-filter: blur(12px);
+        padding: 14px 18px; box-shadow: 0 18px 50px rgba(29,42,46,.12);
+      }
+      .float-card small { display: block; color: var(--mu); font-size: 12px; font-weight: 700; }
+      .float-card strong { display: block; color: var(--text); font-size: 24px; line-height: 1.1; }
+      .float-earned { left: -105px; top: 110px; }
+      .float-profile { right: -84px; bottom: 120px; }
 
       /* ── Téléphone démo ── */
-      .phone-zone { display: flex; flex-direction: column; align-items: center; padding: 34px 0 20px; }
+      .phone-zone { position: relative; display: flex; flex-direction: column; align-items: center; justify-self: end; padding: 0; }
       .phone {
-        width: min(320px, calc(100vw - 40px)); aspect-ratio: 1 / 2; border-radius: 42px; position: relative;
-        background: #05050c; border: 3px solid #2a2f3f;
-        box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 0 1px #0e1320, 0 0 90px rgba(8,145,178,.18);
+        width: min(410px, calc(100vw - 72px)); aspect-ratio: 1 / 1.96; border-radius: 42px; position: relative;
+        background: #243236; border: 8px solid #243236;
+        box-shadow: 0 34px 90px rgba(29,42,46,.25), 0 0 0 1px rgba(255,255,255,.55);
         overflow: hidden;
       }
-      .phone-notch { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 110px; height: 24px; background: #05050c; border-radius: 14px; z-index: 5; border: 1px solid #1a2030; }
-      .demo-badge { position: absolute; top: 14px; right: 14px; z-index: 6; font-size: 9px; font-weight: 900; letter-spacing: .5px; color: #000; background: var(--amber); border-radius: 10px; padding: 3px 9px; }
-      .screen { position: absolute; inset: 0; padding: 48px 14px 58px; overflow-y: auto; opacity: 0; transform: translateX(24px); transition: opacity .38s cubic-bezier(.2,.8,.2,1), transform .38s cubic-bezier(.2,.8,.2,1); pointer-events: none; background: var(--bg); }
+      .phone-notch { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 96px; height: 23px; background: #12191b; border-radius: 14px; z-index: 5; border: 1px solid #2f3d42; }
+      .demo-badge { position: absolute; top: 15px; right: 15px; z-index: 6; font-size: 9px; font-weight: 900; color: var(--text); background: #f6dda1; border-radius: 10px; padding: 3px 9px; }
+      .screen { position: absolute; inset: 0; padding: 58px 18px 70px; overflow-y: auto; opacity: 0; transform: translateX(24px); transition: opacity .38s cubic-bezier(.2,.8,.2,1), transform .38s cubic-bezier(.2,.8,.2,1); pointer-events: none; background: #fbfaf5; color: var(--text); scrollbar-width: none; }
+      .screen::-webkit-scrollbar { display: none; }
       .screen.on { opacity: 1; transform: none; pointer-events: auto; }
       .s-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
       .s-title { font-size: 15px; font-weight: 900; }
+      .phone-page-title { font-size: 28px; font-weight: 900; line-height: 1; margin: 18px 0 7px; }
+      .phone-page-sub { color: var(--sub); font-size: 12px; font-weight: 700; margin-bottom: 16px; }
       .s-back { background: var(--row); border: 1px solid var(--cb); color: var(--sub); border-radius: 8px; font-size: 10px; font-weight: 800; padding: 5px 10px; cursor: pointer; font-family: inherit; }
       .role-grid { display: grid; gap: 10px; margin-top: 18px; }
-      .role-card { width: 100%; background: var(--card); border: 1px solid var(--cb); color: var(--text); border-radius: 14px; padding: 14px; text-align: left; cursor: pointer; font-family: inherit; transition: transform .2s ease, border-color .2s ease; }
-      .role-card.on { border-color: #0e7490; box-shadow: 0 0 0 1px rgba(34,211,238,.12); }
-      .role-card:hover, .role-card:focus-visible, .mcard:hover, .p-btn:hover, .dot:hover, .demo-arrow:hover { border-color: #0e7490; transform: translateY(-1px); }
+      .role-card { width: 100%; background: var(--card); border: 1px solid var(--cb); color: var(--text); border-radius: 8px; padding: 14px; text-align: left; cursor: pointer; font-family: inherit; transition: transform .2s ease, border-color .2s ease; }
+      .role-card.on { border-color: var(--cyan); box-shadow: 0 0 0 1px rgba(8,145,178,.12); }
+      .role-card:hover, .role-card:focus-visible, .mcard:hover, .p-btn:hover, .dot:hover, .demo-arrow:hover { border-color: var(--cyan); transform: translateY(-1px); }
       .role-card strong { display: block; font-size: 14px; font-weight: 900; margin-bottom: 3px; }
       .role-card span { display: block; font-size: 11px; color: var(--sub); }
-      .mcard { background: var(--card); border: 1px solid var(--cb); border-radius: 14px; padding: 13px; margin-bottom: 9px; cursor: pointer; transition: border-color .2s; }
-      .m-amount { font-size: 24px; font-weight: 900; letter-spacing: -1px; }
+      .mcard { background: var(--card); border: 1px solid var(--cb); border-radius: 8px; padding: 15px; margin-bottom: 11px; cursor: pointer; transition: border-color .2s, transform .2s ease; }
+      .m-amount { font-size: 24px; font-weight: 900; letter-spacing: 0; }
       .m-title { font-size: 13px; font-weight: 800; margin: 3px 0 2px; }
       .m-org { font-size: 10.5px; font-weight: 700; color: var(--sub); }
-      .stars { color: var(--amber); font-size: 10px; letter-spacing: 1px; }
+      .stars { color: var(--amber); font-size: 10px; letter-spacing: 0; }
       .m-meta { font-size: 9.5px; color: var(--mu); margin-top: 3px; }
-      .p-btn { width: 100%; border: none; border-radius: 10px; padding: 11px 0; font-size: 12.5px; font-weight: 900; cursor: pointer; font-family: inherit; }
-      .p-white { background: #fff; color: #000; }
+      .p-btn { width: 100%; border: none; border-radius: 8px; padding: 11px 0; font-size: 12.5px; font-weight: 900; cursor: pointer; font-family: inherit; }
+      .p-white { background: var(--text); color: #fff; }
       .p-green { background: #16a34a; color: #fff; }
-      .p-row { background: var(--row); border-radius: 10px; padding: 10px 12px; font-size: 11px; color: var(--sub); margin-bottom: 7px; }
+      .p-row { background: var(--row); border: 1px solid rgba(226,222,212,.65); border-radius: 8px; padding: 10px 12px; font-size: 11px; color: var(--sub); margin-bottom: 7px; }
       .qr { width: 130px; height: 130px; margin: 12px auto; background:
         repeating-linear-gradient(0deg, #000 0 6px, transparent 6px 12px),
         repeating-linear-gradient(90deg, #000 0 6px, #fff 6px 12px);
         border: 8px solid #fff; border-radius: 8px; }
       .big-ok { width: 54px; height: 54px; border-radius: 50%; background: var(--green-bg); color: var(--green); display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 16px auto 8px; }
-      .w-balance { font-size: 32px; font-weight: 900; letter-spacing: -1.5px; margin: 4px 0 12px; }
+      .w-balance { font-size: 32px; font-weight: 900; letter-spacing: 0; margin: 4px 0 12px; }
       .tag { display: inline-block; font-size: 8.5px; font-weight: 800; border-radius: 8px; padding: 2px 7px; }
       .tag-g { color: var(--green); background: var(--green-bg); }
       .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin: 12px 0; }
-      .metric { background: var(--row); border: 1px solid var(--cb); border-radius: 12px; padding: 10px 6px; text-align: center; }
+      .metric { background: var(--row); border: 1px solid var(--cb); border-radius: 8px; padding: 10px 6px; text-align: center; }
       .metric b { display: block; font-size: 15px; line-height: 1; }
       .metric span { display: block; color: var(--mu); font-size: 8.5px; margin-top: 4px; }
       .publish-field { display: grid; gap: 5px; margin-bottom: 9px; }
-      .publish-field label { color: var(--mu); font-size: 8px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
-      .publish-field input { width: 100%; background: var(--row); border: 1px solid var(--cb); border-radius: 10px; color: var(--text); font: inherit; font-size: 12px; padding: 10px 11px; outline: none; }
-      .publish-field input:focus { border-color: #0e7490; }
+      .publish-field label { color: var(--mu); font-size: 8px; font-weight: 900; letter-spacing: 0; text-transform: uppercase; }
+      .publish-field input { width: 100%; background: #fff; border: 1px solid var(--cb); border-radius: 8px; color: var(--text); font: inherit; font-size: 12px; padding: 10px 11px; outline: none; }
+      .publish-field input:focus { border-color: var(--cyan); }
       .kind-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 9px; }
-      .kind-btn { border: 1px solid var(--cb); border-radius: 11px; background: var(--row); color: var(--sub); font: inherit; font-size: 11px; font-weight: 900; padding: 10px 6px; cursor: pointer; }
-      .kind-btn.on { background: #fff; color: #000; border-color: #fff; }
+      .kind-btn { border: 1px solid var(--cb); border-radius: 8px; background: var(--row); color: var(--sub); font: inherit; font-size: 11px; font-weight: 900; padding: 10px 6px; cursor: pointer; }
+      .kind-btn.on { background: var(--text); color: #fff; border-color: var(--text); }
       .kind-btn[data-kind="asso"].on { background: #16a34a; color: #fff; border-color: #16a34a; }
       .chip-row { display: flex; flex-wrap: wrap; gap: 7px; margin: 8px 0 12px; }
       .chip-btn { border: 1px solid var(--cb); border-radius: 999px; background: var(--row); color: var(--sub); font: inherit; font-size: 10.5px; font-weight: 900; padding: 7px 10px; cursor: pointer; }
-      .chip-btn.on { background: #fff; color: #000; border-color: #fff; }
+      .chip-btn.on { background: var(--text); color: #fff; border-color: var(--text); }
       .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 10px; }
-      .step-card { background: var(--row); border: 1px solid var(--cb); border-radius: 13px; padding: 12px; }
-      .step-card small { display: block; color: var(--mu); font-size: 8px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; margin-bottom: 8px; }
+      .step-card { background: var(--row); border: 1px solid var(--cb); border-radius: 8px; padding: 12px; }
+      .step-card small { display: block; color: var(--mu); font-size: 8px; font-weight: 900; letter-spacing: 0; text-transform: uppercase; margin-bottom: 8px; }
       .step-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
       .round-btn { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--cb); background: #eaf2ff; color: #111827; font: inherit; font-size: 16px; font-weight: 900; cursor: pointer; }
-      .step-value { min-width: 42px; text-align: center; color: var(--text); font-size: 22px; font-weight: 900; letter-spacing: -1px; }
+      .step-value { min-width: 42px; text-align: center; color: var(--text); font-size: 22px; font-weight: 900; letter-spacing: 0; }
       .duration-row { display: flex; gap: 7px; margin: 8px 0 11px; }
       .duration-btn { flex: 1; border: 1px solid var(--cb); border-radius: 999px; background: transparent; color: var(--sub); font: inherit; font-size: 11px; font-weight: 900; padding: 9px 0; cursor: pointer; }
-      .duration-btn.on { background: #fff; color: #000; border-color: #fff; }
-      .solid-toggle { width: 100%; border: 1px solid var(--cb); border-radius: 12px; background: var(--row); color: var(--sub); font: inherit; font-size: 11px; font-weight: 900; padding: 12px; cursor: pointer; text-align: left; margin-bottom: 10px; }
-      .solid-toggle.on { color: var(--green); border-color: #14532d; background: #052e16; }
-      .summary-box { background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.18); border-radius: 13px; padding: 12px; margin-bottom: 10px; }
+      .duration-btn.on { background: var(--text); color: #fff; border-color: var(--text); }
+      .solid-toggle { width: 100%; border: 1px solid var(--cb); border-radius: 8px; background: var(--row); color: var(--sub); font: inherit; font-size: 11px; font-weight: 900; padding: 12px; cursor: pointer; text-align: left; margin-bottom: 10px; }
+      .solid-toggle.on { color: var(--green); border-color: #b8dcc3; background: var(--green-bg); }
+      .summary-box { background: #f5f1e7; border: 1px solid var(--cb); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
       .summary-row { display: flex; justify-content: space-between; gap: 10px; color: var(--sub); font-size: 11px; margin-bottom: 6px; }
       .summary-row strong { color: var(--text); }
-      .summary-total { border-top: 1px solid rgba(255,255,255,.08); padding-top: 8px; margin-top: 8px; color: var(--text); font-size: 13px; font-weight: 900; }
-      .amount-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--row); border: 1px solid var(--cb); border-radius: 12px; padding: 11px 12px; margin-bottom: 10px; }
-      .amount-row b { font-size: 22px; letter-spacing: -1px; }
+      .summary-total { border-top: 1px solid rgba(29,42,46,.08); padding-top: 8px; margin-top: 8px; color: var(--text); font-size: 13px; font-weight: 900; }
+      .amount-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--row); border: 1px solid var(--cb); border-radius: 8px; padding: 11px 12px; margin-bottom: 10px; }
+      .amount-row b { font-size: 22px; letter-spacing: 0; }
       .mini-note { font-size: 10.5px; color: var(--sub); line-height: 1.45; }
-      .candidate-card { background: var(--card); border: 1px solid var(--cb); border-radius: 13px; padding: 12px; margin-bottom: 9px; }
-      .candidate-card.accepted { border-color: #166534; }
+      .candidate-card { background: var(--card); border: 1px solid var(--cb); border-radius: 8px; padding: 12px; margin-bottom: 9px; }
+      .candidate-card.accepted { border-color: #8cc29f; }
       .candidate-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
-      .candidate-actions button { border-radius: 9px; padding: 9px 0; border: 1px solid var(--cb); font: inherit; font-size: 11px; font-weight: 900; cursor: pointer; }
-      .accept-btn { background: #052e16; color: var(--green); border-color: #166534 !important; }
-      .reject-btn { background: #1f0000; color: #f87171; border-color: #7f1d1d !important; }
+      .candidate-actions button { border-radius: 8px; padding: 9px 0; border: 1px solid var(--cb); font: inherit; font-size: 11px; font-weight: 900; cursor: pointer; }
+      .accept-btn { background: var(--green-bg); color: var(--green); border-color: #b8dcc3 !important; }
+      .reject-btn { background: #fff0f0; color: #c24141; border-color: #f1c4c4 !important; }
       .demo-controls { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 16px; }
-      .demo-arrow { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--cb); background: var(--card); color: var(--text); cursor: pointer; font-size: 16px; line-height: 1; }
+      .demo-arrow { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--cb); background: var(--card); color: var(--text); cursor: pointer; font-size: 16px; line-height: 1; }
       .dots { display: flex; gap: 6px; justify-content: center; }
       .dot { width: 8px; height: 8px; border: 0; padding: 0; cursor: pointer; border-radius: 50%; background: var(--cb); transition: background .3s, transform .2s; }
       .dot.on { background: var(--cyan); }
       .phone-hint { font-size: 11px; color: var(--mu); margin-top: 12px; text-align: center; }
       .phone-hint b { color: var(--sub); }
 
-      section { padding: 44px 0; }
-      .sec-title { font-size: clamp(22px, 4.5vw, 30px); font-weight: 900; letter-spacing: -1px; margin-bottom: 8px; text-align: center; }
-      .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 26px; }
-      .step { background: var(--card); border: 1px solid var(--cb); border-radius: 16px; padding: 20px 18px; text-align: center; transition: transform .2s; }
+      section { padding: 54px 0; }
+      .sec-title { font-size: 34px; font-weight: 900; letter-spacing: 0; margin-bottom: 8px; text-align: center; }
+      .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 26px; }
+      .step { background: rgba(255,255,255,.7); border: 1px solid var(--cb); border-radius: 8px; padding: 22px 18px; text-align: center; transition: transform .2s; }
       .step:hover { transform: translateY(-3px); }
       .step .n { width: 30px; height: 30px; border-radius: 50%; background: var(--grad); color: #fff; font-weight: 900; font-size: 13px; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; }
       .step h3 { font-size: 14px; font-weight: 800; margin-bottom: 5px; }
       .step p { font-size: 12px; color: var(--sub); }
 
-      details { background: var(--card); border: 1px solid var(--cb); border-radius: 13px; margin-bottom: 9px; overflow: hidden; }
+      details { background: rgba(255,255,255,.7); border: 1px solid var(--cb); border-radius: 8px; margin-bottom: 9px; overflow: hidden; }
       summary { cursor: pointer; padding: 15px 17px; font-size: 13.5px; font-weight: 800; list-style: none; display: flex; justify-content: space-between; align-items: center; }
       summary::-webkit-details-marker { display: none; }
       summary::after { content: '+'; color: var(--cyan); font-size: 17px; font-weight: 900; transition: transform .2s; }
@@ -152,30 +195,66 @@
       .reveal { opacity: 0; transform: translateY(20px); transition: opacity .6s ease, transform .6s ease; }
       .reveal.in { opacity: 1; transform: none; }
       footer { border-top: 1px solid var(--cb); padding: 26px 0 40px; text-align: center; font-size: 11px; color: var(--mu); line-height: 1.8; }
+
+      @media (max-width: 1120px) {
+        .hero-stage { grid-template-columns: 1fr; min-height: auto; gap: 34px; padding-top: 48px; }
+        .hero { text-align: center; }
+        .hero h1 { max-width: 820px; margin-left: auto; margin-right: auto; font-size: 76px; }
+        .hero p { margin-left: auto; margin-right: auto; }
+        .hero-ctas { justify-content: center; }
+        .hero-note { text-align: center; }
+        .phone-zone { justify-self: center; }
+        .float-earned { left: -46px; top: 98px; }
+        .float-profile { right: -34px; bottom: 112px; }
+      }
+      @media (max-width: 720px) {
+        .site-shell { width: 100%; min-height: 100vh; margin: 0; border-radius: 0; border: 0; }
+        .wrap { padding: 0 18px; }
+        .nav-inner { padding: 14px 18px; }
+        .nav-actions { gap: 7px; }
+        .btn { min-height: 40px; border-radius: 14px; }
+        .btn-white, .btn-ghost, .btn-grad, .btn-dark { padding: 9px 14px; font-size: 13px; }
+        .brand { font-size: 12px; }
+        .brand-dot { width: 24px; height: 24px; }
+        .hero-stage { padding-top: 34px; padding-bottom: 42px; }
+        .hero h1 { font-size: 48px; line-height: 1; }
+        .hero p { font-size: 17px; line-height: 1.55; }
+        .hero-note { font-size: 13px; }
+        .phone { width: min(360px, calc(100vw - 30px)); border-width: 7px; }
+        .float-card { display: none; }
+        .sec-title { font-size: 27px; }
+      }
     </style>
   </head>
   <body>
-    <nav>
-      <div class="nav-inner">
-        <a class="brand" href="/"><span class="brand-dot">U</span>UROSI</a>
-        <a class="btn btn-grad" href="/app">Ouvrir l'app →</a>
-      </div>
-    </nav>
+    <div class="site-shell">
+      <nav>
+        <div class="nav-inner">
+          <a class="brand" href="/"><span class="brand-dot">U</span>UROSI</a>
+          <div class="nav-actions">
+            <a class="btn btn-white" href="/app">Mon espace</a>
+            <a class="btn btn-dark" href="/inscription/structure">Côté structure</a>
+          </div>
+        </div>
+      </nav>
 
-    <header class="hero wrap">
-      <div class="hero-blob"></div>
-      <h1>Des missions courtes,<br /><span class="grad-text">simplement.</span></h1>
-      <p>Les structures publient leurs besoins. Tu consultes les horaires, le montant, et tu acceptes les missions qui te conviennent.</p>
-      <div class="hero-ctas">
-        <a class="btn btn-white" href="#demo">Voir la démo</a>
-        <a class="btn btn-ghost" href="/app">Trouver une mission</a>
-        <a class="btn btn-ghost" href="/inscription/structure">Publier une mission</a>
-        <a class="btn btn-ghost" href="/connexion">Se connecter</a>
-      </div>
-    </header>
+      <main class="hero-stage wrap">
+        <header class="hero">
+          <div class="hero-blob"></div>
+          <div class="hero-kicker">MICRO-MISSIONS · MÉTROPOLE EUROPÉENNE DE LILLE</div>
+          <h1>Ton CV grandit<br /><span class="grad-text">avec l'expérience.</span></h1>
+          <p>Chaque mission devient une preuve : présence validée, expérience visible, paiement clair.</p>
+          <div class="hero-ctas">
+            <a class="btn btn-dark" href="#demo">Voir les missions</a>
+            <a class="btn btn-white" href="/inscription/structure">Publier un besoin</a>
+          </div>
+          <div class="hero-note">UROSI reste discret. L'expérience passe avant la marque.</div>
+        </header>
 
-    <!-- ── Démo interactive ── -->
-    <div id="demo" class="phone-zone wrap">
+        <!-- ── Démo interactive ── -->
+        <div id="demo" class="phone-zone">
+          <div class="float-card float-earned"><small>Mission terminée</small><strong>+58 €</strong></div>
+          <div class="float-card float-profile"><small>CV enrichi</small><strong>13 preuves</strong></div>
       <div class="phone" id="phone">
         <div class="phone-notch"></div>
         <div class="demo-badge">MODE DÉMO</div>
@@ -183,7 +262,7 @@
         <!-- Choix -->
         <div class="screen on" data-s="choice">
           <div class="s-head"><span class="s-title">UROSI</span><span class="stars" style="font-size:9px">MODE DÉMO · fictif</span></div>
-          <div style="font-size:22px;font-weight:900;letter-spacing:-.8px;line-height:1.1;margin:22px 0 8px">Tu veux commencer comment ?</div>
+          <div style="font-size:22px;font-weight:900;letter-spacing:0;line-height:1.1;margin:22px 0 8px">Tu veux commencer comment ?</div>
           <div style="font-size:12px;color:var(--sub)">Un accès pour trouver une mission. Un accès pour publier un besoin.</div>
           <div class="role-grid">
             <button class="role-card" type="button" data-go="flux"><strong>Travailleur</strong><span>Missions courtes, wallet, CV vivant.</span></button>
@@ -193,7 +272,9 @@
 
         <!-- Flux -->
         <div class="screen" data-s="flux">
-          <div class="s-head"><button class="s-back" data-go="choice">← Choix</button><span class="s-title">Missions</span><span></span></div>
+          <div class="s-head"><button class="s-back" data-go="choice">← Choix</button><span class="s-title">UROSI</span><span></span></div>
+          <div class="phone-page-title">Autour de toi</div>
+          <div class="phone-page-sub">Payé ou solidaire, dans le même flux.</div>
           <div class="mcard" data-go="mission">
             <div class="m-amount">72 €</div>
             <div class="m-title">Service en salle</div>
@@ -274,7 +355,7 @@
         <!-- Structure : accueil -->
         <div class="screen" data-s="struct-home">
           <div class="s-head"><button class="s-back" data-go="choice">← Choix</button><span class="s-title">Structure</span><span class="tag tag-g">démo</span></div>
-          <div style="font-size:20px;font-weight:900;letter-spacing:-.7px;line-height:1.1;margin-bottom:7px">Publier en moins de 3 minutes</div>
+          <div style="font-size:20px;font-weight:900;letter-spacing:0;line-height:1.1;margin-bottom:7px">Publier en moins de 3 minutes</div>
           <div class="mini-note">Choisis une structure fictive, publie une mission, puis regarde les candidats arriver.</div>
           <div class="metric-grid">
             <div class="metric"><b>3</b><span>missions</span></div>
@@ -336,7 +417,7 @@
             <button class="duration-btn" type="button" data-duration="5">5h</button>
           </div>
           <button class="solid-toggle" type="button" data-solid-toggle><span id="demoSolidCheck">○</span> Mission solidaire — 0 €, sans commission</button>
-          <div id="demoSolidNote" class="p-row" style="display:none;color:var(--green);background:#052e16;border:1px solid #14532d">Mission association : le montant passe à 0 €, mais elle compte dans le CV vivant.</div>
+          <div id="demoSolidNote" class="p-row" style="display:none;color:var(--green);background:var(--green-bg);border:1px solid #b8dcc3">Mission association : le montant passe à 0 €, mais elle compte dans le CV vivant.</div>
           <div class="summary-box">
             <div class="summary-row"><span>Rémunération × <span id="summaryPlaces">2</span></span><strong id="summaryPay">30 €</strong></div>
             <div class="summary-row"><span>Commission structure 18 %</span><strong id="summaryFee">5 €</strong></div>
@@ -390,15 +471,16 @@
         <button class="demo-arrow" type="button" data-demo-next aria-label="Écran suivant">›</button>
       </div>
       <div class="phone-hint"><b id="demoStatus">Démo automatique</b> — touche l'écran pour explorer librement · <a href="/app" style="color:var(--cyan)">passer aux vraies missions →</a></div>
-    </div>
+        </div>
+      </main>
 
     <!-- ── 3 étapes ── -->
     <section class="wrap reveal">
       <div class="sec-title">Comment ça marche</div>
       <div class="steps">
-        <div class="step"><div class="n">1</div><h3>La structure publie</h3><p>Dates, horaires, montant proposé. Jusqu'à 3 jours par mission.</p></div>
-        <div class="step"><div class="n">2</div><h3>Tu acceptes</h3><p>Tu vois les horaires et le montant. Tu acceptes ou tu passes.</p></div>
-        <div class="step"><div class="n">3</div><h3>Tu es payé·e</h3><p>Présence validée par QR, wallet crédité, note au CV vivant.</p></div>
+        <div class="step"><div class="n">1</div><h3>Tu choisis une expérience</h3><p>Payée ou solidaire, près de toi, visible avant de postuler.</p></div>
+        <div class="step"><div class="n">2</div><h3>La présence est validée</h3><p>Début et fin de mission sont confirmés simplement.</p></div>
+        <div class="step"><div class="n">3</div><h3>Ton CV vivant avance</h3><p>Chaque mission ajoute une preuve claire à ton profil.</p></div>
       </div>
     </section>
 
@@ -432,12 +514,34 @@
     </section>
 
     <div class="wrap reveal" style="text-align:center; padding: 20px 0 50px">
-      <a class="btn btn-grad" style="padding: 15px 32px; font-size: 15px" href="/app">Ouvrir l'app →</a>
+      <a class="btn btn-dark" style="padding: 15px 32px; font-size: 15px" href="/app">Ouvrir mon espace →</a>
     </div>
 
-    <footer>UROSI · missions courtes de la Métropole Européenne de Lille</footer>
+    <footer>UROSI · le CV par l'expérience · Métropole Européenne de Lille</footer>
+    </div>
 
     <script>
+      // Variation douce de luminosité au scroll.
+      (function () {
+        var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reduceMotion) return;
+        var ticking = false;
+        function updateLight() {
+          var max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+          var progress = Math.min(1, Math.max(0, window.scrollY / max));
+          var light = 0.42 + progress * 0.34;
+          document.documentElement.style.setProperty('--luminosity', light.toFixed(2));
+          ticking = false;
+        }
+        window.addEventListener('scroll', function () {
+          if (!ticking) {
+            window.requestAnimationFrame(updateLight);
+            ticking = true;
+          }
+        }, { passive: true });
+        updateLight();
+      })();
+
       // Révélation au scroll
       var els = document.querySelectorAll('.reveal');
       if ('IntersectionObserver' in window) {
@@ -452,7 +556,7 @@
         var phone = document.getElementById('phone');
         if (!phone) return;
         var screens = phone.querySelectorAll('.screen');
-        var order = ['choice', 'flux', 'mission', 'worker-structure', 'cv', 'wallet', 'struct-home', 'struct-publish', 'struct-live', 'struct-candidates'];
+        var order = ['flux', 'mission', 'worker-structure', 'cv', 'wallet', 'choice', 'struct-home', 'struct-publish', 'struct-live', 'struct-candidates'];
         var dotsEl = document.getElementById('dots');
         var statusEl = document.getElementById('demoStatus');
         var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
