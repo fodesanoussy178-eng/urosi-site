@@ -22,3 +22,56 @@ input,
 textarea {
   font-family: inherit;
 }
+
+.auth-demo-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 74% 12%, rgba(8, 145, 178, 0.2), transparent 32%),
+    radial-gradient(circle at 18% 86%, rgba(22, 163, 74, 0.12), transparent 30%),
+    #0a0a14;
+  display: flex;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.auth-demo-layout {
+  width: min(920px, 100%);
+  display: grid;
+  grid-template-columns: minmax(320px, 400px) minmax(280px, 360px);
+  gap: 18px;
+  align-items: start;
+}
+
+.auth-form-column {
+  width: 100%;
+  max-width: 400px;
+  justify-self: end;
+}
+
+.signup-demo-panel {
+  position: sticky;
+  top: 20px;
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.32);
+}
+
+@media (max-width: 860px) {
+  .auth-demo-layout {
+    max-width: 430px;
+    grid-template-columns: 1fr;
+  }
+
+  .auth-form-column {
+    max-width: none;
+    justify-self: stretch;
+  }
+
+  .signup-demo-panel {
+    order: -1;
+    position: relative;
+    top: auto;
+  }
+}

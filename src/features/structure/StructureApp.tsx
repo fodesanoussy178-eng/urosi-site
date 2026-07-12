@@ -239,7 +239,7 @@ export function StructureApp() {
           </div>
           <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
             {session && <NotificationBell profileId={session.user.id} onDataChanged={() => reload().catch(() => undefined)} />}
-            <a href="/#demo" style={{ fontSize: 10, color: T.cyan, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', textDecoration: 'none' }}>Démo</a>
+            <a href="/demo?role=structure" style={{ fontSize: 10, color: T.cyan, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', textDecoration: 'none' }}>Démo</a>
             <button onClick={() => setDocKey('cgu')} style={{ fontSize: 10, color: T.mu, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>? Aide</button>
             <button onClick={() => signOut()} style={{ fontSize: 10, color: T.mu, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>Déconnexion</button>
           </div>

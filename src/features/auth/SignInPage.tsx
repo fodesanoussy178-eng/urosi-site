@@ -12,7 +12,7 @@ export function SignInPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <span style={{ fontWeight: 900, fontSize: 15, color: T.text }}>Connexion</span>
           <div style={{ display: 'flex', gap: 6 }}>
-            <a href="/#demo" style={{ fontSize: 10, color: T.cyan, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', textDecoration: 'none' }}>
+            <a href="/demo" style={{ fontSize: 10, color: T.cyan, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', textDecoration: 'none' }}>
               Voir la démo
             </a>
             <button onClick={() => nav('/')} style={{ fontSize: 10, color: T.mu, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>
