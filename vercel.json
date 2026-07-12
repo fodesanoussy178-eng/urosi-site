@@ -7,5 +7,9 @@
     { "source": "/demo.html", "destination": "/#demo", "permanent": false },
     { "source": "/demo", "destination": "/#demo", "permanent": false }
   ],
-  "rewrites": [{ "source": "/(.*)", "destination": "/app.html" }]
+  "rewrites": [
+    { "source": "/cgu", "destination": "/cgu.html" },
+    { "source": "/confidentialite", "destination": "/confidentialite.html" },
+    { "source": "/(.*)", "destination": "/app.html" }
+  ]
 }

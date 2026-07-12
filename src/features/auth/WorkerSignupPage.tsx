@@ -108,7 +108,9 @@ export function WorkerSignupPage() {
                   onChange={(e) => setF((x) => ({ ...x, cgu: e.target.checked }))}
                   style={{ marginTop: 2, accentColor: '#0891b2' }}
                 />
-                <span style={{ fontSize: 11, color: T.sub, lineHeight: 1.5 }}>J'accepte les conditions d'utilisation et la politique de confidentialité d'UROSI.</span>
+                <span style={{ fontSize: 11, color: T.sub, lineHeight: 1.5 }}>
+                  J'accepte les <a href="/cgu" target="_blank" rel="noreferrer" style={{ color: T.cyan, fontWeight: 800 }}>conditions d'utilisation</a> et la <a href="/confidentialite" target="_blank" rel="noreferrer" style={{ color: T.cyan, fontWeight: 800 }}>politique de confidentialité</a> d'UROSI.
+                </span>
               </label>
               {error && <div style={{ fontSize: 12, color: T.red, marginBottom: 10 }}>{error}</div>}
               {info && <div style={{ fontSize: 12, color: T.green, marginBottom: 10 }}>{info}</div>}

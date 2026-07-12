@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#f7f5ef" />
+    <meta name="color-scheme" content="light only" />
+    <meta name="description" content="Politique de confidentialité d'UROSI — traitement des données personnelles, RGPD, droits des utilisateurs." />
+    <title>UROSI — Politique de confidentialité</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800;9..40,900&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --page: #1f2423; --bg: #f8f6ef; --card: #ffffff; --cb: #e2ded4; --row: #f0eee7;
+        --text: #1d2a2e; --sub: #748084; --mu: #9aa2a4;
+        --cyan: #0891b2; --cyan-soft: #e0f7fb; --green: #5f9271; --green-bg: #e7f4eb;
+        --amber: #b98318; --amber-bg: #fbf1dd; --grad: linear-gradient(135deg, #1d4ed8, #0891b2);
+        --luminosity: .45;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html { scroll-behavior: smooth; color-scheme: light only; -webkit-text-size-adjust: 100%; }
+      html, body { min-height: 100%; }
+      body {
+        position: relative; background: var(--page); color: var(--text);
+        font-family: 'DM Sans', system-ui, sans-serif; line-height: 1.5; overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+      }
+      body::before {
+        content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+        background: linear-gradient(120deg, #f9f8f2 0%, #edf7f8 50%, #f4f0e8 100%);
+        opacity: var(--luminosity);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        *, *::before, *::after { animation: none !important; transition: none !important; }
+      }
+      a { color: var(--cyan); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      a:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; border-radius: 4px; }
+
+      .site-shell {
+        position: relative; width: min(1560px, calc(100vw - 48px)); min-height: calc(100vh - 48px); margin: 24px auto;
+        overflow: hidden; border: 1px solid rgba(255,255,255,.45); border-radius: 28px;
+        background:
+          linear-gradient(120deg, rgba(255,255,255,.92) 0%, rgba(249,248,243,.9) 45%, rgba(237,247,248,.92) 100%),
+          var(--bg);
+        box-shadow: 0 24px 90px rgba(0,0,0,.18);
+      }
+      .site-shell::before {
+        content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+        background: linear-gradient(145deg, rgba(255,255,255,.42), rgba(8,145,178,.12) 55%, rgba(255,255,255,.2));
+        opacity: var(--luminosity);
+      }
+      .site-shell > * { position: relative; z-index: 1; }
+      .wrap { max-width: 820px; margin: 0 auto; padding: 0 32px; }
+
+      nav { position: sticky; top: 0; z-index: 50; background: rgba(248,246,239,.84); backdrop-filter: blur(18px); border-bottom: 1px solid rgba(226,222,212,.72); }
+      .nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 17px 32px; max-width: 1500px; margin: 0 auto; }
+      .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 13px; color: #a9b0b1; }
+      .brand-dot { width: 26px; height: 26px; border-radius: 8px; background: var(--grad); display: flex; align-items: center; justify-content: center; font-size: 13px; color: #fff; }
+      .nav-actions { display: flex; align-items: center; gap: 10px; }
+      .btn { display: inline-flex; align-items: center; justify-content: center; border: none; cursor: pointer; font-family: inherit; border-radius: 18px; font-weight: 900; transition: transform .15s ease; text-align: center; min-height: 44px; }
+      .btn:hover { transform: translateY(-1px); text-decoration: none; }
+      .btn-dark { background: var(--text); color: #fff; padding: 11px 24px; font-size: 15px; box-shadow: 0 12px 30px rgba(29,42,46,.12); }
+      .btn-ghost { background: rgba(255,255,255,.62); color: var(--text); border: 1px solid var(--cb); padding: 11px 24px; font-size: 15px; font-weight: 900; }
+
+      /* ── En-tête du document ── */
+      .doc-head { padding: 56px 0 34px; }
+      .kicker { color: var(--cyan); font-size: 13px; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 16px; }
+      .doc-head h1 { font-size: 52px; font-weight: 900; line-height: 1; letter-spacing: -.01em; margin-bottom: 18px; }
+      .doc-lede { font-size: 19px; color: var(--sub); line-height: 1.65; max-width: 640px; margin-bottom: 22px; }
+      .doc-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+      .chip { background: rgba(255,255,255,.7); border: 1px solid var(--cb); border-radius: 999px; padding: 6px 13px; font-size: 12px; font-weight: 700; color: var(--sub); }
+
+      /* ── Sommaire ── */
+      .toc { background: rgba(255,255,255,.7); border: 1px solid var(--cb); border-radius: 8px; padding: 22px 24px; margin-bottom: 16px; }
+      .toc-title { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; color: var(--mu); margin-bottom: 14px; }
+      .toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 30px; }
+      .toc li { margin-bottom: 7px; break-inside: avoid; font-size: 14px; }
+      .toc a { color: var(--text); font-weight: 600; }
+      .toc a:hover { color: var(--cyan); }
+
+      /* ── Articles ── */
+      .art { padding: 34px 0; border-bottom: 1px solid var(--cb); }
+      .art:last-of-type { border-bottom: 0; }
+      .art-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+      .art-n { flex-shrink: 0; min-width: 30px; height: 30px; padding: 0 9px; border-radius: 999px; background: var(--grad); color: #fff; font-weight: 900; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+      .art h2 { font-size: 27px; font-weight: 900; line-height: 1.15; letter-spacing: -.005em; }
+      .art h3 { font-size: 15px; font-weight: 800; margin: 22px 0 8px; }
+      .art p { font-size: 15.5px; color: var(--text); line-height: 1.7; margin-bottom: 14px; }
+      .art ul { margin: 0 0 14px; padding-left: 20px; }
+      .art li { font-size: 15.5px; line-height: 1.65; margin-bottom: 7px; }
+      .art strong { font-weight: 800; }
+
+      /* ── Encadrés ── */
+      .call { border: 1px solid var(--cb); border-radius: 8px; padding: 16px 18px; margin: 18px 0; }
+      .call p { margin-bottom: 0; font-size: 15px; }
+      .call.key { background: var(--cyan-soft); border-color: rgba(8,145,178,.28); }
+      .call.ok { background: var(--green-bg); border-color: rgba(95,146,113,.3); }
+      .call.warn { background: var(--amber-bg); border-color: rgba(185,131,24,.3); }
+      .call.plain { background: rgba(255,255,255,.7); }
+
+      /* ── Tableaux ── */
+      .tbl { background: rgba(255,255,255,.7); border: 1px solid var(--cb); border-radius: 8px; overflow: hidden; margin: 18px 0; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { text-align: left; padding: 12px 16px; font-size: 14.5px; color: var(--text); vertical-align: top; }
+      th { background: var(--row); font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .07em; color: var(--sub); }
+      tbody tr { border-top: 1px solid var(--cb); }
+
+      footer { border-top: 1px solid var(--cb); padding: 30px 0 44px; text-align: center; font-size: 12px; color: var(--mu); line-height: 1.9; }
+      footer a { color: var(--sub); font-weight: 700; }
+
+      @media (max-width: 720px) {
+        .site-shell { width: 100%; min-height: 100vh; margin: 0; border-radius: 0; border: 0; }
+        .wrap { padding: 0 18px; }
+        .nav-inner { padding: 14px 18px; }
+        .btn { min-height: 40px; border-radius: 14px; }
+        .btn-dark, .btn-ghost { padding: 9px 14px; font-size: 13px; }
+        .brand { font-size: 12px; }
+        .doc-head { padding: 34px 0 26px; }
+        .doc-head h1 { font-size: 34px; }
+        .doc-lede { font-size: 16.5px; }
+        .toc ol { columns: 1; }
+        .art h2 { font-size: 22px; }
+        .art p, .art li { font-size: 15px; }
+        th, td { padding: 10px 11px; font-size: 13.5px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="site-shell">
+
+    <nav>
+      <div class="nav-inner">
+        <a class="brand" href="/"><span class="brand-dot">U</span>UROSI</a>
+        <div class="nav-actions">
+          <a class="btn btn-ghost" href="/cgu">CGU</a>
+          <a class="btn btn-dark" href="/app">Mon espace</a>
+        </div>
+      </div>
+    </nav>
+
+    <section class="wrap doc-head">
+      <div class="kicker">Information RGPD</div>
+      <h1>Politique de confidentialité</h1>
+      <p class="doc-lede">Ce que nous collectons, pourquoi, pendant combien de temps, et ce que vous pouvez exiger de nous à tout moment.</p>
+      <div class="doc-meta">
+        <span class="chip">Version 1.0</span>
+        <span class="chip">Mise à jour au __/__/2026</span>
+        <span class="chip">Règlement (UE) 2016/679</span>
+      </div>
+    </section>
+
+    <section class="wrap">
+      <div class="toc">
+        <div class="toc-title">Sommaire</div>
+        <ol>
+          <li><a href="#p1">Responsable de traitement</a></li>
+          <li><a href="#p2">Données collectées</a></li>
+          <li><a href="#p3">Finalités et bases légales</a></li>
+          <li><a href="#p4">Durées de conservation</a></li>
+          <li><a href="#p5">Destinataires</a></li>
+          <li><a href="#p6">Indicateur de fiabilité et article 22 du RGPD</a></li>
+          <li><a href="#p7">Transparence algorithmique</a></li>
+          <li><a href="#p8">Ce que nous ne faisons pas</a></li>
+          <li><a href="#p9">Vos droits</a></li>
+          <li><a href="#p10">Hébergement et transferts</a></li>
+          <li><a href="#p11">Sécurité</a></li>
+          <li><a href="#p12">Cookies</a></li>
+          <li><a href="#p13">Réclamation</a></li>
+        </ol>
+      </div>
+
+      <div class="art" id="p1">
+        <div class="art-head">
+          <div class="art-n">1</div>
+          <h2>Responsable de traitement</h2>
+        </div>
+
+        <p>Le responsable de traitement est <strong>UROSI</strong>, dont le siège est établi à Tourcoing, Métropole Européenne de Lille.</p>
+        <ul>
+          <li>SIRET : __ __ __ __</li>
+          <li>Contact : <a href="mailto:contact@urosi.fr">contact@urosi.fr</a></li>
+          <li>Délégué à la protection des données : <a href="mailto:dpo@urosi.fr">dpo@urosi.fr</a></li>
+        </ul>
+        <p>Toute demande relative à vos données peut être adressée directement au DPO, sans passer par le support.</p>
+      </div>
+
+      <div class="art" id="p2">
+        <div class="art-head">
+          <div class="art-n">2</div>
+          <h2>Données collectées</h2>
+        </div>
+
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Catégorie</th><th>Données</th></tr></thead>
+            <tbody>
+              <tr><td>Identité</td><td>Nom, prénom, date de naissance, adresse électronique, téléphone</td></tr>
+              <tr><td>Vérification (KYC)</td><td>Pièce d'identité, justificatif de domicile — collectés et conservés par le prestataire de paiement</td></tr>
+              <tr><td>Statut déclaré</td><td>Étudiant, demandeur d'emploi, micro-entrepreneur, salarié, autre</td></tr>
+              <tr><td>Structure</td><td>Raison sociale, SIRET ou RNA, représentant légal, attestation d'assurance</td></tr>
+              <tr><td>Activité</td><td>Missions publiées, acceptées, refusées, effectuées ; horodatage des validations de présence ; annulations</td></tr>
+              <tr><td>Financier</td><td>Montants perçus, historique du wallet, IBAN — stocké par le prestataire de paiement, jamais par UROSI</td></tr>
+              <tr><td>Évaluations</td><td>Notes en étoiles reçues et émises, commentaires</td></tr>
+              <tr><td>Technique</td><td>Adresse IP, journaux de connexion, type d'appareil</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="call plain">
+          <p>Aucune donnée sensible au sens de l'article 9 du RGPD n'est collectée : ni origine, ni opinions politiques, religieuses ou syndicales, ni données de santé, ni orientation sexuelle.</p>
+        </div>
+      </div>
+
+      <div class="art" id="p3">
+        <div class="art-head">
+          <div class="art-n">3</div>
+          <h2>Finalités et bases légales</h2>
+        </div>
+
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Finalité</th><th>Base légale</th></tr></thead>
+            <tbody>
+              <tr><td>Créer et gérer votre compte</td><td>Exécution du contrat (art. 6.1.b)</td></tr>
+              <tr><td>Mettre en relation travailleurs et structures</td><td>Exécution du contrat</td></tr>
+              <tr><td>Exécuter les paiements et tenir le wallet</td><td>Exécution du contrat</td></tr>
+              <tr><td>Vérifier l'identité (KYC / LCB-FT)</td><td>Obligation légale (art. 6.1.c)</td></tr>
+              <tr><td>Déclarer les revenus à la DGFiP (DAC7)</td><td>Obligation légale</td></tr>
+              <tr><td>Constituer le CV vivant</td><td>Exécution du contrat</td></tr>
+              <tr><td>Calculer l'indicateur de fiabilité</td><td>Intérêt légitime — confiance entre parties (art. 6.1.f)</td></tr>
+              <tr><td>Prévenir la fraude et sécuriser la plateforme</td><td>Intérêt légitime</td></tr>
+              <tr><td>Alertes fiscales préventives</td><td>Intérêt légitime — protection de l'utilisateur</td></tr>
+              <tr><td>Communications marketing</td><td>Consentement (art. 6.1.a), révocable à tout moment</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="art" id="p4">
+        <div class="art-head">
+          <div class="art-n">4</div>
+          <h2>Durées de conservation</h2>
+        </div>
+
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Donnée</th><th>Durée</th></tr></thead>
+            <tbody>
+              <tr><td>Compte actif</td><td>Toute la durée de la relation</td></tr>
+              <tr><td>Compte fermé — identité</td><td>Suppression sous 30 jours, sauf obligation légale contraire</td></tr>
+              <tr><td>CV vivant après fermeture</td><td>Exportable 30 jours, puis supprimé</td></tr>
+              <tr><td>Pièces KYC</td><td>5 ans après la fin de la relation (obligation LCB-FT)</td></tr>
+              <tr><td>Documents comptables et transactions</td><td>10 ans (Code de commerce)</td></tr>
+              <tr><td>Journaux techniques</td><td>12 mois</td></tr>
+              <tr><td>Historique de fiabilité</td><td>24 mois glissants, avec pondération décroissante des événements anciens</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="art" id="p5">
+        <div class="art-head">
+          <div class="art-n">5</div>
+          <h2>Destinataires</h2>
+        </div>
+
+        <ul>
+          <li><strong>Prestataire de services de paiement agréé</strong> — identité, KYC, IBAN, transactions. Sous-traitant au sens de l'art. 28 du RGPD. Son identité est communiquée à l'activation des paiements.</li>
+          <li><strong>Supabase</strong> — hébergement de la base de données (Union européenne).</li>
+          <li><strong>Vercel</strong> — hébergement applicatif.</li>
+          <li><strong>DGFiP</strong> — déclaration DAC7 au-delà des seuils, exclusivement.</li>
+          <li><strong>Structures</strong> — accès limité au profil public du travailleur : prénom, initiale, CV vivant, étoiles, indicateur de fiabilité. Jamais les données KYC, jamais l'IBAN, jamais l'adresse.</li>
+        </ul>
+        <div class="call key">
+          <p><strong>Aucune donnée n'est vendue, louée, cédée ou transmise à des fins publicitaires, de courtage de données ou de présélection à l'embauche.</strong> Ce n'est pas une politique commerciale — c'est une règle structurelle.</p>
+        </div>
+      </div>
+
+      <div class="art" id="p6">
+        <div class="art-head">
+          <div class="art-n">6</div>
+          <h2>Indicateur de fiabilité et article 22 du RGPD</h2>
+        </div>
+
+        <p>L'indicateur de fiabilité est un traitement automatisé de données factuelles. Il <strong>ne constitue pas une décision automatisée produisant des effets juridiques</strong> ni n'affecte de manière significative les personnes concernées, au sens de l'article 22 du RGPD.</p>
+        <p>Il ne bloque aucun accès, ne filtre aucune mission, n'ordonne aucun fil et ne déclenche aucune exclusion. Il informe. La décision appartient à la structure, qui est une personne humaine.</p>
+        <h3>Garanties</h3>
+        <ul>
+          <li><strong>Accès intégral et gratuit</strong> — vous consultez à tout moment le détail de votre indicateur et chaque événement qui le compose.</li>
+          <li><strong>Contestation gratuite</strong> — tout élément peut être contesté auprès du DPO. L'examen est mené par une personne physique, jamais par un automatisme.</li>
+          <li><strong>Réponse motivée</strong> — sous 30 jours, avec correction rétroactive de l'historique en cas d'erreur reconnue.</li>
+          <li><strong>Jamais payant</strong> — l'accès et la contestation ne peuvent en aucun cas être conditionnés à un paiement ou à un abonnement.</li>
+        </ul>
+      </div>
+
+      <div class="art" id="p7">
+        <div class="art-head">
+          <div class="art-n">7</div>
+          <h2>Transparence algorithmique</h2>
+        </div>
+
+        <p>Conformément aux exigences européennes de transparence des plateformes de travail, voici la logique des traitements automatisés.</p>
+        <h3>Ce qui alimente l'indicateur de fiabilité</h3>
+        <ul>
+          <li>Missions effectuées et présences validées</li>
+          <li>Ponctualité relevée aux validations de début et de fin</li>
+          <li>Annulations après acceptation, pondérées selon le préavis</li>
+          <li>Abandons en cours de mission</li>
+          <li>Pondération décroissante des événements anciens : un événement récent pèse davantage qu'un événement de l'an dernier</li>
+        </ul>
+        <h3>Ce qui ne l'alimente jamais</h3>
+        <ul>
+          <li>Les refus de missions non acceptées — sans effet, en toute circonstance</li>
+          <li>Les étoiles et les commentaires — couche subjective, strictement étanche</li>
+          <li>L'âge, le genre, le lieu de résidence, le statut déclaré, la nationalité</li>
+          <li>Le volume de missions solidaires réalisées</li>
+        </ul>
+        <h3>Ordre d'affichage des missions</h3>
+        <p>Le fil est ordonné par proximité géographique et fraîcheur de publication. <strong>Il n'est jamais ordonné par l'indicateur de fiabilité, par les étoiles, ni par aucun critère de performance.</strong> Aucun accès prioritaire ne peut être acheté.</p>
+      </div>
+
+      <div class="art" id="p8">
+        <div class="art-head">
+          <div class="art-n">8</div>
+          <h2>Ce que nous ne faisons pas</h2>
+        </div>
+
+        <p>Cette section n'est pas juridiquement obligatoire. Elle est ici parce qu'elle engage.</p>
+        <ul>
+          <li>Nous ne construisons pas de produit de notation de travailleurs revendu à des employeurs.</li>
+          <li>Nous ne vendons ni ne cédons les données comportementales à des tiers.</li>
+          <li>Nous ne pratiquons pas de tarification personnalisée fondée sur le comportement.</li>
+          <li>Nous n'utilisons pas la géolocalisation en dehors de la mission en cours et du filtrage de proximité que vous demandez.</li>
+          <li>Nous ne conditionnons aucun droit RGPD à un paiement.</li>
+        </ul>
+      </div>
+
+      <div class="art" id="p9">
+        <div class="art-head">
+          <div class="art-n">9</div>
+          <h2>Vos droits</h2>
+        </div>
+
+        <p>Vous disposez des droits suivants, exerçables gratuitement auprès du DPO à <a href="mailto:dpo@urosi.fr">dpo@urosi.fr</a> :</p>
+        <ul>
+          <li><strong>Accès</strong> (art. 15) — obtenir copie de vos données.</li>
+          <li><strong>Rectification</strong> (art. 16) — corriger une donnée inexacte.</li>
+          <li><strong>Effacement</strong> (art. 17) — supprimer vos données, sauf obligation légale de conservation.</li>
+          <li><strong>Limitation</strong> (art. 18) — geler un traitement le temps d'une contestation.</li>
+          <li><strong>Portabilité</strong> (art. 20) — récupérer votre CV vivant et vos données dans un format structuré et réutilisable.</li>
+          <li><strong>Opposition</strong> (art. 21) — vous opposer à un traitement fondé sur l'intérêt légitime.</li>
+          <li><strong>Retrait du consentement</strong> — à tout moment, pour les communications marketing, sans conséquence sur votre compte.</li>
+        </ul>
+        <p>Nous répondons sous <strong>1 mois</strong>, prorogeable de 2 mois pour les demandes complexes, avec information motivée.</p>
+      </div>
+
+      <div class="art" id="p10">
+        <div class="art-head">
+          <div class="art-n">10</div>
+          <h2>Hébergement et transferts</h2>
+        </div>
+
+        <p>L'ensemble des données est hébergé sur des serveurs situés dans l'Union européenne.</p>
+        <p>Aucun transfert vers un pays tiers n'est effectué sans garanties appropriées conformes au RGPD — clauses contractuelles types ou décision d'adéquation de la Commission européenne. Les déclarations DAC7 sont transmises exclusivement à l'administration fiscale française.</p>
+      </div>
+
+      <div class="art" id="p11">
+        <div class="art-head">
+          <div class="art-n">11</div>
+          <h2>Sécurité</h2>
+        </div>
+
+        <ul>
+          <li>Chiffrement des données en transit (TLS) et au repos.</li>
+          <li>Cloisonnement des accès par politiques de sécurité au niveau des lignes de la base (RLS).</li>
+          <li>Aucune donnée bancaire n'est stockée par UROSI : elles sont détenues par le prestataire de paiement agréé.</li>
+          <li>Journalisation des accès aux données personnelles.</li>
+          <li>En cas de violation présentant un risque, notification à la CNIL sous 72 heures et information des personnes concernées lorsque le risque est élevé.</li>
+        </ul>
+      </div>
+
+      <div class="art" id="p12">
+        <div class="art-head">
+          <div class="art-n">12</div>
+          <h2>Cookies</h2>
+        </div>
+
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Type</th><th>Finalité</th><th>Consentement</th></tr></thead>
+            <tbody>
+              <tr><td>Strictement nécessaires</td><td>Session, authentification, sécurité</td><td>Non requis</td></tr>
+              <tr><td>Mesure d'audience</td><td>Statistiques agrégées et anonymisées</td><td>Requis</td></tr>
+              <tr><td>Publicitaires</td><td>—</td><td>Aucun cookie publicitaire n'est déposé</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Vous pouvez modifier vos choix à tout moment depuis le bandeau de gestion des cookies.</p>
+      </div>
+
+      <div class="art" id="p13">
+        <div class="art-head">
+          <div class="art-n">13</div>
+          <h2>Réclamation</h2>
+        </div>
+
+        <p>Si vous estimez que le traitement de vos données constitue une violation du RGPD, vous pouvez introduire une réclamation auprès de la <strong>Commission Nationale de l'Informatique et des Libertés</strong> — 3 place de Fontenoy, TSA 80715, 75334 Paris Cedex 07, ou en ligne sur cnil.fr.</p>
+        <p>Nous vous invitons toutefois à nous écrire d'abord : <a href="mailto:dpo@urosi.fr">dpo@urosi.fr</a>.</p>
+      </div>
+    </section>
+
+    <footer>
+      UROSI · plateforme mandataire de micro-missions · Tourcoing, Métropole Européenne de Lille<br />
+      SIRET : __ __ __ __ · <a href="mailto:contact@urosi.fr">contact@urosi.fr</a> · DPO : <a href="mailto:dpo@urosi.fr">dpo@urosi.fr</a><br />
+      Paiements opérés par un prestataire de services de paiement agréé.<br />
+      <a href="/cgu">CGU →</a>
+    </footer>
+
+    </div>
+  </body>
+</html>

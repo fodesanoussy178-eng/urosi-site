@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#f7f5ef" />
+    <meta name="color-scheme" content="light only" />
+    <meta name="description" content="Conditions Générales d'Utilisation d'UROSI — micro-missions, Métropole Européenne de Lille." />
+    <title>UROSI — Conditions Générales d'Utilisation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800;9..40,900&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --page: #1f2423; --bg: #f8f6ef; --card: #ffffff; --cb: #e2ded4; --row: #f0eee7;
+        --text: #1d2a2e; --sub: #748084; --mu: #9aa2a4;
+        --cyan: #0891b2; --cyan-soft: #e0f7fb; --green: #5f9271; --green-bg: #e7f4eb;
+        --amber: #b98318; --amber-bg: #fbf1dd; --grad: linear-gradient(135deg, #1d4ed8, #0891b2);
+        --luminosity: .45;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html { scroll-behavior: smooth; color-scheme: light only; -webkit-text-size-adjust: 100%; }
+      html, body { min-height: 100%; }
+      body {
+        position: relative; background: var(--page); color: var(--text);
+        font-family: 'DM Sans', system-ui, sans-serif; line-height: 1.5; overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+      }
+      body::before {
+        content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+        background: linear-gradient(120deg, #f9f8f2 0%, #edf7f8 50%, #f4f0e8 100%);
+        opacity: var(--luminosity);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        *, *::before, *::after { animation: none !important; transition: none !important; }
+      }
+      a { color: var(--cyan); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      a:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; border-radius: 4px; }
+
+      .site-shell {
+        position: relative; width: min(1560px, calc(100vw - 48px)); min-height: calc(100vh - 48px); margin: 24px auto;
+        overflow: hidden; border: 1px solid rgba(255,255,255,.45); border-radius: 28px;
+        background:
+          linear-gradient(120deg, rgba(255,255,255,.92) 0%, rgba(249,248,243,.9) 45%, rgba(237,247,248,.92) 100%),
+          var(--bg);
+        box-shadow: 0 24px 90px rgba(0,0,0,.18);
+      }
+      .site-shell::before {
+        content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+        background: linear-gradient(145deg, rgba(255,255,255,.42), rgba(8,145,178,.12) 55%, rgba(255,255,255,.2));
+        opacity: var(--luminosity);
+      }
+      .site-shell > * { position: relative; z-index: 1; }
+      .wrap { max-width: 820px; margin: 0 auto; padding: 0 32px; }
+
+      nav { position: sticky; top: 0; z-index: 50; background: rgba(248,246,239,.84); backdrop-filter: blur(18px); border-bottom: 1px solid rgba(226,222,212,.72); }
+      .nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 17px 32px; max-width: 1500px; margin: 0 auto; }
+      .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 13px; color: #a9b0b1; }
+      .brand-dot { width: 26px; height: 26px; border-radius: 8px; background: var(--grad); display: flex; align-items: center; justify-content: center; font-size: 13px; color: #fff; }
+      .nav-actions { display: flex; align-items: center; gap: 10px; }
+      .btn { display: inline-flex; align-items: center; justify-content: center; border: none; cursor: pointer; font-family: inherit; border-radius: 18px; font-weight: 900; transition: transform .15s ease; text-align: center; min-height: 44px; }
+      .btn:hover { transform: translateY(-1px); text-decoration: none; }
+      .btn-dark { background: var(--text); color: #fff; padding: 11px 24px; font-size: 15px; box-shadow: 0 12px 30px rgba(29,42,46,.12); }
+      .btn-ghost { background: rgba(255,255,255,.62); color: var(--text); border: 1px solid var(--cb); padding: 11px 24px; font-size: 15px; font-weight: 900; }
+
+      /* ── En-tête du document ── */
+      .doc-head { padding: 56px 0 34px; }
+      .kicker { color: var(--cyan); font-size: 13px; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 16px; }
+      .doc-head h1 { font-size: 52px; font-weight: 900; line-height: 1; letter-spacing: -.01em; margin-bottom: 18px; }
+      .doc-lede { font-size: 19px; color: var(--sub); line-height: 1.65; max-width: 640px; margin-bottom: 22px; }
+      .doc-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+      .chip { background: rgba(255,255,255,.7); border: 1px solid var(--cb); border-radius: 999px; padding: 6px 13px; font-size: 12px; font-weight: 700; color: var(--sub); }
+
+      /* ── Sommaire ── */
+      .toc { background: rgba(255,255,255,.7); border: 1px solid var(--cb); border-radius: 8px; padding: 22px 24px; margin-bottom: 16px; }
+      .toc-title { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; color: var(--mu); margin-bottom: 14px; }
+      .toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 30px; }
+      .toc li { margin-bottom: 7px; break-inside: avoid; font-size: 14px; }
+      .toc a { color: var(--text); font-weight: 600; }
+      .toc a:hover { color: var(--cyan); }
+
+      /* ── Articles ── */
+      .art { padding: 34px 0; border-bottom: 1px solid var(--cb); }
+      .art:last-of-type { border-bottom: 0; }
+      .art-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+      .art-n { flex-shrink: 0; min-width: 30px; height: 30px; padding: 0 9px; border-radius: 999px; background: var(--grad); color: #fff; font-weight: 900; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+      .art h2 { font-size: 27px; font-weight: 900; line-height: 1.15; letter-spacing: -.005em; }
+      .art h3 { font-size: 15px; font-weight: 800; margin: 22px 0 8px; }
+      .art p { font-size: 15.5px; color: var(--text); line-height: 1.7; margin-bottom: 14px; }
+      .art ul { margin: 0 0 14px; padding-left: 20px; }
+      .art li { font-size: 15.5px; line-height: 1.65; margin-bottom: 7px; }
+      .art strong { font-weight: 800; }
+
+      /* ── Encadrés ── */
+      .call { border: 1px solid var(--cb); border-radius: 8px; padding: 16px 18px; margin: 18px 0; }
+      .call p { margin-bottom: 0; font-size: 15px; }
+      .call.key { background: var(--cyan-soft); border-color: rgba(8,145,178,.28); }
+      .call.ok { background: var(--green-bg); border-color: rgba(95,146,113,.3); }
+      .call.warn { background: var(--amber-bg); border-color: rgba(185,131,24,.3); }
+      .call.plain { background: rgba(255,255,255,.7); }
+
+      /* ── Tableaux ── */
+      .tbl { background: rgba(255,255,255,.7); border: 1px solid var(--cb); border-radius: 8px; overflow: hidden; margin: 18px 0; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { text-align: left; padding: 12px 16px; font-size: 14.5px; color: var(--text); vertical-align: top; }
+      th { background: var(--row); font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .07em; color: var(--sub); }
+      tbody tr { border-top: 1px solid var(--cb); }
+
+      footer { border-top: 1px solid var(--cb); padding: 30px 0 44px; text-align: center; font-size: 12px; color: var(--mu); line-height: 1.9; }
+      footer a { color: var(--sub); font-weight: 700; }
+
+      @media (max-width: 720px) {
+        .site-shell { width: 100%; min-height: 100vh; margin: 0; border-radius: 0; border: 0; }
+        .wrap { padding: 0 18px; }
+        .nav-inner { padding: 14px 18px; }
+        .btn { min-height: 40px; border-radius: 14px; }
+        .btn-dark, .btn-ghost { padding: 9px 14px; font-size: 13px; }
+        .brand { font-size: 12px; }
+        .doc-head { padding: 34px 0 26px; }
+        .doc-head h1 { font-size: 34px; }
+        .doc-lede { font-size: 16.5px; }
+        .toc ol { columns: 1; }
+        .art h2 { font-size: 22px; }
+        .art p, .art li { font-size: 15px; }
+        th, td { padding: 10px 11px; font-size: 13.5px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="site-shell">
+
+    <nav>
+      <div class="nav-inner">
+        <a class="brand" href="/"><span class="brand-dot">U</span>UROSI</a>
+        <div class="nav-actions">
+          <a class="btn btn-ghost" href="/confidentialite">Confidentialité</a>
+          <a class="btn btn-dark" href="/app">Mon espace</a>
+        </div>
+      </div>
+    </nav>
+
+    <section class="wrap doc-head">
+      <div class="kicker">Document contractuel</div>
+      <h1>Conditions Générales d'Utilisation</h1>
+      <p class="doc-lede">Ce qui lie UROSI, les travailleurs et les structures. Ce que chacun peut faire, ce que personne ne peut faire, et ce qui se passe quand ça coince.</p>
+      <div class="doc-meta">
+        <span class="chip">Version 1.0</span>
+        <span class="chip">En vigueur au __/__/2026</span>
+        <span class="chip">21 articles</span>
+      </div>
+    </section>
+
+    <section class="wrap">
+      <div class="toc">
+        <div class="toc-title">Sommaire</div>
+        <ol>
+          <li><a href="#a1">Objet et nature de la plateforme</a></li>
+          <li><a href="#a2">Définitions</a></li>
+          <li><a href="#a3">Inscription et vérification</a></li>
+          <li><a href="#a4">Les missions</a></li>
+          <li><a href="#a5">Liberté de refus</a></li>
+          <li><a href="#a6">Prix, commission et paiement</a></li>
+          <li><a href="#a7">Wallet et retraits</a></li>
+          <li><a href="#a8">Validation de présence</a></li>
+          <li><a href="#a9">Annulations et engagements</a></li>
+          <li><a href="#a10">Indicateur de fiabilité</a></li>
+          <li><a href="#a11">Avis et étoiles</a></li>
+          <li><a href="#a12">CV vivant</a></li>
+          <li><a href="#a13">Missions solidaires</a></li>
+          <li><a href="#a14">Statut fiscal et social du travailleur</a></li>
+          <li><a href="#a15">Obligations DAC7</a></li>
+          <li><a href="#a16">Litiges entre parties</a></li>
+          <li><a href="#a17">Règles de sécurité de la plateforme</a></li>
+          <li><a href="#a18">Résiliation</a></li>
+          <li><a href="#a19">Responsabilité et assurance</a></li>
+          <li><a href="#a20">Modification des CGU</a></li>
+          <li><a href="#a21">Droit applicable et médiation</a></li>
+        </ol>
+      </div>
+
+      <div class="art" id="a1">
+        <div class="art-head">
+          <div class="art-n">1</div>
+          <h2>Objet et nature de la plateforme</h2>
+        </div>
+
+        <div class="call key">
+          <p><strong>UROSI est une plateforme mandataire de mise en relation.</strong> Elle n'est ni employeur, ni donneur d'ordre, ni entreprise de travail temporaire. Le contrat de prestation se forme directement entre le travailleur et la structure. UROSI agit comme intermédiaire mandataire, chargé de la mise en relation et de l'encaissement pour le compte du travailleur.</p>
+        </div>
+        <p>Les présentes CGU régissent l'accès et l'usage de urosi.fr et de l'application UROSI. Toute inscription vaut acceptation pleine et entière des présentes conditions.</p>
+        <p>UROSI ne dirige pas le travail, ne fixe pas les prix, n'impose aucune mission, n'exerce aucun pouvoir disciplinaire et ne sanctionne aucun travailleur. Ces trois absences — direction, contrôle, sanction — sont constitutives du modèle.</p>
+        <h3>Structures éligibles</h3>
+        <ul>
+          <li>Entreprises et PME — SIRET valide obligatoire</li>
+          <li>Associations loi 1901 — numéro RNA obligatoire</li>
+          <li>Structures de l'économie sociale et solidaire — vérification préalable par UROSI</li>
+          <li>Collectivités et établissements publics</li>
+        </ul>
+      </div>
+
+      <div class="art" id="a2">
+        <div class="art-head">
+          <div class="art-n">2</div>
+          <h2>Définitions</h2>
+        </div>
+
+        <ul>
+          <li><strong>Plateforme</strong> — le site urosi.fr, l'application et les services associés.</li>
+          <li><strong>Travailleur</strong> — personne physique majeure inscrite pour réaliser des missions.</li>
+          <li><strong>Structure</strong> — personne morale inscrite pour publier des missions.</li>
+          <li><strong>Mission</strong> — prestation ponctuelle, localisée, à durée déterminée.</li>
+          <li><strong>Mission solidaire</strong> — mission bénévole à 0 €, publiée par une structure associative ou ESS.</li>
+          <li><strong>Wallet</strong> — compte de paiement ouvert auprès du prestataire de paiement, sur lequel transitent les fonds.</li>
+          <li><strong>CV vivant</strong> — historique des missions réellement effectuées et validées.</li>
+          <li><strong>Indicateur de fiabilité</strong> — restitution factuelle et informative de l'historique d'engagement d'un compte.</li>
+        </ul>
+      </div>
+
+      <div class="art" id="a3">
+        <div class="art-head">
+          <div class="art-n">3</div>
+          <h2>Inscription et vérification</h2>
+        </div>
+
+        <h3>3.1 — Travailleurs</h3>
+        <ul>
+          <li>Âge minimum : 18 ans révolus.</li>
+          <li>Un seul compte par personne physique. Les comptes multiples sont interdits.</li>
+          <li>Déclaration du statut à l'inscription : étudiant, demandeur d'emploi, micro-entrepreneur, salarié en activité complémentaire, autre.</li>
+          <li>Pièce d'identité valide requise pour l'activation des paiements (vérification KYC, art. 6).</li>
+          <li>Le travailleur est responsable de l'exactitude des informations fournies.</li>
+        </ul>
+        <div class="call plain">
+          <p>La déclaration de statut n'est pas un contrôle : elle permet d'envoyer les bonnes alertes fiscales au bon moment selon votre situation (allocations, URSSAF, France Travail).</p>
+        </div>
+        <h3>3.2 — Structures</h3>
+        <ul>
+          <li>SIRET ou RNA valide, vérifié avant activation du compte.</li>
+          <li>Identification du représentant légal et vérification KYC de la personne morale.</li>
+          <li>Provisionnement du wallet obligatoire avant publication d'une mission rémunérée.</li>
+        </ul>
+      </div>
+
+      <div class="art" id="a4">
+        <div class="art-head">
+          <div class="art-n">4</div>
+          <h2>Les missions</h2>
+        </div>
+
+        <div class="call key">
+          <p><strong>UROSI organise des missions ponctuelles locales, généralement de quelques heures, avec une limite maximale de 3 jours consécutifs</strong> afin d'éviter la dérive vers de l'emploi long déguisé.</p>
+        </div>
+        <p>Cette limite est appliquée automatiquement par la plateforme. Elle ne résulte d'aucune appréciation humaine et ne constitue ni une sanction, ni une évaluation du travailleur.</p>
+        <h3>Contenu obligatoire d'une annonce</h3>
+        <ul>
+          <li>Intitulé et description précise de la prestation attendue</li>
+          <li>Lieu exact d'exécution</li>
+          <li>Date, horaires et durée — planning détaillé par journée pour les missions de plusieurs jours</li>
+          <li>Montant proposé au travailleur, exprimé en net perçu</li>
+          <li>Nombre de places disponibles</li>
+        </ul>
+        <p>Une même structure ne peut enchaîner avec un même travailleur au-delà de la limite de 3 jours consécutifs. Tout contournement — fractionnement artificiel, missions successives déguisées — constitue un manquement grave.</p>
+      </div>
+
+      <div class="art" id="a5">
+        <div class="art-head">
+          <div class="art-n">5</div>
+          <h2>Liberté de refus</h2>
+        </div>
+
+        <div class="call ok">
+          <p><strong>Le travailleur est libre de refuser ou d'ignorer toute mission, sans motif, sans délai et sans conséquence d'aucune sorte.</strong> Un refus n'affecte ni l'indicateur de fiabilité, ni la visibilité du profil, ni l'accès aux missions futures, ni aucun autre paramètre de la plateforme.</p>
+        </div>
+        <p>Cette liberté est absolue et inconditionnelle. Elle est la contrepartie directe de l'absence de lien de subordination entre UROSI et le travailleur.</p>
+      </div>
+
+      <div class="art" id="a6">
+        <div class="art-head">
+          <div class="art-n">6</div>
+          <h2>Prix, commission et paiement</h2>
+        </div>
+
+        <h3>6.1 — Fixation du prix</h3>
+        <p>La structure fixe librement le montant. UROSI ne fixe aucun tarif, n'impose aucun barème et ne négocie pas. Le travailleur voit le montant proposé et accepte, ou passe.</p>
+        <h3>6.2 — Commission</h3>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Partie</th><th>Commission</th></tr></thead>
+            <tbody>
+              <tr><td>Structure</td><td><strong>18 %</strong> du montant de la mission, en sus du montant versé au travailleur</td></tr>
+              <tr><td>Travailleur</td><td><strong>0 %</strong> — le travailleur perçoit 100 % du montant affiché</td></tr>
+              <tr><td>Mission solidaire</td><td>Aucune commission</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>La commission est affichée à la structure avant validation de la publication. Le détail du calcul est consultable en un clic sur chaque mission.</p>
+        <h3>6.3 — Prestataire de services de paiement</h3>
+        <p>Les paiements sont opérés par un <strong>prestataire de services de paiement agréé</strong> par l'ACPR ou par une autorité équivalente au sein de l'Union européenne. Son identité est communiquée à l'utilisateur lors de l'activation des paiements. Les fonds sont cantonnés sur des comptes de paiement dédiés et ne transitent jamais par la trésorerie propre d'UROSI.</p>
+        <p>L'activation des paiements est subordonnée à la vérification d'identité (KYC) exigée par la réglementation LCB-FT, demandée au plus tard lors de la première mission rémunérée.</p>
+        <h3>6.4 — Provisionnement</h3>
+        <p>Toute mission rémunérée est provisionnée par la structure avant publication. Les fonds sont bloqués jusqu'à validation de la présence, puis libérés au bénéfice du travailleur.</p>
+      </div>
+
+      <div class="art" id="a7">
+        <div class="art-head">
+          <div class="art-n">7</div>
+          <h2>Wallet et retraits</h2>
+        </div>
+
+        <ul>
+          <li>À l'issue de la mission et après validation de présence, le wallet du travailleur est crédité automatiquement.</li>
+          <li>Le travailleur peut demander à tout moment un virement vers son compte bancaire.</li>
+          <li>Le virement est exécuté sous <strong>3 jours ouvrés</strong>.</li>
+          <li>Aucun frais de retrait n'est appliqué.</li>
+          <li>Un IBAN au nom du titulaire du compte est requis. Les virements vers un tiers sont refusés.</li>
+        </ul>
+        <p>En cas de litige déclaré (art. 16), les fonds concernés restent bloqués jusqu'à résolution.</p>
+      </div>
+
+      <div class="art" id="a8">
+        <div class="art-head">
+          <div class="art-n">8</div>
+          <h2>Validation de présence</h2>
+        </div>
+
+        <p>Le début et la fin de mission sont confirmés par scan d'un QR code présenté par la structure, ou par validation nominative de la structure dans l'application.</p>
+        <p>Cette validation est le fait générateur du paiement et l'élément de preuve inscrit au CV vivant. Elle atteste d'une présence effective — elle n'emporte aucune appréciation qualitative du travail réalisé.</p>
+        <div class="call warn">
+          <p>La production ou l'usage d'un QR code falsifié constitue un manquement grave et entraîne la fermeture du compte (art. 17).</p>
+        </div>
+      </div>
+
+      <div class="art" id="a9">
+        <div class="art-head">
+          <div class="art-n">9</div>
+          <h2>Annulations et engagements</h2>
+        </div>
+
+        <p>Une mission acceptée constitue un engagement réciproque. Le refus d'une mission non acceptée n'entre jamais dans le champ du présent article.</p>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Situation</th><th>Effet</th></tr></thead>
+            <tbody>
+              <tr><td>Refus ou non-réponse à une mission proposée</td><td>Aucun effet, en toute circonstance</td></tr>
+              <tr><td>Annulation avec préavis raisonnable</td><td>Enregistrée comme normale — sans effet sur l'indicateur</td></tr>
+              <tr><td>Annulations tardives ou retards répétés</td><td>Reflétés dans l'historique de fiabilité, consultable par les structures</td></tr>
+              <tr><td>Mission abandonnée en cours d'exécution</td><td>Événement le plus significatif de l'historique de fiabilité</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>La symétrie est intégrale : une structure qui annule tardivement, ne provisionne pas ou ne valide pas la présence voit son propre historique mis à jour dans les mêmes termes.</p>
+        <p>En cas d'annulation par la structure après le début de la mission, le montant intégral reste dû au travailleur.</p>
+      </div>
+
+      <div class="art" id="a10">
+        <div class="art-head">
+          <div class="art-n">10</div>
+          <h2>Indicateur de fiabilité</h2>
+        </div>
+
+        <div class="call key">
+          <p><strong>L'indicateur de fiabilité est informatif. Il ne bloque rien, ne classe rien, ne filtre rien.</strong> UROSI ne réduit aucune visibilité, ne restreint aucun accès et ne prend aucune décision automatisée produisant des effets juridiques.</p>
+        </div>
+        <h3>10.1 — Ce qu'il mesure</h3>
+        <p>Des faits objectifs et vérifiables : missions effectuées, présences validées, ponctualité, tenue des engagements pris. Aucune appréciation subjective.</p>
+        <h3>10.2 — Ce qu'il ne fait pas</h3>
+        <ul>
+          <li>Il ne conditionne l'accès à aucune mission.</li>
+          <li>Il n'ordonne pas le fil des missions proposées.</li>
+          <li>Il n'est jamais alimenté par les étoiles (art. 11), qui en sont strictement indépendantes.</li>
+          <li>Il ne déclenche aucune décision automatisée au sens de l'article 22 du RGPD.</li>
+        </ul>
+        <h3>10.3 — Décision</h3>
+        <p>L'indicateur est consultable par les structures, <strong>qui restent seules décisionnaires</strong>. L'information est fournie ; le choix leur appartient.</p>
+        <h3>10.4 — Accès et contestation</h3>
+        <p>Tout utilisateur accède gratuitement au détail de son indicateur et à chaque événement qui le compose, et peut contester tout élément à <a href="mailto:contact@urosi.fr">contact@urosi.fr</a>. La contestation est examinée par une personne physique et donne lieu à une réponse motivée sous 30 jours. Cet accès et cette contestation sont gratuits, universels et ne peuvent jamais être conditionnés à un paiement.</p>
+      </div>
+
+      <div class="art" id="a11">
+        <div class="art-head">
+          <div class="art-n">11</div>
+          <h2>Avis et étoiles</h2>
+        </div>
+
+        <p>À l'issue d'une mission, la structure et le travailleur peuvent s'évaluer mutuellement par une note en étoiles assortie d'un commentaire.</p>
+        <ul>
+          <li>Les étoiles sont <strong>purement informatives</strong> : elles n'entraînent aucun blocage automatique de l'accès aux missions.</li>
+          <li>Elles sont <strong>strictement indépendantes de l'indicateur de fiabilité</strong> — aucune contamination entre la couche subjective (avis) et la couche factuelle (indicateur).</li>
+          <li>L'évaluation est bidirectionnelle et symétrique.</li>
+          <li>Tout avis est contestable gratuitement. Un avis diffamatoire, discriminatoire ou manifestement infondé est retiré après examen humain.</li>
+        </ul>
+      </div>
+
+      <div class="art" id="a12">
+        <div class="art-head">
+          <div class="art-n">12</div>
+          <h2>CV vivant</h2>
+        </div>
+
+        <p>Le CV vivant est l'historique des missions réellement effectuées et validées : nature de la prestation, structure, date, présence validée, notes reçues, compétences mobilisées. Il se construit automatiquement.</p>
+        <p>Il appartient au travailleur, qui peut l'exporter à tout moment dans un format lisible et portable (art. 20 du RGPD) et le partager hors plateforme.</p>
+        <div class="call ok">
+          <p>UROSI ne commercialise pas le CV vivant et ne le met à disposition d'aucun tiers à des fins de présélection, de notation ou de profilage à l'embauche.</p>
+        </div>
+      </div>
+
+      <div class="art" id="a13">
+        <div class="art-head">
+          <div class="art-n">13</div>
+          <h2>Missions solidaires</h2>
+        </div>
+
+        <p>Les associations et structures ESS peuvent publier des missions bénévoles à 0 €.</p>
+        <ul>
+          <li>Aucune rémunération, aucune commission.</li>
+          <li>Elles comptent dans le CV vivant comme preuve d'engagement, au même titre qu'une mission rémunérée.</li>
+          <li>Elles ne créent aucune obligation, aucun quota et aucun avantage conditionnel sur la plateforme.</li>
+          <li>Une mission solidaire ne peut se substituer à un emploi qui devrait être rémunéré.</li>
+        </ul>
+      </div>
+
+      <div class="art" id="a14">
+        <div class="art-head">
+          <div class="art-n">14</div>
+          <h2>Statut fiscal et social du travailleur</h2>
+        </div>
+
+        <p>Le travailleur est seul responsable de la déclaration de ses revenus et du respect de ses obligations sociales et fiscales, selon son statut personnel.</p>
+        <p>UROSI n'est pas employeur : elle ne verse ni salaire ni cotisations, ne délivre aucun bulletin de paie et n'établit aucun contrat de travail.</p>
+        <div class="call plain">
+          <p>UROSI adresse des alertes préventives à titre informatif lorsque le cumul de revenus perçus via la plateforme approche des seuils pertinents pour votre statut déclaré. Ces alertes ne constituent ni un conseil fiscal, ni un conseil juridique.</p>
+        </div>
+      </div>
+
+      <div class="art" id="a15">
+        <div class="art-head">
+          <div class="art-n">15</div>
+          <h2>Obligations DAC7</h2>
+        </div>
+
+        <p>En application de la directive européenne DAC7 (2021/514) transposée en droit français, UROSI déclare annuellement à la DGFiP les revenus des travailleurs dépassant, au cours de l'année civile, <strong>30 transactions ou 2 000 €</strong> perçus via la plateforme.</p>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Palier</th><th>Déclenchement</th></tr></thead>
+            <tbody>
+              <tr><td>Alerte 1</td><td>25 transactions ou 1 500 €</td></tr>
+              <tr><td>Alerte 2</td><td>27 transactions ou 1 800 €</td></tr>
+              <tr><td>Alerte 3</td><td>30 transactions ou 2 000 € — seuil de déclaration atteint</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Seules les données exigées par la réglementation sont transmises, et à la seule DGFiP.</p>
+      </div>
+
+      <div class="art" id="a16">
+        <div class="art-head">
+          <div class="art-n">16</div>
+          <h2>Litiges entre parties</h2>
+        </div>
+
+        <p>Un litige survenu à l'occasion d'une mission — présence, prestation ou paiement contesté — est signalé dans l'application dans un délai de 7 jours.</p>
+        <h3>Procédure des deux chances</h3>
+        <ul>
+          <li><strong>Étape 1 — Échange direct.</strong> Les parties disposent de 5 jours pour trouver un accord dans l'espace de résolution dédié. Les fonds restent bloqués.</li>
+          <li><strong>Étape 2 — Arbitrage humain.</strong> À défaut d'accord, UROSI examine les éléments objectifs (validation de présence, horodatage, échanges) et tranche sous 10 jours. La décision est motivée et notifiée aux deux parties.</li>
+        </ul>
+        <p>Les conséquences d'un litige tranché sont symétriques : elles s'appliquent dans les mêmes termes au travailleur et à la structure.</p>
+      </div>
+
+      <div class="art" id="a17">
+        <div class="art-head">
+          <div class="art-n">17</div>
+          <h2>Règles de sécurité de la plateforme</h2>
+        </div>
+
+        <p>Distinctes de l'indicateur de fiabilité, les règles suivantes protègent l'intégrité de la plateforme. Leur violation entraîne la suspension puis la fermeture du compte, après notification et possibilité de réponse :</p>
+        <ul>
+          <li>Fraude, usurpation d'identité, faux documents</li>
+          <li>Production ou usage d'un QR code falsifié</li>
+          <li>Comptes multiples</li>
+          <li>Violence, harcèlement, discrimination, propos haineux</li>
+          <li>Contournement délibéré de la limite de 3 jours consécutifs</li>
+        </ul>
+        <div class="call plain">
+          <p>Ce sont des règles de sécurité, non des critères de performance. Elles n'entrent pas dans le calcul de l'indicateur de fiabilité.</p>
+        </div>
+      </div>
+
+      <div class="art" id="a18">
+        <div class="art-head">
+          <div class="art-n">18</div>
+          <h2>Résiliation</h2>
+        </div>
+
+        <p>Tout utilisateur peut fermer son compte à tout moment, sans motif et sans préavis, depuis son espace personnel ou par courriel à <a href="mailto:contact@urosi.fr">contact@urosi.fr</a>.</p>
+        <p>La fermeture est effective sous 48 heures. Les fonds disponibles sur le wallet sont virés sur le compte bancaire enregistré. Les missions déjà acceptées doivent être menées à leur terme ou faire l'objet d'une annulation notifiée.</p>
+        <p>Le CV vivant reste exportable pendant 30 jours après la fermeture.</p>
+      </div>
+
+      <div class="art" id="a19">
+        <div class="art-head">
+          <div class="art-n">19</div>
+          <h2>Responsabilité et assurance</h2>
+        </div>
+
+        <p>UROSI n'étant ni employeur ni donneur d'ordre, elle n'est pas responsable de l'exécution de la prestation, des conditions matérielles de travail, ni des dommages survenus pendant la mission.</p>
+        <p>La structure demeure responsable de la sécurité des personnes présentes sur son site et doit être couverte par une assurance responsabilité civile professionnelle en cours de validité, déclarée à l'inscription.</p>
+        <p>La responsabilité d'UROSI se limite à la fourniture du service de mise en relation et d'encaissement.</p>
+      </div>
+
+      <div class="art" id="a20">
+        <div class="art-head">
+          <div class="art-n">20</div>
+          <h2>Modification des CGU</h2>
+        </div>
+
+        <p>UROSI peut modifier les présentes CGU. Toute modification substantielle est notifiée aux utilisateurs <strong>30 jours avant son entrée en vigueur</strong>.</p>
+        <p>L'utilisateur qui refuse les nouvelles conditions peut fermer son compte sans frais avant cette date. L'usage continu de la plateforme après cette date vaut acceptation.</p>
+      </div>
+
+      <div class="art" id="a21">
+        <div class="art-head">
+          <div class="art-n">21</div>
+          <h2>Droit applicable et médiation</h2>
+        </div>
+
+        <p>Les présentes CGU sont régies par le droit français.</p>
+        <p>En cas de différend, les parties recherchent d'abord une solution amiable. L'utilisateur agissant en qualité de consommateur peut recourir gratuitement à un médiateur de la consommation, conformément aux articles L. 611-1 et suivants du Code de la consommation.</p>
+        <p>À défaut d'accord, le litige est porté devant les juridictions françaises compétentes.</p>
+      </div>
+    </section>
+
+    <footer>
+      UROSI · plateforme mandataire de micro-missions · Tourcoing, Métropole Européenne de Lille<br />
+      SIRET : __ __ __ __ · <a href="mailto:contact@urosi.fr">contact@urosi.fr</a> · DPO : <a href="mailto:dpo@urosi.fr">dpo@urosi.fr</a><br />
+      Paiements opérés par un prestataire de services de paiement agréé.<br />
+      <a href="/confidentialite">Confidentialité →</a>
+    </footer>
+
+    </div>
+  </body>
+</html>

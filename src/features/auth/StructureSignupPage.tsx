@@ -79,6 +79,9 @@ export function StructureSignupPage() {
           <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.5, marginBottom: 16 }}>
             Seules les structures identifiées (SIRET) peuvent publier des missions. Aucun lien de subordination n'est créé : UROSI est une plateforme de mise en relation (modèle mandataire).
           </div>
+          <div style={{ fontSize: 10.5, color: T.mu, lineHeight: 1.5, marginBottom: 14 }}>
+            En continuant, tu acceptes les <a href="/cgu" target="_blank" rel="noreferrer" style={{ color: T.cyan, fontWeight: 800 }}>CGU</a> et la <a href="/confidentialite" target="_blank" rel="noreferrer" style={{ color: T.cyan, fontWeight: 800 }}>politique de confidentialité</a>.
+          </div>
           <Fld label="Nom de la structure">
             <input aria-label="Nom de la structure" value={f.nom} onChange={(e) => setF((x) => ({ ...x, nom: e.target.value }))} placeholder="Nom de la structure" style={inp} autoFocus />
           </Fld>

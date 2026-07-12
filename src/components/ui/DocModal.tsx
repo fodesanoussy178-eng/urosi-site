@@ -44,6 +44,14 @@ export function DocModal({ dk, onClose }: { dk: DocKey; onClose: () => void }) {
           ))}
         </div>
         <div style={{ padding: '10px 16px 16px', borderTop: `1px solid ${T.cb}`, flexShrink: 0 }}>
+          <a
+            href={dk === 'cgu' ? '/cgu' : '/confidentialite'}
+            target="_blank"
+            rel="noreferrer"
+            style={{ display: 'block', width: '100%', background: '#fff', color: '#000', border: 'none', borderRadius: 8, padding: '10px 0', fontSize: 12, fontWeight: 800, textAlign: 'center', textDecoration: 'none', marginBottom: 8 }}
+          >
+            Lire la version complète
+          </a>
           <button onClick={onClose} style={{ width: '100%', background: T.row, color: T.sub, border: 'none', borderRadius: 8, padding: '10px 0', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
             Fermer
           </button>
