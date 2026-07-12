@@ -5,6 +5,9 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type ProfileRole = 'worker' | 'structure_admin';
+export type ProfileKycStatus = 'not_started' | 'requested' | 'submitted' | 'verified' | 'rejected';
+export type StructureVerificationStatus = 'pending' | 'verified' | 'rejected' | 'founder_bypass';
+export type StructureVerificationMethod = 'siret' | 'founder' | 'manual';
 export type MissionStatus = 'open' | 'closed' | 'cancelled';
 export type MissionSector =
   | 'restauration'
@@ -115,6 +118,14 @@ export interface Database {
           address: string | null;
           bio: string | null;
           skills: string[];
+          kyc_status: ProfileKycStatus;
+          kyc_requested_at: string | null;
+          kyc_submitted_at: string | null;
+          iban_country: string | null;
+          iban_last4: string | null;
+          identity_document_name: string | null;
+          identity_document_path: string | null;
+          identity_document_uploaded_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -128,6 +139,14 @@ export interface Database {
           address?: string | null;
           bio?: string | null;
           skills?: string[];
+          kyc_status?: ProfileKycStatus;
+          kyc_requested_at?: string | null;
+          kyc_submitted_at?: string | null;
+          iban_country?: string | null;
+          iban_last4?: string | null;
+          identity_document_name?: string | null;
+          identity_document_path?: string | null;
+          identity_document_uploaded_at?: string | null;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>;
@@ -143,6 +162,12 @@ export interface Database {
           about: string | null;
           subscription_active: boolean;
           subscribed_at: string | null;
+          verification_status: StructureVerificationStatus;
+          verification_method: StructureVerificationMethod;
+          founder_bypass: boolean;
+          siret_verified_at: string | null;
+          verified_at: string | null;
+          verified_by: string | null;
           created_at: string;
         };
         Insert: {
@@ -154,6 +179,12 @@ export interface Database {
           about?: string | null;
           subscription_active?: boolean;
           subscribed_at?: string | null;
+          verification_status?: StructureVerificationStatus;
+          verification_method?: StructureVerificationMethod;
+          founder_bypass?: boolean;
+          siret_verified_at?: string | null;
+          verified_at?: string | null;
+          verified_by?: string | null;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['structures']['Insert']>;
@@ -161,6 +192,13 @@ export interface Database {
           {
             foreignKeyName: 'structures_owner_id_fkey';
             columns: ['owner_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'structures_verified_by_fkey';
+            columns: ['verified_by'];
             isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];

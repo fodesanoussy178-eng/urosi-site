@@ -11,6 +11,7 @@ export interface SignUpInput {
   structureName?: string;
   siret?: string;
   isEss?: boolean;
+  founderCode?: string;
 }
 
 export interface SignInInput {
@@ -33,7 +34,7 @@ function frenchAuthError(error: { message?: string; status?: number }): Error {
   return new Error(error.message || 'Une erreur est survenue. Réessaie.');
 }
 
-export async function signUp({ email, password, fullName, role, city, phone, structureName, siret, isEss }: SignUpInput) {
+export async function signUp({ email, password, fullName, role, city, phone, structureName, siret, isEss, founderCode }: SignUpInput) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -46,6 +47,7 @@ export async function signUp({ email, password, fullName, role, city, phone, str
         structure_name: structureName ?? null,
         siret: siret ?? null,
         is_ess: isEss ?? false,
+        founder_code: founderCode ?? null,
       },
     },
   });

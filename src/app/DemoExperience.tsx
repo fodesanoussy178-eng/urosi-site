@@ -4,8 +4,7 @@ import { Logo } from '@/components/ui/Logo';
 import { Stars } from '@/components/ui/Stars';
 import { Fld } from '@/components/ui/Fld';
 import { T, FONT, inp } from '@/components/ui/theme';
-
-export const FOUNDER_CODE = 'AGORA59';
+import { FOUNDER_CODE } from '@/lib/founder';
 
 const DEMO_SECONDS = 30;
 const DEMO_KEY = 'urosi_internal_demo_seconds_v1';

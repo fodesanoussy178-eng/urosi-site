@@ -23,6 +23,8 @@ import { fetchUnreadCounts } from '@/features/messages/messagesService';
 import { fetchCommissionRates, type CommissionRates } from '@/features/pricing/pricingService';
 import { geocodeMelCity } from '@/lib/geo';
 import { spanDays, totalMinutes } from '@/lib/slots';
+import { isFounderCode } from '@/lib/founder';
+import { formatSiret, isValidSiret, normalizeSiret } from '@/features/structure/verification';
 import type { Mission, Structure } from '@/features/missions/types';
 import type { MissionSlot } from '@/types/database.types';
 import { formatEuros, formatHours } from '@/lib/format';
@@ -40,6 +42,18 @@ function todayPlus(days: number): string {
 }
 
 type CandWithMission = ApplicationWithApplicant & { missionTitle: string };
+
+function isVerifiedStructure(structure: Structure | null): boolean {
+  if (!structure) return false;
+  return structure.verification_status === 'verified' || structure.verification_status === 'founder_bypass' || Boolean(structure.siret);
+}
+
+function verificationBadge(structure: Structure): { label: string; color: string; bg: string } {
+  if (structure.verification_status === 'founder_bypass' || structure.founder_bypass) return { label: 'Clé fondateur', color: T.green, bg: T.greenBg };
+  if (structure.verification_status === 'verified' || structure.siret) return { label: '✓ SIRET vérifié', color: T.green, bg: T.greenBg };
+  if (structure.verification_status === 'rejected') return { label: 'SIRET refusé', color: T.red, bg: T.redBg };
+  return { label: 'Vérification SIRET', color: T.amber, bg: T.amberBg };
+}
 
 export function StructureApp() {
   const { session } = useAuth();
@@ -59,7 +73,7 @@ export function StructureApp() {
   const [chatFor, setChatFor] = useState<CandWithMission | null>(null);
   const [docKey, setDocKey] = useState<DocKey | null>(null);
   const [subBusy, setSubBusy] = useState(false);
-  const [vf, setVf] = useState({ nom: '', siret: '' });
+  const [vf, setVf] = useState({ nom: '', siret: '', founderCode: '' });
   const [toast, setToast] = useState<string | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout>>();
 
@@ -100,11 +114,19 @@ export function StructureApp() {
         if (mine.length === 0) {
           const meta = session.user.user_metadata as Record<string, string | boolean | null>;
           if (meta.structure_name) {
+            const founder = isFounderCode(String(meta.founder_code ?? ''));
+            const metaSiret = String(meta.siret ?? '');
+            const metaSiretOk = isValidSiret(metaSiret);
             const created = await createStructure(
               session.user.id,
               String(meta.structure_name),
-              (meta.siret as string) ?? undefined,
+              founder ? undefined : normalizeSiret(metaSiret),
               Boolean(meta.is_ess),
+              {
+                verificationStatus: founder ? 'founder_bypass' : metaSiretOk ? 'verified' : 'pending',
+                verificationMethod: founder ? 'founder' : 'siret',
+                founderBypass: founder,
+              },
             );
             mine = [created];
           }
@@ -127,11 +149,20 @@ export function StructureApp() {
 
   async function createFromForm() {
     if (!session) return;
-    if (!(vf.nom.trim().length >= 2 && vf.siret.replace(/\s/g, '').length >= 9)) return;
+    const founder = isFounderCode(vf.founderCode);
+    const siretOk = isValidSiret(vf.siret);
+    if (!(vf.nom.trim().length >= 2 && (founder || siretOk))) {
+      notif('SIRET valide requis, sauf accès fondateur.');
+      return;
+    }
     try {
-      const created = await createStructure(session.user.id, vf.nom.trim(), vf.siret.trim());
+      const created = await createStructure(session.user.id, vf.nom.trim(), founder ? undefined : normalizeSiret(vf.siret), false, {
+        verificationStatus: founder ? 'founder_bypass' : 'verified',
+        verificationMethod: founder ? 'founder' : 'siret',
+        founderBypass: founder,
+      });
       setStructure(created);
-      notif('✓ Structure enregistrée.');
+      notif(founder ? '✓ Structure enregistrée avec accès fondateur.' : '✓ Structure enregistrée, SIRET vérifié.');
     } catch (e) {
       notif(e instanceof Error ? e.message : 'Création impossible.');
     }
@@ -224,6 +255,10 @@ export function StructureApp() {
   const misTitle = (mid: string) => mis.find((m) => m.id === mid)?.title ?? '—';
   const candCount = (mid: string) => (cands.get(mid) ?? []).filter((c) => c.status === 'pending').length;
   const unreadTotal = [...unread.values()].reduce((s, v) => s + v, 0);
+  const formFounder = isFounderCode(vf.founderCode);
+  const formSiretOk = isValidSiret(vf.siret);
+  const canCreateStructure = vf.nom.trim().length >= 2 && (formFounder || formSiretOk);
+  const structureVerified = isVerifiedStructure(structure);
 
   if (loading) {
     return <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, color: T.mu, fontSize: 12 }}>Chargement…</div>;
@@ -255,10 +290,19 @@ export function StructureApp() {
               <input aria-label="Nom de la structure" value={vf.nom} onChange={(e) => setVf((x) => ({ ...x, nom: e.target.value }))} placeholder="Burger Nord" style={inp} />
             </Fld>
             <Fld label="SIRET">
-              <input aria-label="SIRET" value={vf.siret} onChange={(e) => setVf((x) => ({ ...x, siret: e.target.value }))} placeholder="123 456 789 00012" style={inp} />
+              <input aria-label="SIRET" value={vf.siret} onChange={(e) => setVf((x) => ({ ...x, siret: formatSiret(e.target.value) }))} placeholder="123 456 789 00012" style={inp} />
+              {normalizeSiret(vf.siret).length > 0 && (
+                <div style={{ fontSize: 9.5, color: formSiretOk ? T.green : T.amber, marginTop: -7, marginBottom: 10 }}>
+                  {formSiretOk ? '✓ SIRET vérifié automatiquement' : 'Le SIRET doit contenir 14 chiffres valides.'}
+                </div>
+              )}
             </Fld>
-            <button onClick={createFromForm} style={{ width: '100%', background: '#fff', color: '#000', border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: 'pointer', marginTop: 4 }}>
-              Enregistrer ma structure
+            <Fld label="Code fondateur (optionnel)">
+              <input aria-label="Code fondateur" value={vf.founderCode} onChange={(e) => setVf((x) => ({ ...x, founderCode: e.target.value.toUpperCase() }))} placeholder="Réservé fondateur" style={inp} autoCapitalize="characters" />
+              {formFounder && <div style={{ fontSize: 9.5, color: T.green, marginTop: -7, marginBottom: 10 }}>✓ SIRET facultatif pour le fondateur</div>}
+            </Fld>
+            <button onClick={createFromForm} disabled={!canCreateStructure} style={{ width: '100%', background: canCreateStructure ? '#fff' : T.row, color: canCreateStructure ? '#000' : T.mu, border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: canCreateStructure ? 'pointer' : 'not-allowed', marginTop: 4 }}>
+              {canCreateStructure ? 'Enregistrer ma structure' : 'SIRET valide ou clé fondateur'}
             </button>
           </div>
         ) : (
@@ -273,7 +317,7 @@ export function StructureApp() {
                   <div style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{structure.name}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
                     {structure.is_ess && <span style={{ fontSize: 8, fontWeight: 700, color: T.green, background: T.greenBg, borderRadius: 8, padding: '1px 6px' }}>🤝 Association · ESS</span>}
-                    {structure.siret && <span style={{ fontSize: 8, fontWeight: 700, color: T.green, background: T.greenBg, borderRadius: 8, padding: '1px 6px' }}>✓ SIRET {structure.siret}</span>}
+                    <span style={{ fontSize: 8, fontWeight: 700, color: verificationBadge(structure).color, background: verificationBadge(structure).bg, borderRadius: 8, padding: '1px 6px' }}>{verificationBadge(structure).label}</span>
                     {structure.subscription_active && <span style={{ fontSize: 8, fontWeight: 700, color: T.cyan, background: '#22d3ee15', borderRadius: 8, padding: '1px 6px' }}>✓ Abonnée</span>}
                   </div>
                 </div>
@@ -320,8 +364,13 @@ export function StructureApp() {
             {/* ── MISSIONS ── */}
             {tab === 'missions' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <button onClick={() => setShowPub(true)} style={{ width: '100%', background: T.grad, color: '#fff', border: 'none', borderRadius: 11, padding: '12px 0', fontSize: 13, fontWeight: 900, cursor: 'pointer', marginBottom: 2 }}>
-                  ＋ Publier une mission
+                {!structureVerified && (
+                  <div style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 10, padding: '10px 12px', fontSize: 10.5, color: T.amber, lineHeight: 1.45 }}>
+                    Vérification SIRET requise avant publication, sauf accès fondateur.
+                  </div>
+                )}
+                <button onClick={() => structureVerified && setShowPub(true)} disabled={!structureVerified} style={{ width: '100%', background: structureVerified ? T.grad : T.row, color: structureVerified ? '#fff' : T.mu, border: 'none', borderRadius: 11, padding: '12px 0', fontSize: 13, fontWeight: 900, cursor: structureVerified ? 'pointer' : 'not-allowed', marginBottom: 2 }}>
+                  {structureVerified ? '＋ Publier une mission' : 'Structure à vérifier'}
                 </button>
                 {mis.length === 0 && <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 20, textAlign: 'center', fontSize: 11, color: T.mu }}>Aucune mission publiée pour l'instant.</div>}
                 {mis.map((m, i) => {

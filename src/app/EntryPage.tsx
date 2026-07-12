@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Logo } from '@/components/ui/Logo';
 import { T, FONT } from '@/components/ui/theme';
-import { FOUNDER_CODE } from '@/app/DemoExperience';
+import { FOUNDER_CODE } from '@/lib/founder';
 
 export function EntryPage() {
   const nav = useNavigate();

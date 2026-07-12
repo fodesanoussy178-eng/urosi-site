@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { signOut } from '@/features/auth/authService';
-import { updateProfile } from '@/features/profile/profileService';
+import { updateProfile, uploadIdentityDocument, type Profile } from '@/features/profile/profileService';
 import { T, FONT, inp } from '@/components/ui/theme';
+import { Fld } from '@/components/ui/Fld';
 import { QRBadge } from '@/components/ui/QRBadge';
 import { Stars } from '@/components/ui/Stars';
 import { DocModal, AideRegles, type DocKey } from '@/components/ui/DocModal';
@@ -48,6 +49,7 @@ function euros(cents: number): string {
 
 const SHEET = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 50 } as const;
 const SHEET_BODY = { width: '100%', maxWidth: 430, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 28px' } as const;
+type ProfileUpdate = Parameters<typeof updateProfile>[1];
 
 const WORKER_REPORT_MOTIFS: Record<string, string> = {
   structure_absent: 'Aucun responsable présent',
@@ -65,6 +67,21 @@ const WORKER_REPORT_MOTIFS: Record<string, string> = {
   overtime_request: 'Demande de rester plus longtemps',
   other: 'Autre',
 };
+
+function isKycReady(profile: Profile | null | undefined): boolean {
+  return profile?.kyc_status === 'submitted' || profile?.kyc_status === 'verified';
+}
+
+function kycBadge(profile: Profile | null | undefined): { label: string; color: string; bg: string } {
+  if (profile?.kyc_status === 'verified') return { label: 'KYC vérifié', color: T.green, bg: T.greenBg };
+  if (profile?.kyc_status === 'submitted') return { label: 'KYC envoyé', color: T.cyan, bg: '#22d3ee15' };
+  if (profile?.kyc_status === 'rejected') return { label: 'KYC à reprendre', color: T.red, bg: T.redBg };
+  return { label: 'Après acceptation', color: T.amber, bg: T.amberBg };
+}
+
+function normalizeIban(value: string): string {
+  return value.replace(/\s/g, '').toUpperCase();
+}
 
 export function WorkerApp() {
   const { session, profile, refreshProfile } = useAuth();
@@ -86,6 +103,7 @@ export function WorkerApp() {
   const [ratingFor, setRatingFor] = useState<ApplicationWithMission | null>(null);
   const [chatFor, setChatFor] = useState<ApplicationWithMission | null>(null);
   const [alrt, setAlrt] = useState<{ app: ApplicationWithMission; type: 'retard' | 'annulation' } | null>(null);
+  const [kycFor, setKycFor] = useState<ApplicationWithMission | null>(null);
   const [signal, setSignal] = useState<ApplicationWithMission | null>(null);
   const [sigMotif, setSigMotif] = useState<string | null>(null);
   const [sigNote, setSigNote] = useState('');
@@ -192,6 +210,8 @@ export function WorkerApp() {
   const receivedScores = completedApps.map((a) => receivedRatings.get(a.id)).filter((s): s is number => Boolean(s));
   const receivedAvg = receivedScores.length ? receivedScores.reduce((s, v) => s + v, 0) / receivedScores.length : null;
   const unreadTotal = [...unread.values()].reduce((s, v) => s + v, 0);
+  const kycIsReady = isKycReady(profile);
+  const kycNeeded = acceptedApps.length > 0 && !kycIsReady;
 
   async function postuler(m: MissionWithStructure) {
     if (!session || appliedIds.has(m.id) || busyId) return;
@@ -266,6 +286,11 @@ export function WorkerApp() {
   }
 
   async function afficherQr(app: ApplicationWithMission, type: 'start' | 'end') {
+    if (!isKycReady(profile)) {
+      setKycFor(app);
+      notif('Ajoute ton IBAN et ta pièce pour débloquer le pointage.');
+      return;
+    }
     try {
       const created = await createAttendanceQR(app.id, type);
       setQrFor({ app, type, token: created.token, expiresAt: created.expires_at });
@@ -412,6 +437,17 @@ export function WorkerApp() {
                       {a.mission?.city ? `📍 ${a.mission.city} · ` : ''}
                       {a.mission?.scheduled_date ?? ''}
                     </div>
+                    {!kycIsReady && (
+                      <div style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 12, padding: '11px 12px', marginBottom: 10 }}>
+                        <div style={{ fontSize: 11, fontWeight: 900, color: T.amber, marginBottom: 3 }}>Infos paiement demandées après acceptation</div>
+                        <div style={{ fontSize: 9.5, color: T.sub, lineHeight: 1.45, marginBottom: 9 }}>
+                          Ajoute ton IBAN et ta pièce d'identité pour débloquer le pointage QR de cette mission.
+                        </div>
+                        <button onClick={() => setKycFor(a)} style={{ width: '100%', background: '#fff', color: '#000', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 11, fontWeight: 900, cursor: 'pointer' }}>
+                          Compléter maintenant
+                        </button>
+                      </div>
+                    )}
                     <div style={{ background: T.row, border: `1px solid ${startDone ? T.greenBorder : T.cb}`, borderRadius: 12, padding: '11px 12px', marginBottom: 10 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 8 }}>
                         <div>
@@ -422,7 +458,7 @@ export function WorkerApp() {
                         </div>
                         {!startDone && (
                           <button onClick={() => afficherQr(a, 'start')} style={{ background: '#fff', color: '#000', border: 'none', borderRadius: 8, padding: '8px 10px', fontSize: 11, fontWeight: 900, cursor: 'pointer' }}>
-                            Afficher mon QR
+                            {kycIsReady ? 'Afficher mon QR' : 'Ajouter IBAN + pièce'}
                           </button>
                         )}
                       </div>
@@ -493,7 +529,7 @@ export function WorkerApp() {
                         onClick={() => afficherQr(a, startDone ? 'end' : 'start')}
                         style={{ width: '100%', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 9, padding: '11px 0', fontSize: 13, fontWeight: 900, cursor: 'pointer', marginBottom: 6 }}
                       >
-                        {startDone ? 'Afficher mon QR de fin' : 'Afficher mon QR de début'}
+                        {kycIsReady ? (startDone ? 'Afficher mon QR de fin' : 'Afficher mon QR de début') : 'Ajouter IBAN + pièce pour pointer'}
                       </button>
                     )}
                     <button onClick={() => setSignal(a)} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#f59e0b', textDecoration: 'underline' }}>
@@ -609,6 +645,15 @@ export function WorkerApp() {
                     <span style={{ color: T.sub }}>{profile.phone}</span>
                     <span style={{ fontSize: 9, fontWeight: 800, color: T.mu, background: T.row, borderRadius: 10, padding: '2px 8px', flexShrink: 0 }}>Vérification SMS bientôt</span>
                   </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 12, marginTop: 7 }}>
+                  <span style={{ color: T.sub }}>Paiement + identité</span>
+                  <span style={{ fontSize: 9, fontWeight: 800, color: kycBadge(profile).color, background: kycBadge(profile).bg, borderRadius: 10, padding: '2px 8px', flexShrink: 0 }}>{kycBadge(profile).label}</span>
+                </div>
+                {kycNeeded && (
+                  <button onClick={() => setKycFor(acceptedApps[0] ?? null)} style={{ width: '100%', marginTop: 9, background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 9, padding: '9px 0', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+                    Compléter après acceptation
+                  </button>
                 )}
               </div>
               <AideRegles onOpen={setDocKey} />
@@ -912,7 +957,126 @@ export function WorkerApp() {
           />
         )}
 
+        {kycFor && session && (
+          <KycSheet
+            profile={profile}
+            missionTitle={kycFor.mission?.title ?? 'Mission acceptée'}
+            onClose={() => setKycFor(null)}
+            onSave={async (updates, file) => {
+              const uploaded = file ? await uploadIdentityDocument(session.user.id, file) : null;
+              await updateProfile(session.user.id, {
+                ...updates,
+                identity_document_name: uploaded?.name ?? updates.identity_document_name,
+                identity_document_path: uploaded?.path ?? updates.identity_document_path,
+              });
+              await refreshProfile();
+              notif('Infos envoyées ✓ Tu peux maintenant pointer la mission.');
+            }}
+          />
+        )}
+
         {docKey && <DocModal dk={docKey} onClose={() => setDocKey(null)} />}
+      </div>
+    </div>
+  );
+}
+
+function KycSheet({
+  profile,
+  missionTitle,
+  onClose,
+  onSave,
+}: {
+  profile: Profile | null;
+  missionTitle: string;
+  onClose: () => void;
+  onSave: (updates: ProfileUpdate, file: File | null) => Promise<void>;
+}) {
+  const [iban, setIban] = useState('');
+  const [docName, setDocName] = useState(profile?.identity_document_name ?? '');
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const ibanClean = normalizeIban(iban);
+  const ibanOk = /^[A-Z]{2}[0-9]{2}[A-Z0-9]{10,30}$/.test(ibanClean);
+  const ok = ibanOk && (docFile !== null || docName.trim().length >= 3);
+
+  async function submit() {
+    if (!ok || busy) return;
+    setBusy(true);
+    setError(null);
+    let saved = false;
+    try {
+      const now = new Date().toISOString();
+      await onSave({
+        kyc_status: 'submitted',
+        kyc_requested_at: profile?.kyc_requested_at ?? now,
+        kyc_submitted_at: now,
+        iban_country: ibanClean.slice(0, 2),
+        iban_last4: ibanClean.slice(-4),
+        identity_document_name: docName.trim(),
+        identity_document_path: profile?.identity_document_path ?? null,
+        identity_document_uploaded_at: now,
+      }, docFile);
+      saved = true;
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Envoi impossible.');
+    } finally {
+      if (!saved) setBusy(false);
+    }
+  }
+
+  return (
+    <div style={SHEET} onClick={onClose}>
+      <div style={SHEET_BODY} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 13 }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 900, color: T.text, marginBottom: 3 }}>Débloquer le pointage</div>
+            <div style={{ fontSize: 10.5, color: T.sub, lineHeight: 1.5 }}>Mission acceptée : {missionTitle}</div>
+          </div>
+          <button onClick={onClose} style={{ background: T.row, border: 'none', borderRadius: 6, width: 24, height: 24, cursor: 'pointer', color: T.sub, fontSize: 13 }}>×</button>
+        </div>
+        <div style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 11, padding: '11px 12px', marginBottom: 12, fontSize: 10.5, color: T.sub, lineHeight: 1.5 }}>
+          UROSI demande ces infos seulement après acceptation, pour préparer le paiement et la vérification d'identité. Le CV vivant reste inchangé.
+        </div>
+        <Fld label="IBAN">
+          <input
+            aria-label="IBAN"
+            value={iban}
+            onChange={(e) => setIban(e.target.value)}
+            placeholder="FR76 3000 6000 0112 3456 7890 189"
+            autoComplete="off"
+            inputMode="text"
+            style={inp}
+          />
+          {iban && !ibanOk && <div style={{ fontSize: 9.5, color: T.amber, marginTop: -7, marginBottom: 10 }}>Vérifie le format de l'IBAN.</div>}
+        </Fld>
+        <Fld label="Pièce d'identité">
+          <input
+            aria-label="Pièce d'identité"
+            type="file"
+            accept="image/*,.pdf"
+            onChange={(e) => {
+              const file = e.target.files?.[0] ?? null;
+              setDocFile(file);
+              setDocName(file?.name ?? profile?.identity_document_name ?? '');
+            }}
+            style={{ ...inp, padding: '10px 12px' }}
+          />
+          {docName && <div style={{ fontSize: 9.5, color: T.green, marginTop: -7, marginBottom: 10 }}>Pièce ajoutée : {docName}</div>}
+        </Fld>
+        {error && <div style={{ fontSize: 11, color: T.red, marginBottom: 10 }}>{error}</div>}
+        <button
+          onClick={submit}
+          disabled={!ok || busy}
+          style={{ width: '100%', background: ok && !busy ? '#fff' : T.row, color: ok && !busy ? '#000' : T.mu, border: 'none', borderRadius: 10, padding: '12px 0', fontSize: 13, fontWeight: 900, cursor: ok && !busy ? 'pointer' : 'not-allowed' }}
+        >
+          {busy ? '…' : ok ? 'Valider et débloquer le QR' : 'Ajoute IBAN et pièce'}
+        </button>
+        <div style={{ fontSize: 9, color: T.mu, lineHeight: 1.45, marginTop: 10 }}>
+          Le fichier est envoyé dans le bucket privé KYC. L'IBAN complet n'est pas stocké en clair dans la table profil.
+        </div>
       </div>
     </div>
   );
@@ -933,14 +1097,7 @@ function ProfilCard({
   isMicro: boolean;
   bio: string;
   skills: string[];
-  onSave: (updates: {
-    full_name: string;
-    is_micro_entrepreneur: boolean;
-    city: string | null;
-    phone: string | null;
-    bio: string | null;
-    skills: string[];
-  }) => Promise<void>;
+  onSave: (updates: ProfileUpdate) => Promise<void>;
 }) {
   const [name, setName] = useState(fullName);
   const [micro, setMicro] = useState(isMicro);
