@@ -7,8 +7,11 @@ import * as authService from './authService';
 
 vi.mock('./authService', () => ({
   signIn: vi.fn(),
+  signOut: vi.fn(),
   signUp: vi.fn(),
   claimFounderAccess: vi.fn(),
+  requestPasswordReset: vi.fn(),
+  resendConfirmationEmail: vi.fn(),
   isUnconfirmedEmailError: vi.fn(() => false),
 }));
 

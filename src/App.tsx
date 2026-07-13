@@ -70,6 +70,7 @@ function AppShell() {
     <Routes>
       <Route path="/" element={<StaticHome />} />
       <Route path="/demo" element={<DemoExperience />} />
+      <Route path="/connexion" element={<SignInPage />} />
       <Route path="/app" element={profile.role === 'structure_admin' ? <StructureApp /> : <WorkerApp />} />
       <Route path="/reinitialisation" element={<ResetPasswordPage />} />
       <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />

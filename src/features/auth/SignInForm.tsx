@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Fld } from '@/components/ui/Fld';
 import { T, inp } from '@/components/ui/theme';
-import { claimFounderAccess, isUnconfirmedEmailError, requestPasswordReset, resendConfirmationEmail, signIn } from './authService';
+import { claimFounderAccess, isUnconfirmedEmailError, requestPasswordReset, resendConfirmationEmail, signIn, signOut } from './authService';
 
 export function SignInForm() {
+  const nav = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [founderOpen, setFounderOpen] = useState(false);
@@ -19,18 +21,34 @@ export function SignInForm() {
     setInfo(null);
     setShowResend(false);
     setBusy(true);
+    const wantsFounderDemo = internalCode.trim().length > 0;
     try {
       await signIn({ email: email.trim(), password });
-      if (internalCode.trim()) {
-        const unlocked = await claimFounderAccess(internalCode.trim());
-        if (!unlocked) setError('Code interne invalide.');
-      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur.');
       if (isUnconfirmedEmailError(e)) setShowResend(true);
-    } finally {
       setBusy(false);
+      return;
     }
+    if (wantsFounderDemo) {
+      try {
+        const unlocked = await claimFounderAccess(internalCode.trim());
+        if (!unlocked) {
+          await signOut().catch(() => undefined);
+          setError('Code interne invalide.');
+          return;
+        }
+        nav('/demo', { replace: true });
+      } catch {
+        await signOut().catch(() => undefined);
+        setError('Accès interne impossible. Vérifie le code ou la migration Supabase.');
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    nav('/app', { replace: true });
+    setBusy(false);
   }
 
   async function resend() {
@@ -98,7 +116,7 @@ export function SignInForm() {
         disabled={busy}
         style={{ width: '100%', background: busy ? T.row : '#fff', color: busy ? T.mu : '#000', border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: busy ? 'not-allowed' : 'pointer', marginTop: 4 }}
       >
-        {busy ? '…' : 'Se connecter'}
+        {busy ? '…' : internalCode.trim() ? 'Entrer dans la démo' : 'Se connecter'}
       </button>
       <button
         onClick={forgotPassword}

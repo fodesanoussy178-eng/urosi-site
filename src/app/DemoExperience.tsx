@@ -10,6 +10,7 @@ import { hasRememberedFounderAccess, isFounderEmail } from '@/lib/founder';
 
 const DEMO_SECONDS = 30;
 const DEMO_KEY = 'urosi_internal_demo_seconds_v1';
+const DEMO_SHARED_KEY = 'urosi_founder_demo_shared_v1';
 
 type DemoRole = 'worker' | 'structure';
 type WorkerTab = 'flux' | 'moi' | 'wallet';
@@ -41,6 +42,12 @@ type DemoCandidate = {
   here: number;
   history: [string, string][];
   status: CandidateStatus;
+};
+
+type DemoSharedState = {
+  publishedMissions: DemoMission[];
+  candidates: DemoCandidate[];
+  acceptedMissionIds: string[];
 };
 
 const workerMissions: DemoMission[] = [
@@ -218,6 +225,115 @@ const structureSeed: Record<
     regulars: [],
   },
 };
+
+function emptyDemoState(): DemoSharedState {
+  return { publishedMissions: [], candidates: [], acceptedMissionIds: [] };
+}
+
+function readDemoState(): DemoSharedState {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(DEMO_SHARED_KEY) || '{}') as Partial<DemoSharedState>;
+    return {
+      publishedMissions: Array.isArray(parsed.publishedMissions) ? parsed.publishedMissions : [],
+      candidates: Array.isArray(parsed.candidates) ? parsed.candidates : [],
+      acceptedMissionIds: Array.isArray(parsed.acceptedMissionIds) ? parsed.acceptedMissionIds : [],
+    };
+  } catch {
+    return emptyDemoState();
+  }
+}
+
+function writeDemoState(state: DemoSharedState) {
+  try {
+    localStorage.setItem(DEMO_SHARED_KEY, JSON.stringify(state));
+  } catch {
+    // ignore
+  }
+}
+
+function uniqueMissions(missions: DemoMission[]) {
+  const seen = new Set<string>();
+  return missions.filter((mission) => {
+    if (seen.has(mission.id)) return false;
+    seen.add(mission.id);
+    return true;
+  });
+}
+
+function uniqueCandidates(candidates: DemoCandidate[]) {
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    if (seen.has(candidate.id)) return false;
+    seen.add(candidate.id);
+    return true;
+  });
+}
+
+function workerFeedMissions() {
+  const shared = readDemoState().publishedMissions;
+  return uniqueMissions([...shared, ...workerMissions]);
+}
+
+function structureMissions(kind: StructureKind) {
+  const shared = readDemoState().publishedMissions;
+  return uniqueMissions([...shared, ...structureSeed[kind].missions]);
+}
+
+function structureCandidates(kind: StructureKind) {
+  const state = readDemoState();
+  const visibleMissionIds = new Set(structureMissions(kind).map((mission) => mission.id));
+  return uniqueCandidates([...state.candidates.filter((candidate) => visibleMissionIds.has(candidate.missionId)), ...structureSeed[kind].candidates]);
+}
+
+function rememberPublishedMission(mission: DemoMission, candidate: DemoCandidate) {
+  const state = readDemoState();
+  writeDemoState({
+    ...state,
+    publishedMissions: uniqueMissions([mission, ...state.publishedMissions]),
+    candidates: uniqueCandidates([candidate, ...state.candidates]),
+  });
+}
+
+function rememberAcceptedMission(missionId: string) {
+  const state = readDemoState();
+  if (state.acceptedMissionIds.includes(missionId)) return state.acceptedMissionIds;
+  const acceptedMissionIds = [...state.acceptedMissionIds, missionId];
+  writeDemoState({ ...state, acceptedMissionIds });
+  return acceptedMissionIds;
+}
+
+function founderMission(type: 'paid' | 'solid'): DemoMission {
+  const paid = type === 'paid';
+  return {
+    id: `founder-${type}-${Date.now()}`,
+    title: paid ? 'Renfort service partenaire' : 'Distribution solidaire partenaire',
+    structure: paid ? 'Burger Nord' : 'Banque Alimentaire',
+    amount: paid ? 64 : 0,
+    city: 'Lille',
+    when: paid ? 'Demain · 12h-16h' : 'Samedi · 10h-13h',
+    duration: paid ? '4 h' : '3 h',
+    rating: paid ? 4.7 : 4.8,
+    distance: 'démo',
+    solid: !paid,
+    desc: paid
+      ? 'Mission payante créée en démo par la structure. Prix, places et horaires sont libres.'
+      : 'Mission solidaire à 0 €. Elle compte dans le CV vivant sans rémunération.',
+  };
+}
+
+function demoCandidateFor(mission: DemoMission): DemoCandidate {
+  return {
+    id: `cand-${mission.id}-${Date.now()}`,
+    missionId: mission.id,
+    name: mission.solid ? 'Awa S.' : 'Yanis M.',
+    city: 'Lille',
+    note: mission.solid ? 4.8 : 4.6,
+    missions: mission.solid ? 11 : 18,
+    here: mission.solid ? 2 : 3,
+    status: 'pending',
+    history: mission.solid ? [['Collecte alimentaire', '15/04'], ['Accueil public', '02/04']] : [['Renfort midi', '12/04'], ['Runner soir', '05/04']],
+  };
+}
 
 function readNumber(key: string) {
   try {
@@ -411,7 +527,8 @@ function StructureProfile({ name, onBack }: { name: string; onBack: () => void }
 
 function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void }) {
   const [tab, setTab] = useState<WorkerTab>('flux');
-  const [accepted, setAccepted] = useState<string[]>([]);
+  const [feed] = useState<DemoMission[]>(() => workerFeedMissions());
+  const [accepted, setAccepted] = useState<string[]>(() => readDemoState().acceptedMissionIds);
   const [profileName, setProfileName] = useState<string | null>(null);
   const [wallet, setWallet] = useState(182);
   const tr = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -424,13 +541,14 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
   }
 
   function accept(m: DemoMission) {
-    if (!accepted.includes(m.id)) setAccepted((x) => [...x, m.id]);
+    if (!accepted.includes(m.id)) setAccepted(rememberAcceptedMission(m.id));
     setTab('moi');
     notif(m.solid ? 'Mission solidaire ajoutée à tes missions.' : 'Mission acceptée. QR de début prêt.');
   }
 
-  const myMissions = workerMissions.filter((m) => accepted.includes(m.id));
-  const completed = 3 + Math.max(0, accepted.length - 1);
+  const myMissions = feed.filter((m) => accepted.includes(m.id));
+  const completed = 3 + accepted.length;
+  const founderPublishedCount = feed.filter((m) => m.id.startsWith('founder-') || m.id.startsWith('new-')).length;
 
   if (profileName) return <StructureProfile name={profileName} onBack={() => setProfileName(null)} />;
 
@@ -441,8 +559,10 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
       <div style={{ padding: 16, minHeight: 620 }}>
         {tab === 'flux' && (
           <div style={{ display: 'grid', gap: 12 }}>
-            <div style={{ color: T.mu, fontSize: 10, textAlign: 'center' }}>Flux trié autour de toi · compte fictif</div>
-            {workerMissions.map((mission) => (
+            <div style={{ color: T.mu, fontSize: 10, textAlign: 'center' }}>
+              Flux trié autour de toi · compte fictif{founderPublishedCount ? ` · ${founderPublishedCount} mission${founderPublishedCount > 1 ? 's' : ''} lancée${founderPublishedCount > 1 ? 's' : ''} côté structure` : ''}
+            </div>
+            {feed.map((mission) => (
               <MissionCard key={mission.id} mission={mission} onAccept={() => accept(mission)} onStructure={() => setProfileName(mission.structure)} />
             ))}
           </div>
@@ -663,11 +783,11 @@ function Stepper({
   );
 }
 
-function StructureDemo({ founder, onBack }: { founder: boolean; onBack: () => void }) {
+function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; onBack: () => void; onSwitchWorker: () => void }) {
   const [kind, setKind] = useState<StructureKind | null>('pme');
   const [tab, setTab] = useState<StructureTab>('missions');
-  const [missions, setMissions] = useState<DemoMission[]>(structureSeed.pme.missions);
-  const [candidates, setCandidates] = useState<DemoCandidate[]>(structureSeed.pme.candidates);
+  const [missions, setMissions] = useState<DemoMission[]>(() => structureMissions('pme'));
+  const [candidates, setCandidates] = useState<DemoCandidate[]>(() => structureCandidates('pme'));
   const [panel, setPanel] = useState<DemoCandidate | null>(null);
   const [showPub, setShowPub] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -681,8 +801,8 @@ function StructureDemo({ founder, onBack }: { founder: boolean; onBack: () => vo
 
   function choose(next: StructureKind) {
     setKind(next);
-    setMissions(structureSeed[next].missions);
-    setCandidates(structureSeed[next].candidates);
+    setMissions(structureMissions(next));
+    setCandidates(structureCandidates(next));
     setTab('missions');
   }
 
@@ -715,23 +835,38 @@ function StructureDemo({ founder, onBack }: { founder: boolean; onBack: () => vo
     notif(status === 'accepted' ? 'Candidat accepté. Il voit la mission confirmée.' : 'Candidat refusé sans pénalité.');
   }
 
+  function refreshFromDemoState() {
+    if (!kind) return;
+    setMissions(structureMissions(kind));
+    setCandidates(structureCandidates(kind));
+  }
+
+  function publishIntoDemo(mission: DemoMission) {
+    const demoCandidate = demoCandidateFor(mission);
+    rememberPublishedMission(mission, demoCandidate);
+  }
+
   function publish(mission: DemoMission) {
-    setMissions((list) => [mission, ...list]);
-    const demoCandidate: DemoCandidate = {
-      id: `cand-${Date.now()}`,
-      missionId: mission.id,
-      name: mission.solid ? 'Awa S.' : 'Yanis M.',
-      city: 'Lille',
-      note: mission.solid ? 4.8 : 4.6,
-      missions: mission.solid ? 11 : 18,
-      here: mission.solid ? 2 : 3,
-      status: 'pending',
-      history: mission.solid ? [['Collecte alimentaire', '15/04'], ['Accueil public', '02/04']] : [['Renfort midi', '12/04'], ['Runner soir', '05/04']],
-    };
-    setCandidates((list) => [demoCandidate, ...list]);
+    publishIntoDemo(mission);
+    refreshFromDemoState();
     setShowPub(false);
     setTab('candidats');
     notif('Mission publiée dans la démo. Un candidat arrive.');
+  }
+
+  function launchFakeMission(type: 'paid' | 'solid') {
+    publishIntoDemo(founderMission(type));
+    refreshFromDemoState();
+    setTab('missions');
+    notif(type === 'paid' ? 'Mission payante lancée. Elle apparaît côté utilisateur.' : 'Mission solidaire lancée. Elle apparaît côté utilisateur.');
+  }
+
+  function launchFakePair() {
+    publishIntoDemo(founderMission('paid'));
+    publishIntoDemo(founderMission('solid'));
+    refreshFromDemoState();
+    setTab('missions');
+    notif('Deux missions fake lancées : une payante et une solidaire.');
   }
 
   return (
@@ -763,6 +898,12 @@ function StructureDemo({ founder, onBack }: { founder: boolean; onBack: () => vo
         {tab === 'missions' && (
           <div style={{ display: 'grid', gap: 10 }}>
             <Button onClick={() => setShowPub(true)}>Publier une mission</Button>
+            <Button tone="dark" onClick={launchFakePair}>Lancer 2 missions fake</Button>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <Button tone="light" onClick={() => launchFakeMission('paid')}>Lancer payante</Button>
+              <Button tone="green" onClick={() => launchFakeMission('solid')}>Lancer solidaire</Button>
+            </div>
+            <Button tone="ghost" onClick={onSwitchWorker}>Voir côté utilisateur →</Button>
             {missions.map((m, i) => {
               const count = candidates.filter((c) => c.missionId === m.id && c.status === 'pending').length;
               return (
@@ -771,7 +912,7 @@ function StructureDemo({ founder, onBack }: { founder: boolean; onBack: () => vo
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                     <div>
                       <div style={{ color: T.text, fontSize: 14, fontWeight: 900 }}>{m.title}</div>
-                      <div style={{ color: T.mu, fontSize: 10, marginTop: 4 }}>{m.city} · {m.when} · {m.duration}</div>
+                      <div style={{ color: T.mu, fontSize: 10, marginTop: 4 }}>{m.structure} · {m.city} · {m.when} · {m.duration}</div>
                       <div style={{ color: T.sub, fontSize: 10.5, marginTop: 5, lineHeight: 1.45 }}>{m.desc}</div>
                     </div>
                     <div style={{ color: m.solid ? T.green : T.text, fontSize: 18, fontWeight: 900 }}>{m.solid ? 'Solidaire' : `${m.amount} €`}</div>
@@ -919,6 +1060,7 @@ export function DemoExperience() {
   const initialRole = params.get('role') === 'structure' ? 'structure' : params.get('role') === 'worker' ? 'worker' : null;
   const [role, setRole] = useState<DemoRole | null>(initialRole);
   const [used, setUsed] = useState(() => readNumber(DEMO_KEY));
+  const [demoVersion, setDemoVersion] = useState(0);
   const [founderByCode, setFounderByCode] = useState(() => hasRememberedFounderAccess(session?.user.id));
   const founder = isFounderEmail(session?.user.email) || founderByCode;
   const frozen = Boolean(role && !founder && used >= DEMO_SECONDS);
@@ -965,10 +1107,12 @@ export function DemoExperience() {
   function resetDemo() {
     try {
       localStorage.removeItem(DEMO_KEY);
+      localStorage.removeItem(DEMO_SHARED_KEY);
     } catch {
       // ignore
     }
     setUsed(0);
+    setDemoVersion((value) => value + 1);
   }
 
   if (!role) {
@@ -1008,7 +1152,11 @@ export function DemoExperience() {
         </button>
       )}
       <DemoShell>
-        {role === 'worker' ? <WorkerDemo founder={founder} onBack={() => setRole(null)} /> : <StructureDemo founder={founder} onBack={() => setRole(null)} />}
+        {role === 'worker' ? (
+          <WorkerDemo key={`worker-${demoVersion}`} founder={founder} onBack={() => setRole(null)} />
+        ) : (
+          <StructureDemo key={`structure-${demoVersion}`} founder={founder} onBack={() => setRole(null)} onSwitchWorker={() => setRole('worker')} />
+        )}
       </DemoShell>
       {frozen && <DemoLimitOverlay role={role} />}
     </>
