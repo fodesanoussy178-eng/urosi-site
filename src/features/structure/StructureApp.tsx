@@ -351,7 +351,6 @@ export function StructureApp() {
           </div>
           <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
             {session && <NotificationBell profileId={session.user.id} onDataChanged={() => reload().catch(() => undefined)} />}
-            <a href="/demo?role=structure" style={{ fontSize: 10, color: T.cyan, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', textDecoration: 'none' }}>Démo</a>
             <button onClick={() => setDocKey('cgu')} style={{ fontSize: 10, color: T.mu, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>? Aide</button>
             <button onClick={() => signOut()} style={{ fontSize: 10, color: T.mu, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>Déconnexion</button>
           </div>
@@ -793,6 +792,7 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
   const minutes = totalMinutes(slots);
   const durationHoursPerPerson = minutes / 60;
   const missionDays = distinctDays(slots).length;
+  const maxDaysReached = missionDays >= 3;
   const daySpan = spanDays(slots);
   const positions = Math.max(1, Math.floor(f.positions || 1));
   const totalWorkerHours = durationHoursPerPerson * positions;
@@ -837,6 +837,7 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
   }
 
   function addDay() {
+    if (maxDaysReached) return;
     setSlots((prev) => {
       const lastSlotValue = prev[prev.length - 1] ?? { date: todayPlus(1), start: '18:00', end: '23:00' };
       return [...prev, { date: addDays(lastSlotValue.date, 1), start: lastSlotValue.start, end: lastSlotValue.end }];
@@ -963,9 +964,10 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
               </div>
             </div>
           ))}
-          <button onClick={addDay} style={{ background: 'none', border: `1px dashed ${T.cb}`, color: T.sub, borderRadius: 9, padding: '9px 0', width: '100%', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+          <button disabled={maxDaysReached} onClick={addDay} style={{ background: 'none', border: `1px dashed ${T.cb}`, color: T.sub, borderRadius: 9, padding: '9px 0', width: '100%', fontSize: 11, fontWeight: 800, cursor: maxDaysReached ? 'not-allowed' : 'pointer', opacity: maxDaysReached ? 0.5 : 1 }}>
             ＋ Ajouter un jour
           </button>
+          {maxDaysReached && <div style={{ color: T.amber, fontSize: 10.5, marginTop: 7 }}>Une mission dure 3 jours maximum.</div>}
         </Fld>
 
         <Fld label="Nombre de personnes">
@@ -1043,7 +1045,7 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
 
         {(error || validationMessage) && <div style={{ fontSize: 11, color: T.red, marginBottom: 10 }}>{error || validationMessage}</div>}
         <button onClick={publish} disabled={!ok} style={{ width: '100%', background: ok ? '#fff' : T.row, color: ok ? '#000' : T.mu, border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: ok ? 'pointer' : 'not-allowed' }}>
-          {busy ? '…' : f.solid ? 'Publier — Solidaire' : `Publier — ${formatMoney(structureTotalCents)}`}
+          {busy ? '…' : f.solid ? 'Publier · Solidaire (0 €)' : `Publier · ${formatMoney(structureTotalCents)} au total`}
         </button>
       </div>
     </div>
