@@ -3,7 +3,7 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { signOut } from '@/features/auth/authService';
 import { T, FONT, inp } from '@/components/ui/theme';
 import { Fld } from '@/components/ui/Fld';
-import { DocModal, type DocKey } from '@/components/ui/DocModal';
+import { DocModal, AideRegles, type DocKey } from '@/components/ui/DocModal';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import { ChatSheet } from '@/components/ui/ChatSheet';
 import { WalletCard } from '@/components/ui/WalletCard';
@@ -530,6 +530,7 @@ export function StructureApp() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <StatsPanel structureId={structure.id} />
                 <WalletCard profileId={session.user.id} mode="structure" notif={notif} />
+                <AideRegles onOpen={setDocKey} />
                 <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '13px 15px' }}>
                   <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 9 }}>Habitués</div>
                   {habitues.length === 0 && <div style={{ fontSize: 11, color: T.mu }}>Les travailleurs qui terminent des missions chez toi apparaîtront ici.</div>}

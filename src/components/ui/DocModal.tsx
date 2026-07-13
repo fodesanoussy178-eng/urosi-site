@@ -64,7 +64,7 @@ export function DocModal({ dk, onClose }: { dk: DocKey; onClose: () => void }) {
 export function AideRegles({ onOpen }: { onOpen: (k: DocKey) => void }) {
   return (
     <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 13 }}>
-      <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 9 }}>Aide & règles</div>
+      <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 9 }}>Documents légaux</div>
       {(
         [
           ['cgu', '📄 Conditions Générales (CGU)'],
@@ -76,6 +76,14 @@ export function AideRegles({ onOpen }: { onOpen: (k: DocKey) => void }) {
           <span style={{ color: T.mu }}>Lire →</span>
         </button>
       ))}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 4 }}>
+        <a href="/cgu" target="_blank" rel="noreferrer" style={{ textAlign: 'center', background: '#fff', color: '#000', borderRadius: 8, padding: '9px 6px', fontSize: 11, fontWeight: 800, textDecoration: 'none' }}>
+          CGU complètes
+        </a>
+        <a href="/confidentialite" target="_blank" rel="noreferrer" style={{ textAlign: 'center', background: '#fff', color: '#000', borderRadius: 8, padding: '9px 6px', fontSize: 11, fontWeight: 800, textDecoration: 'none' }}>
+          Confidentialité
+        </a>
+      </div>
     </div>
   );
 }
