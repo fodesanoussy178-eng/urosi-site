@@ -245,7 +245,7 @@
           <h1>Ton CV grandit<br /><span class="grad-text">avec l'expérience.</span></h1>
           <p>Chaque mission devient une preuve : présence validée, expérience visible, paiement clair.</p>
           <div class="hero-ctas">
-            <a class="btn btn-dark" href="#demo">Voir les missions</a>
+            <a class="btn btn-dark" href="/demo?role=worker">Essayer la démo</a>
             <a class="btn btn-white" href="/inscription/structure">Publier un besoin</a>
           </div>
           <div class="hero-note">UROSI reste discret. L'expérience passe avant la marque.</div>
@@ -265,8 +265,8 @@
           <div style="font-size:22px;font-weight:900;letter-spacing:0;line-height:1.1;margin:22px 0 8px">Tu veux commencer comment ?</div>
           <div style="font-size:12px;color:var(--sub)">Un accès pour trouver une mission. Un accès pour publier un besoin.</div>
           <div class="role-grid">
-            <button class="role-card" type="button" data-go="flux"><strong>Travailleur</strong><span>Missions courtes, wallet, CV vivant.</span></button>
-            <button class="role-card" type="button" data-go="struct-home"><strong>Structure</strong><span>Créer une mission, voir les candidats, suivre le paiement.</span></button>
+            <a class="role-card" href="/demo?role=worker" style="text-decoration:none"><strong>Travailleur</strong><span>Missions courtes, wallet, CV vivant.</span></a>
+            <a class="role-card" href="/demo?role=structure" style="text-decoration:none"><strong>Structure</strong><span>Créer une mission, voir les candidats, suivre le paiement.</span></a>
           </div>
         </div>
 
@@ -366,7 +366,7 @@
             <button class="role-card" type="button" data-demo-kind="paid"><strong>Burger Nord</strong><span>PME · mission rémunérée</span></button>
             <button class="role-card" type="button" data-demo-kind="asso"><strong>Banque Alimentaire</strong><span>Association ESS · mission à 0 €</span></button>
           </div>
-          <button class="p-btn p-white" style="margin-top:10px" data-go="struct-publish">Créer une fausse mission</button>
+          <button class="p-btn p-white" style="margin-top:10px" data-go="struct-publish">Créer une mission démo</button>
           <button class="p-btn" style="margin-top:8px;background:var(--row);color:var(--text);border:1px solid var(--cb)" data-go="struct-candidates">Voir les candidats</button>
         </div>
 
@@ -470,7 +470,7 @@
         <div class="dots" id="dots"></div>
         <button class="demo-arrow" type="button" data-demo-next aria-label="Écran suivant">›</button>
       </div>
-      <div class="phone-hint"><b id="demoStatus">Démo automatique</b> — touche l'écran pour explorer librement · <a href="/app" style="color:var(--cyan)">passer aux vraies missions →</a></div>
+      <div class="phone-hint"><b id="demoStatus">Aperçu automatique</b> · <a href="/demo" style="color:var(--cyan)">ouvrir la démo complète →</a></div>
         </div>
       </main>
 

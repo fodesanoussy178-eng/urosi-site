@@ -12,6 +12,11 @@ const DEMO_SECONDS = 30;
 const DEMO_KEY = 'urosi_internal_demo_seconds_v1';
 const DEMO_SHARED_KEY = 'urosi_founder_demo_shared_v1';
 const DEMO_SERVICE_FEE_RATE = 0.18;
+const DEMO_STRUCTURE_IDS = {
+  pme: 'demo-structure-burger-nord',
+  asso: 'demo-structure-banque-alimentaire',
+} as const;
+const DEMO_WORKER_HISTORY = ['Renfort fast-food · 40 €', 'Aide installation · 55 €', 'Préparation mariage · 70 €'] as const;
 
 const DEMO_SHORTCUTS = [
   { label: 'Matin', start: '08:00', end: '12:00' },
@@ -28,6 +33,7 @@ type CandidateStatus = 'pending' | 'accepted' | 'rejected';
 
 type DemoMission = {
   id: string;
+  structureId: string;
   title: string;
   structure: string;
   amount: number;
@@ -46,7 +52,6 @@ type DemoCandidate = {
   name: string;
   city: string;
   note: number;
-  missions: number;
   here: number;
   history: [string, string][];
   status: CandidateStatus;
@@ -67,6 +72,7 @@ type DemoMissionDay = {
 const workerMissions: DemoMission[] = [
   {
     id: 'm1',
+    structureId: DEMO_STRUCTURE_IDS.pme,
     title: 'Renfort service midi',
     structure: 'Burger Nord',
     amount: 42,
@@ -79,6 +85,7 @@ const workerMissions: DemoMission[] = [
   },
   {
     id: 'm2',
+    structureId: 'demo-structure-maison-event',
     title: 'Runner événement',
     structure: 'Maison Event',
     amount: 88,
@@ -91,6 +98,7 @@ const workerMissions: DemoMission[] = [
   },
   {
     id: 'm3',
+    structureId: DEMO_STRUCTURE_IDS.asso,
     title: 'Distribution de colis alimentaires',
     structure: 'Banque Alimentaire',
     amount: 0,
@@ -104,6 +112,7 @@ const workerMissions: DemoMission[] = [
   },
   {
     id: 'm4',
+    structureId: 'demo-structure-traiteur-halluin',
     title: 'Aide installation',
     structure: 'Traiteur Halluin',
     amount: 55,
@@ -131,7 +140,7 @@ const structureSeed: Record<
   pme: {
     name: 'Burger Nord',
     type: 'PME · Restauration rapide',
-    verified: '✓ Vérifiée',
+    verified: '✓ Vérifié (démo)',
     stats: [
       ['215', 'missions'],
       ['98 %', 'présence'],
@@ -140,19 +149,8 @@ const structureSeed: Record<
     missions: [
       workerMissions[0]!,
       {
-        id: 'pm2',
-        title: 'Don du sang',
-        structure: 'Burger Nord',
-        amount: 40,
-        city: 'Tourcoing',
-        when: 'Demain · 9h-12h',
-        duration: '3 h',
-        rating: 4.6,
-        distance: '1,2 km',
-        desc: 'Accueil, orientation du public, préparation rapide.',
-      },
-      {
         id: 'pm3',
+        structureId: DEMO_STRUCTURE_IDS.pme,
         title: 'Préparation mariage',
         structure: 'Burger Nord',
         amount: 70,
@@ -171,7 +169,6 @@ const structureSeed: Record<
         name: 'Yanis M.',
         city: 'Lille',
         note: 4.6,
-        missions: 18,
         here: 3,
         status: 'pending',
         history: [
@@ -180,26 +177,11 @@ const structureSeed: Record<
         ],
       },
       {
-        id: 'c2',
-        missionId: 'pm2',
-        name: 'Lina K.',
-        city: 'Roubaix',
-        note: 4.9,
-        missions: 9,
-        here: 2,
-        status: 'pending',
-        history: [
-          ['Accueil public', '18/04'],
-          ['Inventaire', '03/04'],
-        ],
-      },
-      {
         id: 'c3',
         missionId: 'm1',
         name: 'Aïssa D.',
         city: 'Lille',
         note: 4.8,
-        missions: 14,
         here: 1,
         status: 'accepted',
         history: [
@@ -213,7 +195,7 @@ const structureSeed: Record<
   asso: {
     name: 'Banque Alimentaire',
     type: 'Association loi 1901 · ESS',
-    verified: '✓ Vérifiée',
+    verified: '✓ Vérifié (démo)',
     stats: [
       ['74', 'missions'],
       ['97 %', 'présence'],
@@ -227,7 +209,6 @@ const structureSeed: Record<
         name: 'Awa S.',
         city: 'Lille',
         note: 4.8,
-        missions: 11,
         here: 2,
         status: 'pending',
         history: [
@@ -248,7 +229,12 @@ function readDemoState(): DemoSharedState {
   try {
     const parsed = JSON.parse(localStorage.getItem(DEMO_SHARED_KEY) || '{}') as Partial<DemoSharedState>;
     return {
-      publishedMissions: Array.isArray(parsed.publishedMissions) ? parsed.publishedMissions : [],
+      publishedMissions: Array.isArray(parsed.publishedMissions)
+        ? parsed.publishedMissions.map((mission) => ({
+            ...mission,
+            structureId: mission.structureId ?? structureIdForName(mission.structure),
+          }))
+        : [],
       candidates: Array.isArray(parsed.candidates) ? parsed.candidates : [],
       acceptedMissionIds: Array.isArray(parsed.acceptedMissionIds) ? parsed.acceptedMissionIds : [],
     };
@@ -277,10 +263,17 @@ function uniqueMissions(missions: DemoMission[]) {
 function uniqueCandidates(candidates: DemoCandidate[]) {
   const seen = new Set<string>();
   return candidates.filter((candidate) => {
-    if (seen.has(candidate.id)) return false;
-    seen.add(candidate.id);
+    const workerKey = candidate.name.trim().toLocaleLowerCase('fr-FR');
+    if (seen.has(workerKey)) return false;
+    seen.add(workerKey);
     return true;
   });
+}
+
+function structureIdForName(name: string): string {
+  if (name === structureSeed.pme.name) return DEMO_STRUCTURE_IDS.pme;
+  if (name === structureSeed.asso.name) return DEMO_STRUCTURE_IDS.asso;
+  return `demo-structure-${name.toLocaleLowerCase('fr-FR').replace(/[^a-z0-9]+/g, '-')}`;
 }
 
 function workerFeedMissions() {
@@ -290,13 +283,20 @@ function workerFeedMissions() {
 
 function structureMissions(kind: StructureKind) {
   const shared = readDemoState().publishedMissions;
-  return uniqueMissions([...shared, ...structureSeed[kind].missions]);
+  const structureId = DEMO_STRUCTURE_IDS[kind];
+  return uniqueMissions([
+    ...shared.filter((mission) => mission.structureId === structureId),
+    ...structureSeed[kind].missions.filter((mission) => mission.structureId === structureId),
+  ]);
 }
 
 function structureCandidates(kind: StructureKind) {
   const state = readDemoState();
   const visibleMissionIds = new Set(structureMissions(kind).map((mission) => mission.id));
-  return uniqueCandidates([...state.candidates.filter((candidate) => visibleMissionIds.has(candidate.missionId)), ...structureSeed[kind].candidates]);
+  return uniqueCandidates([
+    ...state.candidates.filter((candidate) => visibleMissionIds.has(candidate.missionId)),
+    ...structureSeed[kind].candidates.filter((candidate) => visibleMissionIds.has(candidate.missionId)),
+  ]);
 }
 
 function rememberPublishedMission(mission: DemoMission, candidate: DemoCandidate) {
@@ -316,10 +316,18 @@ function rememberAcceptedMission(missionId: string) {
   return acceptedMissionIds;
 }
 
+function forgetAcceptedMission(missionId: string) {
+  const state = readDemoState();
+  const acceptedMissionIds = state.acceptedMissionIds.filter((id) => id !== missionId);
+  writeDemoState({ ...state, acceptedMissionIds });
+  return acceptedMissionIds;
+}
+
 function founderMission(type: 'paid' | 'solid'): DemoMission {
   const paid = type === 'paid';
   return {
     id: `founder-${type}-${Date.now()}`,
+    structureId: paid ? DEMO_STRUCTURE_IDS.pme : DEMO_STRUCTURE_IDS.asso,
     title: paid ? 'Renfort service partenaire' : 'Distribution solidaire partenaire',
     structure: paid ? 'Burger Nord' : 'Banque Alimentaire',
     amount: paid ? 64 : 0,
@@ -342,7 +350,6 @@ function demoCandidateFor(mission: DemoMission): DemoCandidate {
     name: mission.solid ? 'Awa S.' : 'Yanis M.',
     city: 'Lille',
     note: mission.solid ? 4.8 : 4.6,
-    missions: mission.solid ? 11 : 18,
     here: mission.solid ? 2 : 3,
     status: 'pending',
     history: mission.solid ? [['Collecte alimentaire', '15/04'], ['Accueil public', '02/04']] : [['Renfort midi', '12/04'], ['Runner soir', '05/04']],
@@ -465,7 +472,7 @@ function MissionCard({ mission, onAccept, onStructure }: { mission: DemoMission;
         {mission.structure} ›
       </button>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginTop: 5 }}>
-        <span style={{ color: T.green, background: T.greenBg, borderRadius: 12, padding: '2px 7px', fontSize: 8.5, fontWeight: 900 }}>✓ Vérifié</span>
+        <span style={{ color: T.green, background: T.greenBg, borderRadius: 12, padding: '2px 7px', fontSize: 8.5, fontWeight: 900 }}>✓ Vérifié (démo)</span>
         <Stars n={mission.rating} size={12} />
         <span style={{ color: T.mu, fontSize: 10, fontWeight: 800 }}>{mission.rating.toFixed(1).replace('.', ',')}</span>
       </div>
@@ -545,6 +552,8 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
   const [accepted, setAccepted] = useState<string[]>(() => readDemoState().acceptedMissionIds);
   const [profileName, setProfileName] = useState<string | null>(null);
   const [wallet, setWallet] = useState(182);
+  const [withdrawAmount, setWithdrawAmount] = useState(50);
+  const [missionAlert, setMissionAlert] = useState<{ mission: DemoMission; type: 'delay' | 'cancel' } | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -560,8 +569,23 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
     notif(m.solid ? 'Mission solidaire ajoutée à tes missions.' : 'Mission acceptée. QR de début prêt.');
   }
 
+  function withdraw() {
+    if (!Number.isFinite(withdrawAmount)) return;
+    const amount = Math.min(wallet, Math.max(1, Math.floor(withdrawAmount)));
+    if (amount <= 0) return;
+    setWallet((value) => value - amount);
+    setWithdrawAmount(Math.max(1, wallet - amount));
+    notif(`Retrait de ${amount} € demandé.`);
+  }
+
+  function cancelMission(mission: DemoMission) {
+    setAccepted(forgetAcceptedMission(mission.id));
+    setMissionAlert(null);
+    notif(`Mission « ${mission.title} » annulée. La structure est prévenue.`);
+  }
+
   const myMissions = feed.filter((m) => accepted.includes(m.id));
-  const completed = 3 + accepted.length;
+  const completed = DEMO_WORKER_HISTORY.length;
   const founderPublishedCount = feed.filter((m) => m.id.startsWith('founder-') || m.id.startsWith('new-')).length;
 
   if (profileName) return <StructureProfile name={profileName} onBack={() => setProfileName(null)} />;
@@ -603,9 +627,10 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
                       <strong style={{ color: T.mu }}>Après le début</strong>
                     </div>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 10 }}>
                     <Button tone="green" onClick={() => notif('QR de début affiché dans la vraie app.')}>QR début</Button>
-                    <Button tone="light" onClick={() => notif('Retard transmis à la structure.')}>Retard</Button>
+                    <Button tone="light" onClick={() => setMissionAlert({ mission: m, type: 'delay' })}>Retard</Button>
+                    <Button tone="red" onClick={() => setMissionAlert({ mission: m, type: 'cancel' })}>Annuler</Button>
                   </div>
                 </div>
               ))
@@ -623,7 +648,7 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
                 <div style={{ background: T.row, borderRadius: 12, padding: 12, textAlign: 'center' }}><strong style={{ color: T.text, fontSize: 22 }}>★ 4.7</strong><div style={{ color: T.mu, fontSize: 9 }}>Note moyenne</div></div>
               </div>
               <div style={{ color: T.mu, fontSize: 9, fontWeight: 900, textTransform: 'uppercase', marginBottom: 8 }}>Historique vérifié</div>
-              {['Renfort fast-food · 40 €', 'Aide installation · 55 €', 'Préparation mariage · 70 €'].map((h) => {
+              {DEMO_WORKER_HISTORY.map((h) => {
                 const [title, amount] = h.split(' · ');
                 return (
                   <div key={h} style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${T.cb}`, padding: '9px 0', color: T.text, fontSize: 12, fontWeight: 800 }}>
@@ -640,18 +665,69 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
             <div style={{ background: '#032e18', border: '1px solid #0f6b36', borderRadius: 16, padding: 20 }}>
               <div style={{ color: T.green, fontSize: 11, fontWeight: 900 }}>DISPONIBLE</div>
               <div style={{ color: '#fff', fontSize: 48, fontWeight: 900, letterSpacing: -2 }}>{wallet}<span style={{ color: T.green, fontSize: 22 }}>€</span></div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, alignItems: 'center', marginTop: 10 }}>
+              <div style={{ marginTop: 10 }}>
                 <div style={{ color: T.green, fontSize: 13, fontWeight: 900 }}>En attente · virement J+3<br /><span style={{ fontSize: 27 }}>40 €</span></div>
-                <button onClick={() => setWallet((x) => x + 40)} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 16px', fontWeight: 900, cursor: 'pointer' }}>Libérer</button>
               </div>
             </div>
-            <Button onClick={() => setWallet(0)} disabled={wallet <= 0}>Retirer</Button>
+            <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 16, padding: 16 }}>
+              <label htmlFor="demo-withdraw-amount" style={{ display: 'block', color: T.sub, fontSize: 11, fontWeight: 800, marginBottom: 8 }}>Montant à retirer</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
+                <input
+                  id="demo-withdraw-amount"
+                  aria-label="Montant à retirer"
+                  type="number"
+                  min={1}
+                  max={wallet}
+                  value={withdrawAmount}
+                  onChange={(event) => {
+                    const nextAmount = Number(event.target.value);
+                    setWithdrawAmount(Number.isFinite(nextAmount) ? Math.min(wallet, Math.max(0, nextAmount)) : 0);
+                  }}
+                  style={{ ...inp, marginBottom: 0 }}
+                />
+                <Button onClick={withdraw} disabled={wallet <= 0 || !Number.isFinite(withdrawAmount) || withdrawAmount <= 0}>Retirer</Button>
+              </div>
+              <div style={{ color: T.mu, fontSize: 10, marginTop: 8 }}>Maximum disponible : {wallet} €</div>
+            </div>
             <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 16, padding: 16, color: T.sub, fontSize: 12, lineHeight: 1.6 }}>
               L’argent reste disponible. Les virements sont simulés ici, mais dans l’app réelle ils passent par le wallet sécurisé.
             </div>
           </div>
         )}
       </div>
+      {missionAlert && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 190 }} onClick={() => setMissionAlert(null)}>
+          <div style={{ width: '100%', maxWidth: 430, background: T.card, borderRadius: '24px 24px 0 0', padding: '20px 18px 28px' }} onClick={(event) => event.stopPropagation()}>
+            <div style={{ color: missionAlert.type === 'delay' ? T.amber : T.red, fontSize: 16, fontWeight: 900, marginBottom: 6 }}>
+              {missionAlert.type === 'delay' ? 'Signaler un retard' : 'Annuler la mission'}
+            </div>
+            <div style={{ color: T.sub, fontSize: 11, lineHeight: 1.5, marginBottom: 14 }}>
+              La structure sera prévenue immédiatement.
+            </div>
+            {missionAlert.type === 'delay' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 7 }}>
+                {[5, 10, 15, 30].map((minutes) => (
+                  <button
+                    key={minutes}
+                    onClick={() => {
+                      notif(`Retard de ${minutes}${minutes === 30 ? ' minutes ou plus' : ' minutes'} transmis à la structure.`);
+                      setMissionAlert(null);
+                    }}
+                    style={{ background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 9, padding: '11px 0', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
+                  >
+                    {minutes} min{minutes === 30 ? '+' : ''}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <Button tone="light" onClick={() => setMissionAlert(null)}>Revenir</Button>
+                <Button tone="red" onClick={() => cancelMission(missionAlert.mission)}>Confirmer l’annulation</Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       <BottomTabs
         tabs={[
           ['flux', 'Flux'],
@@ -729,6 +805,7 @@ function PublishDemoModal({
   const workerSubtotal = workerAmount * f.places;
   const serviceFee = f.solid ? 0 : Math.round(workerSubtotal * DEMO_SERVICE_FEE_RATE);
   const total = workerSubtotal + serviceFee;
+  const maxDaysReached = days.length >= 3;
   const firstDay = days[0] ?? { date: demoTodayPlus(1), start: '12:00', end: '16:00' };
   const ok = f.title.trim().length >= 2 && f.place.trim().length >= 2 && days.every((day) => day.date && day.start && day.end && demoSlotMinutes(day) > 0) && (f.solid || workerAmount > 0);
 
@@ -737,6 +814,7 @@ function PublishDemoModal({
   }
 
   function addDay() {
+    if (maxDaysReached) return;
     setDays((prev) => {
       const last = prev[prev.length - 1] ?? firstDay;
       return [...prev, { date: demoAddDays(last.date, 1), start: last.start, end: last.end }];
@@ -799,9 +877,10 @@ function PublishDemoModal({
               <div style={{ color: T.mu, fontSize: 10, marginTop: 7 }}>{day.end < day.start ? `Fin le lendemain · ${demoHours(demoSlotMinutes(day))}` : demoHours(demoSlotMinutes(day))}</div>
             </div>
           ))}
-          <button onClick={addDay} style={{ background: 'none', border: `1px dashed ${T.cb}`, color: T.sub, borderRadius: 9, padding: '9px 0', width: '100%', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+          <button disabled={maxDaysReached} onClick={addDay} style={{ background: 'none', border: `1px dashed ${T.cb}`, color: T.sub, borderRadius: 9, padding: '9px 0', width: '100%', fontSize: 11, fontWeight: 800, cursor: maxDaysReached ? 'not-allowed' : 'pointer', opacity: maxDaysReached ? 0.5 : 1 }}>
             + Ajouter un jour
           </button>
+          {maxDaysReached && <div style={{ color: T.amber, fontSize: 10.5, marginTop: 7 }}>Une mission dure 3 jours maximum.</div>}
         </Fld>
         <div style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 13, marginBottom: 14 }}>
           <div style={{ color: T.mu, fontSize: 11, lineHeight: 1.45, marginBottom: 8 }}>
@@ -831,8 +910,9 @@ function PublishDemoModal({
           onClick={() =>
             onPublish({
               id: `new-${Date.now()}`,
+              structureId: isAsso ? DEMO_STRUCTURE_IDS.asso : DEMO_STRUCTURE_IDS.pme,
               title: f.title.trim(),
-              structure: isAsso || f.solid ? 'Banque Alimentaire' : 'Burger Nord',
+              structure: isAsso ? 'Banque Alimentaire' : 'Burger Nord',
               amount: workerAmount,
               city: f.place.trim(),
               when: whenLabel,
@@ -844,7 +924,7 @@ function PublishDemoModal({
             })
           }
         >
-          {f.solid ? 'Publier · Solidaire (0 €)' : `Publier · ${workerAmount} € / personne`}
+          {f.solid ? 'Publier · Solidaire (0 €)' : `Publier · ${total} € au total`}
         </Button>
       </div>
     </div>
@@ -948,19 +1028,19 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
     notif('Mission publiée dans la démo. Un candidat arrive.');
   }
 
-  function launchFakeMission(type: 'paid' | 'solid') {
+  function generateMission(type: 'paid' | 'solid') {
     publishIntoDemo(founderMission(type));
     refreshFromDemoState();
     setTab('missions');
     notif(type === 'paid' ? 'Mission payante lancée. Elle apparaît côté utilisateur.' : 'Mission solidaire lancée. Elle apparaît côté utilisateur.');
   }
 
-  function launchFakePair() {
+  function populateFeed() {
     publishIntoDemo(founderMission('paid'));
     publishIntoDemo(founderMission('solid'));
     refreshFromDemoState();
     setTab('missions');
-    notif('Deux missions fake lancées : une payante et une solidaire.');
+    notif('Le flux contient une nouvelle mission payante et une mission solidaire.');
   }
 
   return (
@@ -992,12 +1072,6 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
         {tab === 'missions' && (
           <div style={{ display: 'grid', gap: 10 }}>
             <Button onClick={() => setShowPub(true)}>Publier une mission</Button>
-            <Button tone="dark" onClick={launchFakePair}>Lancer 2 missions fake</Button>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <Button tone="light" onClick={() => launchFakeMission('paid')}>Lancer payante</Button>
-              <Button tone="green" onClick={() => launchFakeMission('solid')}>Lancer solidaire</Button>
-            </div>
-            <Button tone="ghost" onClick={onSwitchWorker}>Voir côté utilisateur →</Button>
             {missions.map((m, i) => {
               const count = candidates.filter((c) => c.missionId === m.id && c.status === 'pending').length;
               return (
@@ -1024,6 +1098,17 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
                 </div>
               );
             })}
+            <div style={{ border: `1px solid ${T.amberBorder}`, background: T.amberBg, borderRadius: 16, padding: 14, marginTop: 8 }}>
+              <div style={{ color: T.amber, fontSize: 9, fontWeight: 900, letterSpacing: 1.2, marginBottom: 10 }}>MODE DÉMO</div>
+              <div style={{ display: 'grid', gap: 8 }}>
+                <Button tone="dark" onClick={populateFeed}>Peupler le flux</Button>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <Button tone="light" onClick={() => generateMission('paid')}>Générer une mission payante</Button>
+                  <Button tone="green" onClick={() => generateMission('solid')}>Générer une mission solidaire</Button>
+                </div>
+                <Button tone="ghost" onClick={onSwitchWorker}>Basculer côté travailleur →</Button>
+              </div>
+            </div>
           </div>
         )}
         {tab === 'candidats' && (
@@ -1063,7 +1148,7 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
               {[
-                ['Missions', String(panel.missions)],
+                ['Missions', String(panel.history.length)],
                 ['Note', `${panel.note}/5`],
                 ['Chez toi', `${panel.here}×`],
               ].map(([l, v]) => (
@@ -1114,7 +1199,7 @@ function CandidateCard({
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ color: T.text, fontSize: 14, fontWeight: 900 }}>{candidate.name} {candidate.here >= 2 && <span style={{ color: T.amber, fontSize: 9 }}>★ Habitué · {candidate.here}×</span>}</div>
           <div style={{ color: T.mu, fontSize: 10, marginTop: 3 }}>{missionTitle} · {candidate.city}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}><Stars n={candidate.note} size={11} /><span style={{ color: T.mu, fontSize: 10 }}>{candidate.note} · {candidate.missions} missions</span></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}><Stars n={candidate.note} size={11} /><span style={{ color: T.mu, fontSize: 10 }}>{candidate.note} · {candidate.history.length} missions</span></div>
         </div>
         {candidate.status !== 'pending' && <span style={{ color: candidate.status === 'accepted' ? T.green : T.red, fontSize: 10, fontWeight: 900 }}>{candidate.status === 'accepted' ? 'accepté' : 'refusé'}</span>}
       </button>
@@ -1294,49 +1379,5 @@ export function DemoExperience() {
         setUsed(0);
       }} />}
     </>
-  );
-}
-
-export function SignupDemoPanel({ role }: { role: DemoRole }) {
-  const isStructure = role === 'structure';
-  return (
-    <aside className="signup-demo-panel">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <div>
-          <div style={{ color: T.text, fontSize: 14, fontWeight: 900 }}>{isStructure ? 'Démo structure' : 'Démo travailleur'}</div>
-          <div style={{ color: T.mu, fontSize: 10, marginTop: 2 }}>visible pendant l’inscription</div>
-        </div>
-        <span style={{ color: T.amber, background: T.amberBg, borderRadius: 12, padding: '3px 8px', fontSize: 9, fontWeight: 900 }}>DÉMO</span>
-      </div>
-      {isStructure ? (
-        <div style={{ display: 'grid', gap: 10 }}>
-          <div style={{ background: T.row, border: `1px solid ${T.greenBorder}`, borderRadius: 14, padding: 13 }}>
-            <div style={{ color: T.text, fontSize: 13, fontWeight: 900 }}>Publier une mission</div>
-            <div style={{ color: T.sub, fontSize: 11, marginTop: 4 }}>Prix libre, places, durée, association à 0 €.</div>
-          </div>
-          <div style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 13 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: T.text, fontSize: 13, fontWeight: 900 }}>
-              <span>Yanis M.</span>
-              <span style={{ color: T.amber }}>★ 4.6</span>
-            </div>
-            <div style={{ color: T.mu, fontSize: 10, marginTop: 4 }}>18 missions · CV vivant vérifié</div>
-          </div>
-          <Link to="/demo?role=structure" style={{ textDecoration: 'none' }}><Button>Ouvrir la démo structure</Button></Link>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gap: 10 }}>
-          <div style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 13 }}>
-            <div style={{ color: T.text, fontSize: 28, fontWeight: 900 }}>42€</div>
-            <div style={{ color: T.text, fontSize: 13, fontWeight: 900 }}>Renfort service midi</div>
-            <div style={{ color: T.mu, fontSize: 10, marginTop: 4 }}>Burger Nord · 0,3 km · QR début/fin</div>
-          </div>
-          <div style={{ background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 14, padding: 13 }}>
-            <div style={{ color: T.green, fontSize: 11, fontWeight: 900 }}>CV vivant +1</div>
-            <div style={{ color: T.sub, fontSize: 10, marginTop: 4 }}>Chaque mission terminée devient une preuve.</div>
-          </div>
-          <Link to="/demo?role=worker" style={{ textDecoration: 'none' }}><Button>Ouvrir la démo travailleur</Button></Link>
-        </div>
-      )}
-    </aside>
   );
 }

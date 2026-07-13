@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Logo } from '@/components/ui/Logo';
 import { Fld } from '@/components/ui/Fld';
 import { T, FONT, inp } from '@/components/ui/theme';
-import { SignupDemoPanel } from '@/app/DemoExperience';
 import { signUp } from './authService';
 import { AuthTabs, type AuthMode } from './AuthTabs';
 import { SignInForm } from './SignInForm';
@@ -60,9 +59,6 @@ export function WorkerSignupPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <span style={{ fontWeight: 900, fontSize: 15, color: T.text }}>{mode === 'signin' ? 'Connexion' : 'Créer mon compte'}</span>
           <div style={{ display: 'flex', gap: 6 }}>
-            <a href="/demo?role=worker" style={{ fontSize: 10, color: T.cyan, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', textDecoration: 'none' }}>
-              Voir la démo
-            </a>
             <button onClick={() => nav('/')} style={{ fontSize: 10, color: T.mu, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>
               ← Accueil
             </button>
@@ -128,7 +124,6 @@ export function WorkerSignupPage() {
           )}
         </div>
       </div>
-        <SignupDemoPanel role="worker" />
       </div>
     </div>
   );
