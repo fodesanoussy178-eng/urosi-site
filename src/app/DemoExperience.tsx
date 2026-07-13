@@ -6,7 +6,7 @@ import { Fld } from '@/components/ui/Fld';
 import { T, FONT, inp } from '@/components/ui/theme';
 import { useAuth } from '@/features/auth/AuthContext';
 import { hasFounderAccess } from '@/features/auth/authService';
-import { hasRememberedFounderAccess, isFounderEmail } from '@/lib/founder';
+import { hasDemoFounderAccess, hasRememberedFounderAccess, isDemoFounderCode, isFounderEmail, rememberDemoFounderAccess } from '@/lib/founder';
 
 const DEMO_SECONDS = 30;
 const DEMO_KEY = 'urosi_internal_demo_seconds_v1';
@@ -1034,14 +1034,27 @@ function CandidateCard({
   );
 }
 
-function DemoLimitOverlay({ role }: { role: DemoRole }) {
+function DemoLimitOverlay({ role, onUnlock }: { role: DemoRole; onUnlock: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [code, setCode] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  function unlock() {
+    if (!isDemoFounderCode(code)) {
+      setError('Code interne invalide.');
+      return;
+    }
+    rememberDemoFounderAccess();
+    onUnlock();
+  }
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,5,15,.86)', backdropFilter: 'blur(7px)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18, fontFamily: FONT }}>
       <div style={{ width: '100%', maxWidth: 380, background: T.card, border: `1px solid ${T.cb}`, borderRadius: 20, padding: 24, textAlign: 'center' }}>
         <Logo sz={58} />
         <div style={{ color: T.text, fontSize: 19, fontWeight: 900, margin: '18px 0 7px' }}>Fin de l’aperçu gratuit</div>
         <div style={{ color: T.sub, fontSize: 12, lineHeight: 1.65, marginBottom: 18 }}>
-          Crée ton compte ou connecte-toi pour continuer. L'accès fondateur se déverrouille automatiquement sur le compte autorisé.
+          Crée ton compte ou connecte-toi pour continuer.
         </div>
         <Link to={role === 'structure' ? '/inscription/structure' : '/inscription/travailleur'} style={{ textDecoration: 'none', display: 'block', marginBottom: 8 }}>
           <Button>Créer mon compte</Button>
@@ -1049,6 +1062,30 @@ function DemoLimitOverlay({ role }: { role: DemoRole }) {
         <Link to="/connexion" style={{ textDecoration: 'none', display: 'block', marginBottom: 16 }}>
           <Button tone="light">J’ai déjà un compte</Button>
         </Link>
+        {open && (
+          <div style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 10, marginTop: 8 }}>
+            <input
+              aria-label="Code interne"
+              value={code}
+              onChange={(e) => {
+                setCode(e.target.value.toUpperCase());
+                setError(null);
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && unlock()}
+              placeholder="code"
+              style={{ ...inp, marginBottom: 8, fontSize: 11, padding: '9px 10px', textTransform: 'uppercase', letterSpacing: 1 }}
+              autoCapitalize="characters"
+              autoComplete="off"
+            />
+            {error && <div style={{ color: T.red, fontSize: 11, marginBottom: 8 }}>{error}</div>}
+            <Button onClick={unlock}>Entrer</Button>
+          </div>
+        )}
+        <button
+          aria-label="Accès interne"
+          onClick={() => setOpen((value) => !value)}
+          style={{ width: 6, height: 6, borderRadius: 999, background: open ? T.cyan : T.cb, border: 'none', opacity: open ? 0.9 : 0.3, cursor: 'pointer', padding: 0, marginTop: 14 }}
+        />
       </div>
     </div>
   );
@@ -1061,7 +1098,7 @@ export function DemoExperience() {
   const [role, setRole] = useState<DemoRole | null>(initialRole);
   const [used, setUsed] = useState(() => readNumber(DEMO_KEY));
   const [demoVersion, setDemoVersion] = useState(0);
-  const [founderByCode, setFounderByCode] = useState(() => hasRememberedFounderAccess(session?.user.id));
+  const [founderByCode, setFounderByCode] = useState(() => hasDemoFounderAccess() || hasRememberedFounderAccess(session?.user.id));
   const founder = isFounderEmail(session?.user.email) || founderByCode;
   const frozen = Boolean(role && !founder && used >= DEMO_SECONDS);
   const left = Math.max(0, DEMO_SECONDS - used);
@@ -1069,10 +1106,10 @@ export function DemoExperience() {
   useEffect(() => {
     let alive = true;
     if (!session) {
-      setFounderByCode(false);
+      setFounderByCode(hasDemoFounderAccess());
       return undefined;
     }
-    if (isFounderEmail(session.user.email) || hasRememberedFounderAccess(session.user.id)) {
+    if (hasDemoFounderAccess() || isFounderEmail(session.user.email) || hasRememberedFounderAccess(session.user.id)) {
       setFounderByCode(true);
       return undefined;
     }
@@ -1081,7 +1118,7 @@ export function DemoExperience() {
         if (alive) setFounderByCode(value);
       })
       .catch(() => {
-        if (alive) setFounderByCode(false);
+        if (alive) setFounderByCode(hasDemoFounderAccess());
       });
     return () => {
       alive = false;
@@ -1158,7 +1195,10 @@ export function DemoExperience() {
           <StructureDemo key={`structure-${demoVersion}`} founder={founder} onBack={() => setRole(null)} onSwitchWorker={() => setRole('worker')} />
         )}
       </DemoShell>
-      {frozen && <DemoLimitOverlay role={role} />}
+      {frozen && <DemoLimitOverlay role={role} onUnlock={() => {
+        setFounderByCode(true);
+        setUsed(0);
+      }} />}
     </>
   );
 }

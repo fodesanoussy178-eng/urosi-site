@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Fld } from '@/components/ui/Fld';
 import { T, inp } from '@/components/ui/theme';
-import { claimFounderAccess, isUnconfirmedEmailError, requestPasswordReset, resendConfirmationEmail, signIn, signOut } from './authService';
+import { isDemoFounderCode, rememberDemoFounderAccess } from '@/lib/founder';
+import { isUnconfirmedEmailError, requestPasswordReset, resendConfirmationEmail, signIn } from './authService';
 
 export function SignInForm() {
   const nav = useNavigate();
@@ -22,29 +23,23 @@ export function SignInForm() {
     setShowResend(false);
     setBusy(true);
     const wantsFounderDemo = internalCode.trim().length > 0;
+    if (wantsFounderDemo) {
+      if (!isDemoFounderCode(internalCode)) {
+        setError('Code interne invalide.');
+        setBusy(false);
+        return;
+      }
+      rememberDemoFounderAccess();
+      nav('/demo', { replace: true });
+      setBusy(false);
+      return;
+    }
     try {
       await signIn({ email: email.trim(), password });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur.');
       if (isUnconfirmedEmailError(e)) setShowResend(true);
       setBusy(false);
-      return;
-    }
-    if (wantsFounderDemo) {
-      try {
-        const unlocked = await claimFounderAccess(internalCode.trim());
-        if (!unlocked) {
-          await signOut().catch(() => undefined);
-          setError('Code interne invalide.');
-          return;
-        }
-        nav('/demo', { replace: true });
-      } catch {
-        await signOut().catch(() => undefined);
-        setError('Accès interne impossible. Vérifie le code ou la migration Supabase.');
-      } finally {
-        setBusy(false);
-      }
       return;
     }
     nav('/app', { replace: true });
