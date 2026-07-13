@@ -20,6 +20,21 @@ alter table public.profiles add column if not exists identity_document_uploaded_
 
 create index if not exists profiles_kyc_status_idx on public.profiles (kyc_status);
 
+do $$
+begin
+  if to_regprocedure('public.is_founder()') is null then
+    execute '
+      create function public.is_founder()
+      returns boolean
+      language sql
+      stable
+      security definer
+      set search_path = public
+      as ''select false''
+    ';
+  end if;
+end $$;
+
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'kyc-documents',
