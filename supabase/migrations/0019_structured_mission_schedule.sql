@@ -2,6 +2,49 @@
 -- Les champs historiques (scheduled_date, start_time, duration_minutes, places,
 -- worker_rate_cents) restent alimentes pour ne pas casser les ecrans existants.
 
+-- Compatibilite prod : certaines bases ont 0019 sans avoir encore toutes les
+-- colonnes de 0006/0007/0014. Ces ajouts sont idempotents et ne suppriment
+-- aucune donnee.
+alter table public.missions add column if not exists is_solidaire boolean not null default false;
+alter table public.missions add column if not exists sector text not null default 'autre';
+alter table public.missions add column if not exists difficulty smallint not null default 1;
+alter table public.missions add column if not exists is_urgent boolean not null default false;
+alter table public.missions add column if not exists start_time time;
+alter table public.missions add column if not exists address text;
+alter table public.missions add column if not exists lat double precision;
+alter table public.missions add column if not exists lng double precision;
+alter table public.missions add column if not exists distance_km numeric;
+alter table public.missions add column if not exists base_rate_cents integer;
+alter table public.missions add column if not exists pricing_breakdown jsonb;
+alter table public.missions add column if not exists places integer not null default 1;
+alter table public.missions add column if not exists slots jsonb;
+
+alter table public.missions drop constraint if exists missions_worker_rate_cents_check;
+alter table public.missions
+  add constraint missions_worker_rate_cents_check
+  check (
+    (is_solidaire and worker_rate_cents = 0)
+    or (not is_solidaire and worker_rate_cents > 0)
+  );
+
+alter table public.missions drop constraint if exists missions_duration_minutes_check;
+alter table public.missions
+  add constraint missions_duration_minutes_check
+  check (duration_minutes >= 60 and duration_minutes <= 4320);
+
+alter table public.missions drop constraint if exists missions_sector_check;
+alter table public.missions
+  add constraint missions_sector_check
+  check (sector in ('restauration', 'vente', 'logistique', 'evenementiel', 'nettoyage', 'manutention', 'administratif', 'autre'));
+
+alter table public.missions drop constraint if exists missions_difficulty_check;
+alter table public.missions
+  add constraint missions_difficulty_check check (difficulty between 1 and 3);
+
+alter table public.missions drop constraint if exists missions_places_check;
+alter table public.missions
+  add constraint missions_places_check check (places between 1 and 20);
+
 alter table public.missions add column if not exists starts_at timestamptz;
 alter table public.missions add column if not exists ends_at timestamptz;
 alter table public.missions add column if not exists mission_days integer not null default 1 check (mission_days between 1 and 3);
@@ -337,17 +380,26 @@ begin
   end if;
 
   new.base_rate_cents := greatest(coalesce(new.base_rate_cents, new.worker_rate_cents), 1);
-  v := public.compute_mission_pricing(
-    new.structure_id,
-    new.base_rate_cents,
-    new.scheduled_date,
-    new.start_time,
-    new.duration_minutes,
-    coalesce(new.sector, 'autre'),
-    coalesce(new.difficulty, 1),
-    coalesce(new.is_urgent, false),
-    new.distance_km
-  );
+  if to_regprocedure('public.compute_mission_pricing(uuid,integer,date,time without time zone,integer,text,integer,boolean,numeric)') is not null then
+    execute 'select public.compute_mission_pricing($1,$2,$3,$4,$5,$6,$7,$8,$9)'
+      into v
+      using
+        new.structure_id,
+        new.base_rate_cents,
+        new.scheduled_date,
+        new.start_time,
+        new.duration_minutes,
+        coalesce(new.sector, 'autre'),
+        coalesce(new.difficulty, 1),
+        coalesce(new.is_urgent, false),
+        new.distance_km;
+  else
+    v := jsonb_build_object(
+      'base_cents', new.base_rate_cents,
+      'adjustments', '[]'::jsonb,
+      'total_cents', new.base_rate_cents
+    );
+  end if;
   new.worker_rate_cents := greatest((v ->> 'total_cents')::int, 1);
   new.pricing_breakdown := v;
   return new;
