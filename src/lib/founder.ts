@@ -1,5 +1,5 @@
-export const FOUNDER_CODE = 'AGORA59';
+export const FOUNDER_EMAIL = 'fodesanoussy178@gmail.com';
 
-export function isFounderCode(value: string | null | undefined): boolean {
-  return (value ?? '').trim().toUpperCase() === FOUNDER_CODE;
+export function isFounderEmail(value: string | null | undefined): boolean {
+  return (value ?? '').trim().toLowerCase() === FOUNDER_EMAIL;
 }

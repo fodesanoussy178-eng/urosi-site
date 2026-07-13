@@ -22,14 +22,17 @@ import { confirmRemoteAttendance, reportWorkerAbsence } from '@/features/mission
 import { fetchUnreadCounts } from '@/features/messages/messagesService';
 import { fetchCommissionRates, type CommissionRates } from '@/features/pricing/pricingService';
 import { geocodeMelCity } from '@/lib/geo';
-import { spanDays, totalMinutes } from '@/lib/slots';
-import { isFounderCode } from '@/lib/founder';
+import { areConsecutiveDays, spanDays, totalMinutes } from '@/lib/slots';
+import { isFounderEmail } from '@/lib/founder';
 import { formatSiret, isValidSiret, normalizeSiret } from '@/features/structure/verification';
 import type { Mission, Structure } from '@/features/missions/types';
 import type { MissionSlot } from '@/types/database.types';
 import { formatEuros, formatHours } from '@/lib/format';
 
 type Tab = 'missions' | 'candidats' | 'pilotage';
+const DEFAULT_HOURLY_EUR = 14;
+const MIN_HOURLY_EUR = 10;
+const MAX_HOURLY_EUR = 80;
 
 function euros(cents: number): string {
   return formatEuros(cents).replace(' EUR', ' €');
@@ -49,7 +52,7 @@ function isVerifiedStructure(structure: Structure | null): boolean {
 }
 
 function verificationBadge(structure: Structure): { label: string; color: string; bg: string } {
-  if (structure.verification_status === 'founder_bypass' || structure.founder_bypass) return { label: 'Clé fondateur', color: T.green, bg: T.greenBg };
+  if (structure.verification_status === 'founder_bypass' || structure.founder_bypass) return { label: 'Accès fondateur', color: T.green, bg: T.greenBg };
   if (structure.verification_status === 'verified' || structure.siret) return { label: '✓ SIRET vérifié', color: T.green, bg: T.greenBg };
   if (structure.verification_status === 'rejected') return { label: 'SIRET refusé', color: T.red, bg: T.redBg };
   return { label: 'Vérification SIRET', color: T.amber, bg: T.amberBg };
@@ -73,7 +76,7 @@ export function StructureApp() {
   const [chatFor, setChatFor] = useState<CandWithMission | null>(null);
   const [docKey, setDocKey] = useState<DocKey | null>(null);
   const [subBusy, setSubBusy] = useState(false);
-  const [vf, setVf] = useState({ nom: '', siret: '', founderCode: '' });
+  const [vf, setVf] = useState({ nom: '', siret: '' });
   const [toast, setToast] = useState<string | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout>>();
 
@@ -114,13 +117,13 @@ export function StructureApp() {
         if (mine.length === 0) {
           const meta = session.user.user_metadata as Record<string, string | boolean | null>;
           if (meta.structure_name) {
-            const founder = isFounderCode(String(meta.founder_code ?? ''));
+            const founder = isFounderEmail(session.user.email);
             const metaSiret = String(meta.siret ?? '');
             const metaSiretOk = isValidSiret(metaSiret);
             const created = await createStructure(
               session.user.id,
               String(meta.structure_name),
-              founder ? undefined : normalizeSiret(metaSiret),
+              founder && !metaSiretOk ? undefined : normalizeSiret(metaSiret),
               Boolean(meta.is_ess),
               {
                 verificationStatus: founder ? 'founder_bypass' : metaSiretOk ? 'verified' : 'pending',
@@ -149,10 +152,10 @@ export function StructureApp() {
 
   async function createFromForm() {
     if (!session) return;
-    const founder = isFounderCode(vf.founderCode);
+    const founder = isFounderEmail(session.user.email);
     const siretOk = isValidSiret(vf.siret);
     if (!(vf.nom.trim().length >= 2 && (founder || siretOk))) {
-      notif('SIRET valide requis, sauf accès fondateur.');
+      notif('SIRET valide requis.');
       return;
     }
     try {
@@ -255,7 +258,7 @@ export function StructureApp() {
   const misTitle = (mid: string) => mis.find((m) => m.id === mid)?.title ?? '—';
   const candCount = (mid: string) => (cands.get(mid) ?? []).filter((c) => c.status === 'pending').length;
   const unreadTotal = [...unread.values()].reduce((s, v) => s + v, 0);
-  const formFounder = isFounderCode(vf.founderCode);
+  const formFounder = isFounderEmail(session?.user.email);
   const formSiretOk = isValidSiret(vf.siret);
   const canCreateStructure = vf.nom.trim().length >= 2 && (formFounder || formSiretOk);
   const structureVerified = isVerifiedStructure(structure);
@@ -286,6 +289,11 @@ export function StructureApp() {
           <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 17 }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: T.text, marginBottom: 4 }}>Avant de publier, on identifie ta structure</div>
             <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.5, marginBottom: 16 }}>Seules les structures identifiées (SIRET) peuvent publier des missions.</div>
+            {formFounder && (
+              <div style={{ fontSize: 10.5, color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 9, padding: '8px 10px', marginBottom: 12 }}>
+                Accès fondateur détecté sur ce compte.
+              </div>
+            )}
             <Fld label="Nom de la structure">
               <input aria-label="Nom de la structure" value={vf.nom} onChange={(e) => setVf((x) => ({ ...x, nom: e.target.value }))} placeholder="Burger Nord" style={inp} />
             </Fld>
@@ -297,12 +305,8 @@ export function StructureApp() {
                 </div>
               )}
             </Fld>
-            <Fld label="Code fondateur (optionnel)">
-              <input aria-label="Code fondateur" value={vf.founderCode} onChange={(e) => setVf((x) => ({ ...x, founderCode: e.target.value.toUpperCase() }))} placeholder="Réservé fondateur" style={inp} autoCapitalize="characters" />
-              {formFounder && <div style={{ fontSize: 9.5, color: T.green, marginTop: -7, marginBottom: 10 }}>✓ SIRET facultatif pour le fondateur</div>}
-            </Fld>
             <button onClick={createFromForm} disabled={!canCreateStructure} style={{ width: '100%', background: canCreateStructure ? '#fff' : T.row, color: canCreateStructure ? '#000' : T.mu, border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: canCreateStructure ? 'pointer' : 'not-allowed', marginTop: 4 }}>
-              {canCreateStructure ? 'Enregistrer ma structure' : 'SIRET valide ou clé fondateur'}
+              {canCreateStructure ? 'Enregistrer ma structure' : 'SIRET valide requis'}
             </button>
           </div>
         ) : (
@@ -366,7 +370,7 @@ export function StructureApp() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {!structureVerified && (
                   <div style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 10, padding: '10px 12px', fontSize: 10.5, color: T.amber, lineHeight: 1.45 }}>
-                    Vérification SIRET requise avant publication, sauf accès fondateur.
+                    Vérification SIRET requise avant publication.
                   </div>
                 )}
                 <button onClick={() => structureVerified && setShowPub(true)} disabled={!structureVerified} style={{ width: '100%', background: structureVerified ? T.grad : T.row, color: structureVerified ? '#fff' : T.mu, border: 'none', borderRadius: 11, padding: '12px 0', fontSize: 13, fontWeight: 900, cursor: structureVerified ? 'pointer' : 'not-allowed', marginBottom: 2 }}>
@@ -695,11 +699,10 @@ function AboutEditor({ structure, onSaved, notif }: { structure: Structure; onSa
   );
 }
 
-// Publication volontairement simple : la structure indique le planning
-// (jusqu'à 3 jours), le nombre de places et le montant proposé. Le coût
-// total (commission incluse) est affiché, le détail au clic.
+// Publication : UROSI propose un tarif horaire, puis calcule le coût réel
+// selon les créneaux, les jours consécutifs et le nombre de places.
 function PublishModal({ structure, onClose, onPublished }: { structure: Structure; onClose: () => void; onPublished: (m: Mission) => void }) {
-  const [f, setF] = useState({ t: '', adr: '', pay: 72, desc: '', places: 1, solid: false });
+  const [f, setF] = useState({ t: '', adr: '', hourly: DEFAULT_HOURLY_EUR, desc: '', places: 1, solid: false });
   const [slots, setSlots] = useState<MissionSlot[]>([{ date: todayPlus(1), start: '11:00', end: '15:00' }]);
   const [rates, setRates] = useState<CommissionRates | null>(null);
   const [showDetail, setShowDetail] = useState(false);
@@ -712,10 +715,15 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
 
   const minutes = totalMinutes(slots);
   const days = spanDays(slots);
+  const consecutiveDays = areConsecutiveDays(slots);
   const tooLong = days > 3;
-  const slotsOk = slots.length > 0 && minutes >= 60 && !tooLong && slots.every((sl) => sl.date && sl.start < sl.end);
-  const ok = f.t.trim().length >= 2 && f.adr.trim().length >= 2 && slotsOk && (f.solid || f.pay > 0);
-  const split = rates && !f.solid ? splitPrice(Math.round(f.pay * 100), rates.structurePct, rates.workerPct) : null;
+  const hourly = Math.min(MAX_HOURLY_EUR, Math.max(MIN_HOURLY_EUR, f.hourly || 0));
+  const workerTotalCents = f.solid ? 0 : Math.round(hourly * 100 * (minutes / 60));
+  const split = rates && !f.solid ? splitPrice(workerTotalCents, rates.structurePct, rates.workerPct) : null;
+  const perPersonStructureCents = split?.totalStructureCents ?? workerTotalCents;
+  const totalStructureCents = perPersonStructureCents * f.places;
+  const slotsOk = slots.length > 0 && minutes >= 60 && !tooLong && consecutiveDays && slots.every((sl) => sl.date && sl.start < sl.end);
+  const ok = f.t.trim().length >= 2 && f.adr.trim().length >= 2 && slotsOk && (f.solid || workerTotalCents > 0);
 
   function setSlot(i: number, patch: Partial<MissionSlot>) {
     setSlots((prev) => prev.map((sl, idx) => (idx === i ? { ...sl, ...patch } : sl)));
@@ -741,8 +749,8 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
         duration_minutes: minutes,
         slots,
         places: f.places,
-        worker_rate_cents: f.solid ? 0 : Math.round(f.pay * 100),
-        base_rate_cents: f.solid ? null : Math.round(f.pay * 100),
+        worker_rate_cents: workerTotalCents,
+        base_rate_cents: f.solid ? null : workerTotalCents,
         is_solidaire: f.solid,
       });
       onPublished(mission);
@@ -768,7 +776,7 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
           <input aria-label="Adresse" value={f.adr} onChange={(e) => setF((x) => ({ ...x, adr: e.target.value }))} placeholder="Adresse ou ville" style={inp} />
         </Fld>
 
-        <Fld label="Planning (jusqu'à 3 jours)">
+        <Fld label="Planning (1 à 3 jours consécutifs)">
           {slots.map((sl, i) => (
             <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}>
               <input aria-label={`Jour ${i + 1}`} type="date" value={sl.date} onChange={(e) => setSlot(i, { date: e.target.value })} style={{ ...inp, marginBottom: 0, flex: 1.4, padding: '10px 8px', fontSize: 11.5 }} />
@@ -790,11 +798,13 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
               ＋ Ajouter un créneau
             </button>
           )}
-          <div style={{ fontSize: 10, color: tooLong ? T.red : T.mu, marginTop: 6 }}>
+          <div style={{ fontSize: 10, color: tooLong || !consecutiveDays ? T.red : T.mu, marginTop: 6 }}>
             {tooLong
               ? 'Une mission dure 3 jours maximum.'
+              : !consecutiveDays
+                ? 'Les jours sélectionnés doivent se suivre.'
               : minutes > 0
-                ? `Durée totale : ${formatHours(minutes)}${days > 1 ? ` sur ${days} jours` : ''}`
+                ? `Durée totale : ${formatHours(minutes)}${days > 1 ? ` sur ${days} jours` : ''}. Plusieurs créneaux le même jour sont possibles.`
                 : 'Ajoute au moins un créneau (1h minimum).'}
           </div>
         </Fld>
@@ -830,47 +840,52 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
           </div>
         ) : (
           <>
-            <Fld label="Montant proposé (€)">
+            <Fld label="Tarif horaire proposé (€ / h)">
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <button onClick={() => setF((x) => ({ ...x, pay: Math.max(5, x.pay - 5) }))} style={{ width: 34, height: 34, borderRadius: '50%', background: T.row, border: `1px solid ${T.cb}`, color: T.text, fontSize: 18, cursor: 'pointer' }}>
+                <button onClick={() => setF((x) => ({ ...x, hourly: Math.max(MIN_HOURLY_EUR, x.hourly - 1) }))} style={{ width: 34, height: 34, borderRadius: '50%', background: T.row, border: `1px solid ${T.cb}`, color: T.text, fontSize: 18, cursor: 'pointer' }}>
                   −
                 </button>
                 <input
-                  aria-label="Montant proposé"
-                  value={String(f.pay)}
-                  onChange={(e) => setF((x) => ({ ...x, pay: Math.max(0, Number(e.target.value.replace(',', '.')) || 0) }))}
+                  aria-label="Tarif horaire proposé"
+                  value={String(f.hourly)}
+                  onChange={(e) => setF((x) => ({ ...x, hourly: Math.min(MAX_HOURLY_EUR, Math.max(0, Number(e.target.value.replace(',', '.')) || 0)) }))}
                   inputMode="decimal"
                   style={{ ...inp, marginBottom: 0, width: 90, textAlign: 'center', fontSize: 18, fontWeight: 900 }}
                 />
-                <button onClick={() => setF((x) => ({ ...x, pay: x.pay + 5 }))} style={{ width: 34, height: 34, borderRadius: '50%', background: T.grad, border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer' }}>
+                <button onClick={() => setF((x) => ({ ...x, hourly: Math.min(MAX_HOURLY_EUR, x.hourly + 1) }))} style={{ width: 34, height: 34, borderRadius: '50%', background: T.grad, border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer' }}>
                   +
                 </button>
               </div>
             </Fld>
-            {split && (
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 800, color: T.text }}>
-                  Coût total estimé : {euros(split.totalStructureCents)}
+            <div style={{ marginBottom: 12, background: T.row, border: `1px solid ${T.cb}`, borderRadius: 10, padding: '11px 12px' }}>
+              <div style={{ fontSize: 10.5, color: T.mu, lineHeight: 1.5 }}>
+                Calcul UROSI : {formatHours(minutes || 0)} × {hourly} €/h = <strong style={{ color: T.text }}>{euros(workerTotalCents)}</strong> par personne.
+              </div>
+              <div style={{ marginTop: 7, fontSize: 12.5, fontWeight: 900, color: T.text }}>
+                Coût total estimé : {euros(totalStructureCents)} pour {f.places} place{f.places > 1 ? 's' : ''}
+              </div>
+              {split && (
+                <>
                   <button
                     onClick={() => setShowDetail((v) => !v)}
-                    style={{ marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: 10.5, color: T.mu, textDecoration: 'underline', fontWeight: 600 }}
+                    style={{ marginTop: 7, background: 'none', border: 'none', cursor: 'pointer', fontSize: 10.5, color: T.mu, textDecoration: 'underline', fontWeight: 600, padding: 0 }}
                   >
-                    {showDetail ? 'Masquer' : 'Voir le détail'}
+                    {showDetail ? 'Masquer le détail par personne' : 'Voir le détail par personne'}
                   </button>
-                </div>
-                {showDetail && (
-                  <div style={{ marginTop: 8 }}>
-                    <PriceSplit values={split} side="structure" />
-                  </div>
-                )}
-              </div>
-            )}
+                  {showDetail && (
+                    <div style={{ marginTop: 8 }}>
+                      <PriceSplit values={split} side="structure" />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </>
         )}
 
         {error && <div style={{ fontSize: 11, color: T.red, marginBottom: 10 }}>{error}</div>}
         <button onClick={publish} disabled={!ok || busy} style={{ width: '100%', background: ok && !busy ? '#fff' : T.row, color: ok && !busy ? '#000' : T.mu, border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: ok && !busy ? 'pointer' : 'not-allowed' }}>
-          {busy ? '…' : ok ? (f.solid ? 'Publier — Solidaire (0 €)' : `Publier — ${f.pay} €`) : 'Complète la mission'}
+          {busy ? '…' : ok ? (f.solid ? 'Publier — Solidaire (0 €)' : `Publier — ${euros(workerTotalCents)} / personne`) : 'Complète la mission'}
         </button>
       </div>
     </div>

@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Logo } from '@/components/ui/Logo';
 import { T, FONT } from '@/components/ui/theme';
-import { FOUNDER_CODE } from '@/lib/founder';
 
 export function EntryPage() {
   const nav = useNavigate();
@@ -44,7 +43,6 @@ export function EntryPage() {
             Démo structure
           </button>
         </div>
-        <div style={{ color: T.mu, fontSize: 10, marginTop: 9 }}>Clé fondateur : {FOUNDER_CODE}</div>
         <button
           onClick={() => nav('/connexion')}
           style={{ marginTop: 22, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: T.sub, textDecoration: 'underline', fontWeight: 700 }}

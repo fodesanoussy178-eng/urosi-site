@@ -4,11 +4,11 @@ import { Logo } from '@/components/ui/Logo';
 import { Stars } from '@/components/ui/Stars';
 import { Fld } from '@/components/ui/Fld';
 import { T, FONT, inp } from '@/components/ui/theme';
-import { FOUNDER_CODE } from '@/lib/founder';
+import { useAuth } from '@/features/auth/AuthContext';
+import { isFounderEmail } from '@/lib/founder';
 
 const DEMO_SECONDS = 30;
 const DEMO_KEY = 'urosi_internal_demo_seconds_v1';
-const FOUNDER_KEY = 'urosi_internal_demo_founder_v1';
 
 type DemoRole = 'worker' | 'structure';
 type WorkerTab = 'flux' | 'moi' | 'wallet';
@@ -226,22 +226,6 @@ function readNumber(key: string) {
   }
 }
 
-function readFounder() {
-  try {
-    return localStorage.getItem(FOUNDER_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-
-function saveFounder() {
-  try {
-    localStorage.setItem(FOUNDER_KEY, '1');
-  } catch {
-    // ignore
-  }
-}
-
 function initials(name: string) {
   return name
     .split(' ')
@@ -313,7 +297,7 @@ function TopBar({
         </div>
       </div>
       <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
-        {founder && <span style={{ fontSize: 10, color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 14, padding: '5px 10px', fontWeight: 900 }}>Clé active</span>}
+        {founder && <span style={{ fontSize: 10, color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 14, padding: '5px 10px', fontWeight: 900 }}>Accès fondateur</span>}
         {onBack && (
           <button onClick={onBack} style={{ background: T.row, color: T.sub, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
             ← Accueil
@@ -567,9 +551,10 @@ function PublishDemoModal({
   onClose: () => void;
   onPublish: (mission: DemoMission) => void;
 }) {
-  const [f, setF] = useState({ title: 'Renfort service du midi', place: 'Lille centre', pay: isAsso ? 0 : 15, places: 2, duration: 3, solid: isAsso });
-  const ok = f.title.trim().length >= 2 && f.place.trim().length >= 2 && (f.solid || f.pay > 0);
-  const total = f.solid ? 0 : Math.round(f.pay * f.places * 1.18);
+  const [f, setF] = useState({ title: 'Renfort service du midi', place: 'Lille centre', hourly: isAsso ? 0 : 14, places: 2, duration: 3, days: 1, solid: isAsso });
+  const workerAmount = f.solid ? 0 : f.hourly * f.duration * f.days;
+  const ok = f.title.trim().length >= 2 && f.place.trim().length >= 2 && (f.solid || workerAmount > 0);
+  const total = f.solid ? 0 : Math.round(workerAmount * f.places * 1.18);
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.74)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 200 }} onClick={onClose}>
       <div style={{ width: '100%', maxWidth: 430, maxHeight: '90vh', overflowY: 'auto', background: T.card, borderRadius: '24px 24px 0 0', padding: '20px 18px 28px' }} onClick={(e) => e.stopPropagation()}>
@@ -585,33 +570,41 @@ function PublishDemoModal({
         </Fld>
         <Fld label="Type">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <Button tone={f.solid ? 'light' : 'dark'} onClick={() => setF((x) => ({ ...x, solid: false, pay: Math.max(10, x.pay || 15) }))}>Payée</Button>
-            <Button tone={f.solid ? 'green' : 'light'} onClick={() => setF((x) => ({ ...x, solid: true, pay: 0 }))}>Association · 0 €</Button>
+            <Button tone={f.solid ? 'light' : 'dark'} onClick={() => setF((x) => ({ ...x, solid: false, hourly: Math.max(10, x.hourly || 14) }))}>Payée</Button>
+            <Button tone={f.solid ? 'green' : 'light'} onClick={() => setF((x) => ({ ...x, solid: true, hourly: 0 }))}>Association · 0 €</Button>
           </div>
         </Fld>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <Fld label="€/personne">
-            <Stepper value={f.solid ? 0 : f.pay} min={10} max={60} step={5} disabled={f.solid} onChange={(pay) => setF((x) => ({ ...x, pay }))} suffix="€" />
+          <Fld label="€/h proposé">
+            <Stepper value={f.solid ? 0 : f.hourly} min={10} max={60} step={1} disabled={f.solid} onChange={(hourly) => setF((x) => ({ ...x, hourly }))} suffix="€" />
           </Fld>
           <Fld label="Places">
             <Stepper value={f.places} min={1} max={12} step={1} onChange={(places) => setF((x) => ({ ...x, places }))} />
           </Fld>
         </div>
-        <Fld label="Durée">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 6 }}>
+        <Fld label="Horaires">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 6, marginBottom: 8 }}>
             {[1, 2, 3, 4, 5].map((h) => (
               <button key={h} onClick={() => setF((x) => ({ ...x, duration: h }))} style={{ background: f.duration === h ? '#fff' : T.row, color: f.duration === h ? '#05060d' : T.sub, border: `1px solid ${f.duration === h ? '#fff' : T.cb}`, borderRadius: 16, padding: '9px 0', fontWeight: 900, cursor: 'pointer' }}>{h}h</button>
             ))}
           </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6 }}>
+            {[1, 2, 3].map((d) => (
+              <button key={d} onClick={() => setF((x) => ({ ...x, days: d }))} style={{ background: f.days === d ? '#fff' : T.row, color: f.days === d ? '#05060d' : T.sub, border: `1px solid ${f.days === d ? '#fff' : T.cb}`, borderRadius: 16, padding: '9px 0', fontWeight: 900, cursor: 'pointer' }}>{d}j</button>
+            ))}
+          </div>
         </Fld>
         <div style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 13, marginBottom: 14 }}>
+          <div style={{ color: T.mu, fontSize: 11, lineHeight: 1.45, marginBottom: 8 }}>
+            {f.solid ? 'Mission bénévole : aucun coût.' : `${f.duration} h × ${f.days} jour${f.days > 1 ? 's' : ''} × ${f.hourly} €/h = ${workerAmount} € / personne`}
+          </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', color: T.sub, fontSize: 12, marginBottom: 6 }}>
             <span>{f.solid ? 'Mission solidaire' : `Rémunération x ${f.places}`}</span>
-            <strong style={{ color: T.text }}>{f.solid ? '0 €' : `${f.pay * f.places} €`}</strong>
+            <strong style={{ color: T.text }}>{f.solid ? '0 €' : `${workerAmount * f.places} €`}</strong>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', color: T.sub, fontSize: 12 }}>
             <span>Commission structure 18 %</span>
-            <strong style={{ color: T.text }}>{f.solid ? '0 €' : `${total - f.pay * f.places} €`}</strong>
+            <strong style={{ color: T.text }}>{f.solid ? '0 €' : `${total - workerAmount * f.places} €`}</strong>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', color: T.text, fontSize: 14, fontWeight: 900, borderTop: `1px solid ${T.cb}`, paddingTop: 9, marginTop: 9 }}>
             <span>Total wallet</span>
@@ -625,10 +618,10 @@ function PublishDemoModal({
               id: `new-${Date.now()}`,
               title: f.title.trim(),
               structure: isAsso || f.solid ? 'Banque Alimentaire' : 'Burger Nord',
-              amount: f.solid ? 0 : f.pay,
+              amount: workerAmount,
               city: f.place.trim(),
-              when: `Aujourd’hui · ${f.duration} h`,
-              duration: `${f.duration} h`,
+              when: f.days === 1 ? `Aujourd’hui · ${f.duration} h` : `${f.days} jours · ${f.duration} h/jour`,
+              duration: `${f.duration * f.days} h`,
               rating: isAsso || f.solid ? 4.8 : 4.7,
               distance: 'démo',
               solid: f.solid,
@@ -636,7 +629,7 @@ function PublishDemoModal({
             })
           }
         >
-          {f.solid ? 'Publier · Solidaire (0 €)' : `Publier · ${f.pay} €`}
+          {f.solid ? 'Publier · Solidaire (0 €)' : `Publier · ${workerAmount} € / personne`}
         </Button>
       </div>
     </div>
@@ -899,33 +892,14 @@ function CandidateCard({
   );
 }
 
-function FounderOverlay({
-  role,
-  onFounder,
-}: {
-  role: DemoRole;
-  onFounder: () => void;
-}) {
-  const [code, setCode] = useState('');
-  const [error, setError] = useState(false);
-
-  function tryCode() {
-    if (code.trim().toUpperCase() === FOUNDER_CODE) {
-      saveFounder();
-      onFounder();
-    } else {
-      setError(true);
-      setTimeout(() => setError(false), 1400);
-    }
-  }
-
+function DemoLimitOverlay({ role }: { role: DemoRole }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,5,15,.86)', backdropFilter: 'blur(7px)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18, fontFamily: FONT }}>
       <div style={{ width: '100%', maxWidth: 380, background: T.card, border: `1px solid ${T.cb}`, borderRadius: 20, padding: 24, textAlign: 'center' }}>
         <Logo sz={58} />
         <div style={{ color: T.text, fontSize: 19, fontWeight: 900, margin: '18px 0 7px' }}>Fin de l’aperçu gratuit</div>
         <div style={{ color: T.sub, fontSize: 12, lineHeight: 1.65, marginBottom: 18 }}>
-          Tu peux créer ton compte pour continuer, ou utiliser la clé fondateur pour visiter la démo sans minuteur.
+          Crée ton compte ou connecte-toi pour continuer. L'accès fondateur se déverrouille automatiquement sur le compte autorisé.
         </div>
         <Link to={role === 'structure' ? '/inscription/structure' : '/inscription/travailleur'} style={{ textDecoration: 'none', display: 'block', marginBottom: 8 }}>
           <Button>Créer mon compte</Button>
@@ -933,22 +907,18 @@ function FounderOverlay({
         <Link to="/connexion" style={{ textDecoration: 'none', display: 'block', marginBottom: 16 }}>
           <Button tone="light">J’ai déjà un compte</Button>
         </Link>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input value={code} onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && tryCode()} placeholder="Code fondateur" style={{ ...inp, borderColor: error ? T.red : T.cb, textTransform: 'uppercase', letterSpacing: 1 }} />
-          <button onClick={tryCode} style={{ background: T.grad, color: '#fff', border: 'none', borderRadius: 10, padding: '0 16px', fontWeight: 900, cursor: 'pointer' }}>OK</button>
-        </div>
-        {error && <div style={{ color: T.red, fontSize: 10, marginTop: 8 }}>Code invalide.</div>}
       </div>
     </div>
   );
 }
 
 export function DemoExperience() {
+  const { session } = useAuth();
   const [params] = useSearchParams();
   const initialRole = params.get('role') === 'structure' ? 'structure' : params.get('role') === 'worker' ? 'worker' : null;
   const [role, setRole] = useState<DemoRole | null>(initialRole);
-  const [founder, setFounder] = useState(readFounder);
   const [used, setUsed] = useState(() => readNumber(DEMO_KEY));
+  const founder = isFounderEmail(session?.user.email);
   const frozen = Boolean(role && !founder && used >= DEMO_SECONDS);
   const left = Math.max(0, DEMO_SECONDS - used);
 
@@ -968,19 +938,13 @@ export function DemoExperience() {
     return () => window.clearInterval(id);
   }, [role, founder, frozen]);
 
-  function activateFounder() {
-    setFounder(true);
-  }
-
   function resetDemo() {
     try {
       localStorage.removeItem(DEMO_KEY);
-      localStorage.removeItem(FOUNDER_KEY);
     } catch {
       // ignore
     }
     setUsed(0);
-    setFounder(false);
   }
 
   if (!role) {
@@ -997,7 +961,7 @@ export function DemoExperience() {
             </div>
             <Link to="/acces" style={{ textDecoration: 'none', display: 'block', marginBottom: 16 }}><Button tone="ghost">Créer un compte</Button></Link>
             {founder ? (
-              <button onClick={resetDemo} style={{ background: 'none', color: T.green, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 900 }}>Clé fondateur active · réinitialiser</button>
+              <button onClick={resetDemo} style={{ background: 'none', color: T.green, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 900 }}>Accès fondateur actif · réinitialiser</button>
             ) : (
               <div style={{ color: T.mu, fontSize: 11 }}>Aperçu gratuit : {left}s restantes</div>
             )}
@@ -1022,7 +986,7 @@ export function DemoExperience() {
       <DemoShell>
         {role === 'worker' ? <WorkerDemo founder={founder} onBack={() => setRole(null)} /> : <StructureDemo founder={founder} onBack={() => setRole(null)} />}
       </DemoShell>
-      {frozen && <FounderOverlay role={role} onFounder={activateFounder} />}
+      {frozen && <DemoLimitOverlay role={role} />}
     </>
   );
 }
@@ -1067,7 +1031,6 @@ export function SignupDemoPanel({ role }: { role: DemoRole }) {
           <Link to="/demo?role=worker" style={{ textDecoration: 'none' }}><Button>Ouvrir la démo travailleur</Button></Link>
         </div>
       )}
-      <div style={{ color: T.mu, fontSize: 10, lineHeight: 1.5, marginTop: 12 }}>Clé fondateur : {FOUNDER_CODE}</div>
     </aside>
   );
 }

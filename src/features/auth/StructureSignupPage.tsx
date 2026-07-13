@@ -7,23 +7,21 @@ import { SignupDemoPanel } from '@/app/DemoExperience';
 import { signUp } from './authService';
 import { AuthTabs, type AuthMode } from './AuthTabs';
 import { SignInForm } from './SignInForm';
-import { isFounderCode } from '@/lib/founder';
 import { formatSiret, isValidSiret, normalizeSiret } from '@/features/structure/verification';
 
 export function StructureSignupPage() {
   const nav = useNavigate();
   const [mode, setMode] = useState<AuthMode>('signup');
-  const [f, setF] = useState({ nom: '', siret: '', founderCode: '', email: '', password: '', ess: false });
+  const [f, setF] = useState({ nom: '', siret: '', email: '', password: '', ess: false });
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const founder = isFounderCode(f.founderCode);
   const siretDigits = normalizeSiret(f.siret);
   const siretOk = isValidSiret(f.siret);
 
   const ok =
     f.nom.trim().length >= 2 &&
-    (siretOk || founder) &&
+    siretOk &&
     /\S+@\S+\.\S+/.test(f.email) &&
     f.password.length >= 6;
 
@@ -38,9 +36,8 @@ export function StructureSignupPage() {
         fullName: f.nom.trim(),
         role: 'structure_admin',
         structureName: f.nom.trim(),
-        siret: founder ? undefined : siretDigits,
+        siret: siretDigits,
         isEss: f.ess,
-        founderCode: f.founderCode.trim() || undefined,
       });
       if (!data.session) {
         setInfo('Compte créé ! Vérifie ta boîte mail pour confirmer ton adresse, puis connecte-toi.');
@@ -93,10 +90,6 @@ export function StructureSignupPage() {
               </div>
             )}
           </Fld>
-          <Fld label="Code fondateur (optionnel)">
-            <input aria-label="Code fondateur" value={f.founderCode} onChange={(e) => setF((x) => ({ ...x, founderCode: e.target.value.toUpperCase() }))} placeholder="Réservé fondateur" style={inp} autoCapitalize="characters" />
-            {founder && <div style={{ fontSize: 9.5, color: T.green, marginTop: -7, marginBottom: 10 }}>✓ Accès fondateur actif : SIRET facultatif</div>}
-          </Fld>
           <Fld label="Type de structure">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
               <button type="button" onClick={() => setF((x) => ({ ...x, ess: false }))} style={{ background: !f.ess ? '#fff' : T.row, color: !f.ess ? '#000' : T.sub, border: `1px solid ${!f.ess ? '#fff' : T.cb}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
@@ -121,7 +114,7 @@ export function StructureSignupPage() {
             disabled={!ok || busy}
             style={{ width: '100%', background: ok && !busy ? '#fff' : T.row, color: ok && !busy ? '#000' : T.mu, border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: ok && !busy ? 'pointer' : 'not-allowed', marginTop: 4 }}
           >
-            {busy ? '…' : ok ? 'Créer mon espace structure' : 'Renseigne nom, SIRET valide ou clé fondateur'}
+            {busy ? '…' : ok ? 'Créer mon espace structure' : 'Renseigne nom, SIRET valide, email et mot de passe'}
           </button>
             </>
           )}

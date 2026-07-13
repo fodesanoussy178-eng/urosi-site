@@ -16,6 +16,17 @@ export function distinctDays(slots: MissionSlot[]): string[] {
   return [...new Set(slots.map((s) => s.date))].sort();
 }
 
+function dayNumber(date: string): number {
+  const d = new Date(date + 'T00:00:00');
+  return Math.round(d.getTime() / 86400000);
+}
+
+export function areConsecutiveDays(slots: MissionSlot[]): boolean {
+  const days = distinctDays(slots);
+  if (days.length <= 1) return true;
+  return days.every((day, i) => i === 0 || dayNumber(day) - dayNumber(days[i - 1]!) === 1);
+}
+
 // Étendue en jours (1 à 3) entre le premier et le dernier créneau.
 export function spanDays(slots: MissionSlot[]): number {
   const days = distinctDays(slots);
