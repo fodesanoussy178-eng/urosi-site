@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/features/auth/AuthContext';
-import { signOut } from '@/features/auth/authService';
+import { hasFounderAccess, signOut } from '@/features/auth/authService';
 import { T, FONT, inp } from '@/components/ui/theme';
 import { Fld } from '@/components/ui/Fld';
 import { DocModal, AideRegles, type DocKey } from '@/components/ui/DocModal';
@@ -23,7 +23,7 @@ import { fetchUnreadCounts } from '@/features/messages/messagesService';
 import { fetchCommissionRates, type CommissionRates } from '@/features/pricing/pricingService';
 import { geocodeMelCity } from '@/lib/geo';
 import { areConsecutiveDays, spanDays, totalMinutes } from '@/lib/slots';
-import { isFounderEmail } from '@/lib/founder';
+import { hasRememberedFounderAccess, isFounderEmail } from '@/lib/founder';
 import { formatSiret, isValidSiret, normalizeSiret } from '@/features/structure/verification';
 import type { Mission, Structure } from '@/features/missions/types';
 import type { MissionSlot } from '@/types/database.types';
@@ -77,6 +77,7 @@ export function StructureApp() {
   const [docKey, setDocKey] = useState<DocKey | null>(null);
   const [subBusy, setSubBusy] = useState(false);
   const [vf, setVf] = useState({ nom: '', siret: '' });
+  const [founderAccess, setFounderAccess] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout>>();
 
@@ -113,11 +114,12 @@ export function StructureApp() {
     (async () => {
       if (!session) return;
       try {
+        const founder = isFounderEmail(session.user.email) || hasRememberedFounderAccess(session.user.id) || (await hasFounderAccess().catch(() => false));
+        setFounderAccess(founder);
         let mine = await fetchMyStructures(session.user.id);
         if (mine.length === 0) {
           const meta = session.user.user_metadata as Record<string, string | boolean | null>;
           if (meta.structure_name) {
-            const founder = isFounderEmail(session.user.email);
             const metaSiret = String(meta.siret ?? '');
             const metaSiretOk = isValidSiret(metaSiret);
             const created = await createStructure(
@@ -152,7 +154,7 @@ export function StructureApp() {
 
   async function createFromForm() {
     if (!session) return;
-    const founder = isFounderEmail(session.user.email);
+    const founder = founderAccess;
     const siretOk = isValidSiret(vf.siret);
     if (!(vf.nom.trim().length >= 2 && (founder || siretOk))) {
       notif('SIRET valide requis.');
@@ -258,7 +260,7 @@ export function StructureApp() {
   const misTitle = (mid: string) => mis.find((m) => m.id === mid)?.title ?? '—';
   const candCount = (mid: string) => (cands.get(mid) ?? []).filter((c) => c.status === 'pending').length;
   const unreadTotal = [...unread.values()].reduce((s, v) => s + v, 0);
-  const formFounder = isFounderEmail(session?.user.email);
+  const formFounder = founderAccess;
   const formSiretOk = isValidSiret(vf.siret);
   const canCreateStructure = vf.nom.trim().length >= 2 && (formFounder || formSiretOk);
   const structureVerified = isVerifiedStructure(structure);

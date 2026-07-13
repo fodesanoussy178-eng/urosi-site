@@ -5,7 +5,8 @@ import { Stars } from '@/components/ui/Stars';
 import { Fld } from '@/components/ui/Fld';
 import { T, FONT, inp } from '@/components/ui/theme';
 import { useAuth } from '@/features/auth/AuthContext';
-import { isFounderEmail } from '@/lib/founder';
+import { hasFounderAccess } from '@/features/auth/authService';
+import { hasRememberedFounderAccess, isFounderEmail } from '@/lib/founder';
 
 const DEMO_SECONDS = 30;
 const DEMO_KEY = 'urosi_internal_demo_seconds_v1';
@@ -918,9 +919,32 @@ export function DemoExperience() {
   const initialRole = params.get('role') === 'structure' ? 'structure' : params.get('role') === 'worker' ? 'worker' : null;
   const [role, setRole] = useState<DemoRole | null>(initialRole);
   const [used, setUsed] = useState(() => readNumber(DEMO_KEY));
-  const founder = isFounderEmail(session?.user.email);
+  const [founderByCode, setFounderByCode] = useState(() => hasRememberedFounderAccess(session?.user.id));
+  const founder = isFounderEmail(session?.user.email) || founderByCode;
   const frozen = Boolean(role && !founder && used >= DEMO_SECONDS);
   const left = Math.max(0, DEMO_SECONDS - used);
+
+  useEffect(() => {
+    let alive = true;
+    if (!session) {
+      setFounderByCode(false);
+      return undefined;
+    }
+    if (isFounderEmail(session.user.email) || hasRememberedFounderAccess(session.user.id)) {
+      setFounderByCode(true);
+      return undefined;
+    }
+    hasFounderAccess()
+      .then((value) => {
+        if (alive) setFounderByCode(value);
+      })
+      .catch(() => {
+        if (alive) setFounderByCode(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [session]);
 
   useEffect(() => {
     if (!role || founder || frozen) return undefined;

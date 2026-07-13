@@ -205,6 +205,26 @@ export interface Database {
           },
         ];
       };
+      founder_access: {
+        Row: {
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['founder_access']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'founder_access_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: true;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       missions: {
         Row: {
           id: string;
@@ -930,6 +950,10 @@ export interface Database {
       };
     };
     Functions: {
+      claim_founder_access: {
+        Args: { p_code: string };
+        Returns: boolean;
+      };
       compute_mission_pricing: {
         Args: {
           p_structure_id: string;
@@ -947,6 +971,10 @@ export interface Database {
       deposit_wallet: {
         Args: { p_amount_cents: number; p_label?: string };
         Returns: number;
+      };
+      has_founder_access: {
+        Args: Record<string, never>;
+        Returns: boolean;
       };
       withdraw_wallet: {
         Args: { p_amount_cents: number };

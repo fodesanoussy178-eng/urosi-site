@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { rememberFounderAccess } from '@/lib/founder';
 import type { ProfileRole } from '@/types/database.types';
 
 export interface SignUpInput {
@@ -61,6 +62,26 @@ export async function signIn({ email, password }: SignInInput) {
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
+}
+
+export async function claimFounderAccess(code: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('claim_founder_access', { p_code: code });
+  if (error) throw error;
+  if (data) {
+    const { data: userData } = await supabase.auth.getUser();
+    rememberFounderAccess(userData.user?.id);
+  }
+  return Boolean(data);
+}
+
+export async function hasFounderAccess(): Promise<boolean> {
+  const { data, error } = await supabase.rpc('has_founder_access');
+  if (error) throw error;
+  if (data) {
+    const { data: userData } = await supabase.auth.getUser();
+    rememberFounderAccess(userData.user?.id);
+  }
+  return Boolean(data);
 }
 
 // Envoie l'email de reinitialisation. L'URL /reinitialisation doit etre dans

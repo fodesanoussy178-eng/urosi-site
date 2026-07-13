@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Fld } from '@/components/ui/Fld';
 import { T, inp } from '@/components/ui/theme';
-import { isUnconfirmedEmailError, requestPasswordReset, resendConfirmationEmail, signIn } from './authService';
+import { claimFounderAccess, isUnconfirmedEmailError, requestPasswordReset, resendConfirmationEmail, signIn } from './authService';
 
 export function SignInForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [founderOpen, setFounderOpen] = useState(false);
+  const [internalCode, setInternalCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [showResend, setShowResend] = useState(false);
@@ -19,6 +21,10 @@ export function SignInForm() {
     setBusy(true);
     try {
       await signIn({ email: email.trim(), password });
+      if (internalCode.trim()) {
+        const unlocked = await claimFounderAccess(internalCode.trim());
+        if (!unlocked) setError('Code interne invalide.');
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur.');
       if (isUnconfirmedEmailError(e)) setShowResend(true);
@@ -100,6 +106,27 @@ export function SignInForm() {
       >
         Mot de passe oublié ?
       </button>
+      {founderOpen && (
+        <div style={{ marginTop: 10, background: T.row, border: `1px solid ${T.cb}`, borderRadius: 10, padding: 9 }}>
+          <input
+            aria-label="Code interne"
+            value={internalCode}
+            onChange={(e) => setInternalCode(e.target.value.toUpperCase())}
+            onKeyDown={(e) => e.key === 'Enter' && submit()}
+            placeholder="code"
+            style={{ ...inp, marginBottom: 0, fontSize: 11, padding: '9px 10px', textTransform: 'uppercase', letterSpacing: 1 }}
+            autoCapitalize="characters"
+            autoComplete="off"
+          />
+        </div>
+      )}
+      <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 10 }}>
+        <button
+          aria-label="Accès interne"
+          onClick={() => setFounderOpen((v) => !v)}
+          style={{ width: 6, height: 6, borderRadius: 999, background: founderOpen ? T.cyan : T.cb, border: 'none', opacity: founderOpen ? 0.9 : 0.35, cursor: 'pointer', padding: 0 }}
+        />
+      </div>
     </>
   );
 }
