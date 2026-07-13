@@ -10,10 +10,12 @@ alter table public.missions add column if not exists sector text not null defaul
 alter table public.missions add column if not exists difficulty smallint not null default 1;
 alter table public.missions add column if not exists is_urgent boolean not null default false;
 alter table public.missions add column if not exists start_time time;
+alter table public.missions add column if not exists duration_minutes integer not null default 60;
 alter table public.missions add column if not exists address text;
 alter table public.missions add column if not exists lat double precision;
 alter table public.missions add column if not exists lng double precision;
 alter table public.missions add column if not exists distance_km numeric;
+alter table public.missions add column if not exists worker_rate_cents integer not null default 1000;
 alter table public.missions add column if not exists base_rate_cents integer;
 alter table public.missions add column if not exists pricing_breakdown jsonb;
 alter table public.missions add column if not exists places integer not null default 1;
