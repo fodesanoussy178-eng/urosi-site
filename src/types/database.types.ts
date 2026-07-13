@@ -9,6 +9,8 @@ export type ProfileKycStatus = 'not_started' | 'requested' | 'submitted' | 'veri
 export type StructureVerificationStatus = 'pending' | 'verified' | 'rejected' | 'founder_bypass';
 export type StructureVerificationMethod = 'siret' | 'founder' | 'manual';
 export type MissionStatus = 'open' | 'closed' | 'cancelled';
+export type MissionTimeSlot = 'morning' | 'afternoon' | 'evening' | 'night';
+export type MissionDayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 export type MissionSector =
   | 'restauration'
   | 'vente'
@@ -97,6 +99,7 @@ export interface PricingBreakdown {
 }
 
 // Creneau d'une mission (planning par journee, 3 jours max).
+// Quand end < start, le creneau se termine automatiquement le lendemain.
 export interface MissionSlot {
   date: string; // YYYY-MM-DD
   start: string; // HH:MM
@@ -233,12 +236,17 @@ export interface Database {
           detail: string | null;
           city: string | null;
           address: string | null;
+          location: string | null;
           lat: number | null;
           lng: number | null;
           distance_km: number | null;
           scheduled_date: string;
           start_time: string | null;
+          starts_at: string | null;
+          ends_at: string | null;
           duration_minutes: number;
+          duration_minutes_per_person: number | null;
+          mission_days: number;
           sector: MissionSector;
           difficulty: number;
           is_urgent: boolean;
@@ -247,7 +255,17 @@ export interface Database {
           pricing_breakdown: PricingBreakdown | null;
           is_solidaire: boolean;
           places: number;
+          positions: number;
           slots: MissionSlot[] | null;
+          hourly_rate: number | null;
+          worker_amount: number;
+          worker_subtotal: number;
+          service_fee: number;
+          structure_total: number;
+          total_worker_hours: number;
+          time_slot: MissionTimeSlot;
+          day_of_week: MissionDayOfWeek | null;
+          mission_category: string;
           status: MissionStatus;
           created_at: string;
         };
@@ -258,12 +276,17 @@ export interface Database {
           detail?: string | null;
           city?: string | null;
           address?: string | null;
+          location?: string | null;
           lat?: number | null;
           lng?: number | null;
           distance_km?: number | null;
           scheduled_date: string;
           start_time?: string | null;
+          starts_at?: string | null;
+          ends_at?: string | null;
           duration_minutes: number;
+          duration_minutes_per_person?: number | null;
+          mission_days?: number;
           sector?: MissionSector;
           difficulty?: number;
           is_urgent?: boolean;
@@ -272,7 +295,17 @@ export interface Database {
           pricing_breakdown?: PricingBreakdown | null;
           is_solidaire?: boolean;
           places?: number;
+          positions?: number;
           slots?: MissionSlot[] | null;
+          hourly_rate?: number | null;
+          worker_amount?: number;
+          worker_subtotal?: number;
+          service_fee?: number;
+          structure_total?: number;
+          total_worker_hours?: number;
+          time_slot?: MissionTimeSlot;
+          day_of_week?: MissionDayOfWeek | null;
+          mission_category?: string;
           status?: MissionStatus;
           created_at?: string;
         };
@@ -283,6 +316,36 @@ export interface Database {
             columns: ['structure_id'];
             isOneToOne: false;
             referencedRelation: 'structures';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      mission_days: {
+        Row: {
+          id: string;
+          mission_id: string;
+          date: string;
+          starts_at: string;
+          ends_at: string;
+          duration_minutes: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          mission_id: string;
+          date: string;
+          starts_at: string;
+          ends_at: string;
+          duration_minutes: number;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['mission_days']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'mission_days_mission_id_fkey';
+            columns: ['mission_id'];
+            isOneToOne: false;
+            referencedRelation: 'missions';
             referencedColumns: ['id'];
           },
         ];

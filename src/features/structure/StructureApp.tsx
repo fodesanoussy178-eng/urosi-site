@@ -7,7 +7,6 @@ import { DocModal, AideRegles, type DocKey } from '@/components/ui/DocModal';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import { ChatSheet } from '@/components/ui/ChatSheet';
 import { WalletCard } from '@/components/ui/WalletCard';
-import { PriceSplit, splitPrice } from '@/components/ui/PriceSplit';
 import { fetchMyStructures, createStructure, updateStructureAbout, subscribeStructure } from './structureService';
 import { StatsPanel } from './StatsPanel';
 import { fetchMissionsForStructure, createMission } from '@/features/missions/missionsService';
@@ -20,19 +19,37 @@ import { rate, fetchRatedApplicationIds, fetchWorkerReputation, type WorkerReput
 import { fetchDelaysForApplications } from '@/features/missions/feedbackService';
 import { confirmRemoteAttendance, reportWorkerAbsence } from '@/features/missions/attendanceService';
 import { fetchUnreadCounts } from '@/features/messages/messagesService';
-import { fetchCommissionRates, type CommissionRates } from '@/features/pricing/pricingService';
 import { geocodeMelCity } from '@/lib/geo';
-import { areConsecutiveDays, spanDays, totalMinutes } from '@/lib/slots';
+import { distinctDays, slotMinutes, spanDays, totalMinutes } from '@/lib/slots';
 import { hasRememberedFounderAccess, isFounderEmail } from '@/lib/founder';
 import { formatSiret, isValidSiret, normalizeSiret } from '@/features/structure/verification';
 import type { Mission, Structure } from '@/features/missions/types';
-import type { MissionSlot } from '@/types/database.types';
+import type { MissionDayOfWeek, MissionSlot, MissionTimeSlot } from '@/types/database.types';
 import { formatEuros, formatHours } from '@/lib/format';
 
 type Tab = 'missions' | 'candidats' | 'pilotage';
 const DEFAULT_HOURLY_EUR = 14;
 const MIN_HOURLY_EUR = 10;
 const MAX_HOURLY_EUR = 80;
+const SERVICE_FEE_RATE = 0.18;
+const MAX_MISSION_MINUTES = 4320;
+type RateMode = 'hourly' | 'fixed';
+
+const SLOT_SHORTCUTS: Array<{ label: string; start: string; end: string }> = [
+  { label: 'Matin', start: '08:00', end: '12:00' },
+  { label: 'Après-midi', start: '13:00', end: '17:00' },
+  { label: 'Soir', start: '18:00', end: '23:00' },
+  { label: 'Nuit', start: '22:00', end: '03:00' },
+];
+
+const MISSION_CATEGORIES = [
+  ['renfort_service', 'Renfort service'],
+  ['runner', 'Runner'],
+  ['accueil', 'Accueil'],
+  ['inventaire', 'Inventaire'],
+  ['distribution', 'Distribution'],
+  ['autre', 'Autre'],
+] as const;
 
 function euros(cents: number): string {
   return formatEuros(cents).replace(' EUR', ' €');
@@ -42,6 +59,61 @@ function todayPlus(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
+}
+
+function addDays(date: string, days: number): string {
+  const d = new Date(`${date}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function dateTime(date: string, time: string, addDay = false): Date {
+  const d = new Date(`${date}T${time}:00`);
+  if (addDay) d.setDate(d.getDate() + 1);
+  return d;
+}
+
+function slotStartsAt(slot: MissionSlot): Date {
+  return dateTime(slot.date, slot.start);
+}
+
+function slotEndsAt(slot: MissionSlot): Date {
+  return dateTime(slot.date, slot.end, slot.end < slot.start);
+}
+
+function firstSlot(slots: MissionSlot[]): MissionSlot | null {
+  return slots.slice().sort((a, b) => slotStartsAt(a).getTime() - slotStartsAt(b).getTime())[0] ?? null;
+}
+
+function lastSlot(slots: MissionSlot[]): MissionSlot | null {
+  return slots.slice().sort((a, b) => slotEndsAt(b).getTime() - slotEndsAt(a).getTime())[0] ?? null;
+}
+
+function formatMoney(cents: number): string {
+  return `${(cents / 100).toFixed(2).replace('.', ',')} €`;
+}
+
+function formatHoursCompact(hours: number): string {
+  return Number.isInteger(hours) ? `${hours} h` : `${hours.toFixed(1).replace('.', ',')} h`;
+}
+
+function formatLongDay(date: string): string {
+  return new Date(`${date}T00:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+function dayOfWeek(date: string): MissionDayOfWeek {
+  const days: MissionDayOfWeek[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  return days[new Date(`${date}T00:00:00`).getDay()] ?? 'monday';
+}
+
+function inferTimeSlot(slots: MissionSlot[]): MissionTimeSlot {
+  if (slots.some((slot) => slot.end < slot.start)) return 'night';
+  const first = firstSlot(slots);
+  const hour = Number(first?.start.slice(0, 2) ?? 12);
+  if (hour < 12 && hour >= 5) return 'morning';
+  if (hour < 18) return 'afternoon';
+  if (hour < 22) return 'evening';
+  return 'night';
 }
 
 type CandWithMission = ApplicationWithApplicant & { missionTitle: string };
@@ -701,58 +773,129 @@ function AboutEditor({ structure, onSaved, notif }: { structure: Structure; onSa
   );
 }
 
-// Publication : UROSI propose un tarif horaire, puis calcule le coût réel
-// selon les créneaux, les jours consécutifs et le nombre de places.
 function PublishModal({ structure, onClose, onPublished }: { structure: Structure; onClose: () => void; onPublished: (m: Mission) => void }) {
-  const [f, setF] = useState({ t: '', adr: '', hourly: DEFAULT_HOURLY_EUR, desc: '', places: 1, solid: false });
-  const [slots, setSlots] = useState<MissionSlot[]>([{ date: todayPlus(1), start: '11:00', end: '15:00' }]);
-  const [rates, setRates] = useState<CommissionRates | null>(null);
+  const [f, setF] = useState({
+    t: '',
+    adr: '',
+    category: 'renfort_service',
+    rateMode: 'hourly' as RateMode,
+    hourly: String(DEFAULT_HOURLY_EUR),
+    fixed: '60',
+    desc: '',
+    positions: 1,
+    solid: false,
+  });
+  const [slots, setSlots] = useState<MissionSlot[]>([{ date: todayPlus(1), start: '18:00', end: '23:00' }]);
   const [showDetail, setShowDetail] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchCommissionRates().then(setRates).catch(() => undefined);
-  }, []);
-
   const minutes = totalMinutes(slots);
-  const days = spanDays(slots);
-  const consecutiveDays = areConsecutiveDays(slots);
-  const tooLong = days > 3;
-  const hourly = Math.min(MAX_HOURLY_EUR, Math.max(MIN_HOURLY_EUR, f.hourly || 0));
-  const workerTotalCents = f.solid ? 0 : Math.round(hourly * 100 * (minutes / 60));
-  const split = rates && !f.solid ? splitPrice(workerTotalCents, rates.structurePct, rates.workerPct) : null;
-  const perPersonStructureCents = split?.totalStructureCents ?? workerTotalCents;
-  const totalStructureCents = perPersonStructureCents * f.places;
-  const slotsOk = slots.length > 0 && minutes >= 60 && !tooLong && consecutiveDays && slots.every((sl) => sl.date && sl.start < sl.end);
-  const ok = f.t.trim().length >= 2 && f.adr.trim().length >= 2 && slotsOk && (f.solid || workerTotalCents > 0);
+  const durationHoursPerPerson = minutes / 60;
+  const missionDays = distinctDays(slots).length;
+  const daySpan = spanDays(slots);
+  const positions = Math.max(1, Math.floor(f.positions || 1));
+  const totalWorkerHours = durationHoursPerPerson * positions;
+  const hourlyValue = Number(f.hourly.replace(',', '.'));
+  const fixedValue = Number(f.fixed.replace(',', '.'));
+  const safeHourlyValue = Number.isFinite(hourlyValue) ? hourlyValue : 0;
+  const safeFixedValue = Number.isFinite(fixedValue) ? fixedValue : 0;
+  const invalidSlots = slots.some((sl) => !sl.date || !sl.start || !sl.end || sl.start === sl.end || slotMinutes(sl) <= 0);
+  const tooLong = minutes > MAX_MISSION_MINUTES || daySpan > 3;
+  const rateInvalid = !f.solid && (f.rateMode === 'hourly' ? !Number.isFinite(hourlyValue) || hourlyValue < MIN_HOURLY_EUR || hourlyValue > MAX_HOURLY_EUR : !Number.isFinite(fixedValue) || fixedValue <= 0);
+  const workerAmountCents = f.solid ? 0 : f.rateMode === 'hourly' ? Math.round(safeHourlyValue * 100 * durationHoursPerPerson) : Math.round(safeFixedValue * 100);
+  const workerSubtotalCents = workerAmountCents * positions;
+  const serviceFeeCents = f.solid ? 0 : Math.round(workerSubtotalCents * SERVICE_FEE_RATE);
+  const structureTotalCents = workerSubtotalCents + serviceFeeCents;
+  const first = firstSlot(slots);
+  const last = lastSlot(slots);
+  const summary = first
+    ? `${formatLongDay(first.date)} · ${first.start}–${last?.end ?? first.end}${last && last.end < last.start ? ' +1' : ''} · ${formatHours(minutes)}`
+    : '';
+  const validationMessage =
+    f.t.trim().length < 2
+      ? 'Renseigne le titre de la mission.'
+      : f.adr.trim().length < 2
+        ? 'Renseigne le lieu de la mission.'
+        : slots.length === 0 || slots.some((sl) => !sl.date)
+          ? 'Choisis au moins une date.'
+          : invalidSlots
+            ? "Chaque jour doit avoir une heure de début et une heure de fin cohérentes."
+            : minutes <= 0
+              ? 'La durée doit être supérieure à zéro.'
+              : positions < 1
+                ? 'Le nombre de personnes doit être supérieur à zéro.'
+                : tooLong
+                  ? 'La mission dépasse la durée maximale autorisée par UROSI.'
+                  : rateInvalid
+                    ? 'Renseigne un tarif valide.'
+                    : null;
+  const ok = !validationMessage && !busy;
 
   function setSlot(i: number, patch: Partial<MissionSlot>) {
     setSlots((prev) => prev.map((sl, idx) => (idx === i ? { ...sl, ...patch } : sl)));
   }
 
+  function addDay() {
+    setSlots((prev) => {
+      const lastSlotValue = prev[prev.length - 1] ?? { date: todayPlus(1), start: '18:00', end: '23:00' };
+      return [...prev, { date: addDays(lastSlotValue.date, 1), start: lastSlotValue.start, end: lastSlotValue.end }];
+    });
+  }
+
+  function duplicatePrevious(i: number) {
+    const previous = slots[i - 1];
+    if (!previous) return;
+    setSlot(i, { start: previous.start, end: previous.end });
+  }
+
+  function applyShortcut(i: number, start: string, end: string) {
+    setSlot(i, { start, end });
+  }
+
   async function publish() {
-    if (!ok || busy) return;
+    if (!ok) {
+      setError(validationMessage);
+      return;
+    }
     setError(null);
     setBusy(true);
     try {
       const coords = geocodeMelCity(f.adr);
+      const start = firstSlot(slots);
+      const end = lastSlot(slots);
+      const startAt = start ? slotStartsAt(start) : dateTime(todayPlus(1), '09:00');
+      const endAt = end ? slotEndsAt(end) : dateTime(todayPlus(1), '10:00');
       const mission = await createMission({
         structure_id: structure.id,
         title: f.t.trim(),
         detail: f.desc.trim() || null,
         city: f.adr.trim(),
+        address: f.adr.trim(),
+        location: f.adr.trim(),
         lat: coords?.lat ?? null,
         lng: coords?.lng ?? null,
-        // scheduled_date / start_time / duration_minutes sont recalculés par
-        // le serveur à partir du planning (trigger missions_apply_slots).
-        scheduled_date: slots[0]?.date ?? todayPlus(1),
-        start_time: slots[0]?.start ?? null,
+        scheduled_date: start?.date ?? todayPlus(1),
+        start_time: start?.start ?? null,
+        starts_at: startAt.toISOString(),
+        ends_at: endAt.toISOString(),
         duration_minutes: minutes,
+        duration_minutes_per_person: minutes,
+        mission_days: missionDays,
         slots,
-        places: f.places,
-        worker_rate_cents: workerTotalCents,
-        base_rate_cents: f.solid ? null : workerTotalCents,
+        places: positions,
+        positions,
+        worker_rate_cents: workerAmountCents,
+        base_rate_cents: f.solid ? null : workerAmountCents,
+        hourly_rate: f.solid || f.rateMode !== 'hourly' ? null : safeHourlyValue,
+        worker_amount: workerAmountCents / 100,
+        worker_subtotal: workerSubtotalCents / 100,
+        service_fee: serviceFeeCents / 100,
+        structure_total: structureTotalCents / 100,
+        total_worker_hours: Number(totalWorkerHours.toFixed(2)),
+        time_slot: inferTimeSlot(slots),
+        day_of_week: dayOfWeek(start?.date ?? todayPlus(1)),
+        mission_category: f.category,
         is_solidaire: f.solid,
       });
       onPublished(mission);
@@ -772,122 +915,135 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
         </div>
 
         <Fld label="Intitulé de la mission">
-          <input aria-label="Intitulé" value={f.t} onChange={(e) => setF((x) => ({ ...x, t: e.target.value }))} placeholder="Intitulé de la mission" style={inp} autoFocus />
+          <input aria-label="Intitulé" value={f.t} onChange={(e) => setF((x) => ({ ...x, t: e.target.value }))} placeholder="Renfort service, accueil, inventaire…" style={inp} autoFocus />
         </Fld>
-        <Fld label="Adresse / ville">
-          <input aria-label="Adresse" value={f.adr} onChange={(e) => setF((x) => ({ ...x, adr: e.target.value }))} placeholder="Adresse ou ville" style={inp} />
+        <Fld label="Catégorie">
+          <select aria-label="Catégorie" value={f.category} onChange={(e) => setF((x) => ({ ...x, category: e.target.value }))} style={inp}>
+            {MISSION_CATEGORIES.map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+        </Fld>
+        <Fld label="Lieu">
+          <input aria-label="Lieu" value={f.adr} onChange={(e) => setF((x) => ({ ...x, adr: e.target.value }))} placeholder="Adresse ou ville" style={inp} />
         </Fld>
 
-        <Fld label="Planning (1 à 3 jours consécutifs)">
+        <Fld label="Horaires">
           {slots.map((sl, i) => (
-            <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}>
-              <input aria-label={`Jour ${i + 1}`} type="date" value={sl.date} onChange={(e) => setSlot(i, { date: e.target.value })} style={{ ...inp, marginBottom: 0, flex: 1.4, padding: '10px 8px', fontSize: 11.5 }} />
-              <input aria-label={`Début ${i + 1}`} type="time" value={sl.start} onChange={(e) => setSlot(i, { start: e.target.value })} style={{ ...inp, marginBottom: 0, flex: 1, padding: '10px 6px', fontSize: 11.5 }} />
-              <span style={{ color: T.mu, fontSize: 11 }}>→</span>
-              <input aria-label={`Fin ${i + 1}`} type="time" value={sl.end} onChange={(e) => setSlot(i, { end: e.target.value })} style={{ ...inp, marginBottom: 0, flex: 1, padding: '10px 6px', fontSize: 11.5 }} />
-              {slots.length > 1 && (
-                <button onClick={() => setSlots((prev) => prev.filter((_, idx) => idx !== i))} aria-label="Supprimer le créneau" style={{ background: T.redBg, color: T.red, border: 'none', borderRadius: 7, width: 26, height: 26, cursor: 'pointer', fontSize: 12, flexShrink: 0 }}>
-                  ×
-                </button>
-              )}
+            <div key={`${sl.date}-${i}`} style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 10, marginBottom: 9 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                <div style={{ color: T.text, fontSize: 12, fontWeight: 900 }}>Jour {i + 1}</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {i > 0 && (
+                    <button onClick={() => duplicatePrevious(i)} style={{ background: 'transparent', color: T.mu, border: `1px solid ${T.cb}`, borderRadius: 7, padding: '5px 7px', fontSize: 9.5, fontWeight: 800, cursor: 'pointer' }}>
+                      Dupliquer
+                    </button>
+                  )}
+                  {slots.length > 1 && (
+                    <button onClick={() => setSlots((prev) => prev.filter((_, idx) => idx !== i))} aria-label="Supprimer le jour" style={{ background: T.redBg, color: T.red, border: 'none', borderRadius: 7, width: 26, height: 26, cursor: 'pointer', fontSize: 12 }}>
+                      ×
+                    </button>
+                  )}
+                </div>
+              </div>
+              <input aria-label={`Date ${i + 1}`} type="date" value={sl.date} onChange={(e) => setSlot(i, { date: e.target.value })} style={{ ...inp, marginBottom: 8, padding: '10px 9px', fontSize: 12 }} />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 5, marginBottom: 8 }}>
+                {SLOT_SHORTCUTS.map((shortcut) => (
+                  <button key={shortcut.label} onClick={() => applyShortcut(i, shortcut.start, shortcut.end)} style={{ background: T.card, color: T.sub, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 0', fontSize: 9.5, fontWeight: 800, cursor: 'pointer' }}>
+                    {shortcut.label}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <input aria-label={`Heure de début ${i + 1}`} type="time" value={sl.start} onChange={(e) => setSlot(i, { start: e.target.value })} style={{ ...inp, marginBottom: 0, padding: '10px 9px', fontSize: 12 }} />
+                <input aria-label={`Heure de fin ${i + 1}`} type="time" value={sl.end} onChange={(e) => setSlot(i, { end: e.target.value })} style={{ ...inp, marginBottom: 0, padding: '10px 9px', fontSize: 12 }} />
+              </div>
+              <div style={{ color: sl.start === sl.end ? T.red : T.mu, fontSize: 10, marginTop: 7 }}>
+                {sl.end < sl.start ? `Fin le ${formatLongDay(addDays(sl.date, 1))} · ${formatHours(slotMinutes(sl))}` : `${formatHours(slotMinutes(sl))}`}
+              </div>
             </div>
           ))}
-          {slots.length < 12 && (
-            <button
-              onClick={() => setSlots((prev) => [...prev, { date: prev[prev.length - 1]?.date ?? todayPlus(1), start: '18:00', end: '22:00' }])}
-              style={{ background: 'none', border: `1px dashed ${T.cb}`, color: T.sub, borderRadius: 8, padding: '7px 0', width: '100%', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-            >
-              ＋ Ajouter un créneau
-            </button>
-          )}
-          <div style={{ fontSize: 10, color: tooLong || !consecutiveDays ? T.red : T.mu, marginTop: 6 }}>
-            {tooLong
-              ? 'Une mission dure 3 jours maximum.'
-              : !consecutiveDays
-                ? 'Les jours sélectionnés doivent se suivre.'
-              : minutes > 0
-                ? `Durée totale : ${formatHours(minutes)}${days > 1 ? ` sur ${days} jours` : ''}. Plusieurs créneaux le même jour sont possibles.`
-                : 'Ajoute au moins un créneau (1h minimum).'}
-          </div>
+          <button onClick={addDay} style={{ background: 'none', border: `1px dashed ${T.cb}`, color: T.sub, borderRadius: 9, padding: '9px 0', width: '100%', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+            ＋ Ajouter un jour
+          </button>
         </Fld>
 
-        <Fld label="Nombre de places">
+        <Fld label="Nombre de personnes">
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button onClick={() => setF((x) => ({ ...x, places: Math.max(1, x.places - 1) }))} style={{ width: 30, height: 30, borderRadius: '50%', background: T.row, border: `1px solid ${T.cb}`, color: T.text, fontSize: 15, cursor: 'pointer' }}>−</button>
-            <span style={{ fontSize: 15, fontWeight: 900, color: T.text, minWidth: 70, textAlign: 'center' }}>{f.places} place{f.places > 1 ? 's' : ''}</span>
-            <button onClick={() => setF((x) => ({ ...x, places: Math.min(20, x.places + 1) }))} style={{ width: 30, height: 30, borderRadius: '50%', background: T.grad, border: 'none', color: '#fff', fontSize: 15, cursor: 'pointer' }}>＋</button>
+            <button onClick={() => setF((x) => ({ ...x, positions: Math.max(1, x.positions - 1) }))} style={{ width: 30, height: 30, borderRadius: '50%', background: T.row, border: `1px solid ${T.cb}`, color: T.text, fontSize: 15, cursor: 'pointer' }}>−</button>
+            <span style={{ fontSize: 15, fontWeight: 900, color: T.text, minWidth: 95, textAlign: 'center' }}>{positions} personne{positions > 1 ? 's' : ''}</span>
+            <button onClick={() => setF((x) => ({ ...x, positions: Math.min(20, x.positions + 1) }))} style={{ width: 30, height: 30, borderRadius: '50%', background: T.grad, border: 'none', color: '#fff', fontSize: 15, cursor: 'pointer' }}>＋</button>
           </div>
-        </Fld>
-
-        <Fld label="Descriptif">
-          <textarea aria-label="Descriptif" value={f.desc} onChange={(e) => setF((x) => ({ ...x, desc: e.target.value }))} rows={3} placeholder="Ce que le travailleur fera concrètement…" style={{ ...inp, resize: 'none', lineHeight: 1.5 }} />
         </Fld>
 
         {structure.is_ess && (
           <Fld label="Type de mission">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
               <button onClick={() => setF((x) => ({ ...x, solid: false }))} style={{ background: !f.solid ? '#fff' : T.row, color: !f.solid ? '#000' : T.sub, border: `1px solid ${!f.solid ? '#fff' : T.cb}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
-                € Rémunérée
+                Rémunérée
               </button>
               <button onClick={() => setF((x) => ({ ...x, solid: true }))} style={{ background: f.solid ? '#16a34a' : T.row, color: f.solid ? '#fff' : '#4ade80', border: `1px solid ${f.solid ? '#16a34a' : '#14532d'}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
-                🤝 Solidaire (0 €)
+                Solidaire
               </button>
             </div>
           </Fld>
         )}
 
-        {f.solid ? (
-          <div style={{ background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 9, padding: '11px 13px', marginBottom: 12, fontSize: 10.5, color: T.green, lineHeight: 1.55 }}>
-            🤝 Mission bénévole à 0 €. Elle comptera dans le CV vivant des participants.
-          </div>
-        ) : (
+        {!f.solid && (
           <>
-            <Fld label="Tarif horaire proposé (€ / h)">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <button onClick={() => setF((x) => ({ ...x, hourly: Math.max(MIN_HOURLY_EUR, x.hourly - 1) }))} style={{ width: 34, height: 34, borderRadius: '50%', background: T.row, border: `1px solid ${T.cb}`, color: T.text, fontSize: 18, cursor: 'pointer' }}>
-                  −
+            <Fld label="Tarif">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
+                <button onClick={() => setF((x) => ({ ...x, rateMode: 'hourly' }))} style={{ background: f.rateMode === 'hourly' ? '#fff' : T.row, color: f.rateMode === 'hourly' ? '#000' : T.sub, border: `1px solid ${f.rateMode === 'hourly' ? '#fff' : T.cb}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
+                  À l'heure
                 </button>
-                <input
-                  aria-label="Tarif horaire proposé"
-                  value={String(f.hourly)}
-                  onChange={(e) => setF((x) => ({ ...x, hourly: Math.min(MAX_HOURLY_EUR, Math.max(0, Number(e.target.value.replace(',', '.')) || 0)) }))}
-                  inputMode="decimal"
-                  style={{ ...inp, marginBottom: 0, width: 90, textAlign: 'center', fontSize: 18, fontWeight: 900 }}
-                />
-                <button onClick={() => setF((x) => ({ ...x, hourly: Math.min(MAX_HOURLY_EUR, x.hourly + 1) }))} style={{ width: 34, height: 34, borderRadius: '50%', background: T.grad, border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer' }}>
-                  +
+                <button onClick={() => setF((x) => ({ ...x, rateMode: 'fixed' }))} style={{ background: f.rateMode === 'fixed' ? '#fff' : T.row, color: f.rateMode === 'fixed' ? '#000' : T.sub, border: `1px solid ${f.rateMode === 'fixed' ? '#fff' : T.cb}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
+                  Montant fixe
                 </button>
               </div>
+              <input
+                aria-label={f.rateMode === 'hourly' ? 'Tarif horaire' : 'Montant fixe'}
+                value={f.rateMode === 'hourly' ? f.hourly : f.fixed}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^\d,.]/g, '');
+                  setF((x) => (x.rateMode === 'hourly' ? { ...x, hourly: value } : { ...x, fixed: value }));
+                }}
+                inputMode="decimal"
+                placeholder={f.rateMode === 'hourly' ? '12' : '75'}
+                style={{ ...inp, marginBottom: 0 }}
+              />
             </Fld>
-            <div style={{ marginBottom: 12, background: T.row, border: `1px solid ${T.cb}`, borderRadius: 10, padding: '11px 12px' }}>
-              <div style={{ fontSize: 10.5, color: T.mu, lineHeight: 1.5 }}>
-                Calcul UROSI : {formatHours(minutes || 0)} × {hourly} €/h = <strong style={{ color: T.text }}>{euros(workerTotalCents)}</strong> par personne.
-              </div>
-              <div style={{ marginTop: 7, fontSize: 12.5, fontWeight: 900, color: T.text }}>
-                Coût total estimé : {euros(totalStructureCents)} pour {f.places} place{f.places > 1 ? 's' : ''}
-              </div>
-              {split && (
-                <>
-                  <button
-                    onClick={() => setShowDetail((v) => !v)}
-                    style={{ marginTop: 7, background: 'none', border: 'none', cursor: 'pointer', fontSize: 10.5, color: T.mu, textDecoration: 'underline', fontWeight: 600, padding: 0 }}
-                  >
-                    {showDetail ? 'Masquer le détail par personne' : 'Voir le détail par personne'}
-                  </button>
-                  {showDetail && (
-                    <div style={{ marginTop: 8 }}>
-                      <PriceSplit values={split} side="structure" />
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
           </>
         )}
 
-        {error && <div style={{ fontSize: 11, color: T.red, marginBottom: 10 }}>{error}</div>}
-        <button onClick={publish} disabled={!ok || busy} style={{ width: '100%', background: ok && !busy ? '#fff' : T.row, color: ok && !busy ? '#000' : T.mu, border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: ok && !busy ? 'pointer' : 'not-allowed' }}>
-          {busy ? '…' : ok ? (f.solid ? 'Publier — Solidaire (0 €)' : `Publier — ${euros(workerTotalCents)} / personne`) : 'Complète la mission'}
+        <div style={{ marginBottom: 12, background: T.row, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '12px 13px' }}>
+          <div style={{ color: T.mu, fontSize: 10.5, lineHeight: 1.55, marginBottom: 7 }}>{summary || 'Choisis la date et les horaires.'}</div>
+          <div style={{ color: T.text, fontSize: 12.5, fontWeight: 900, marginBottom: 5 }}>
+            {positions} personne{positions > 1 ? 's' : ''} · {missionDays || 1} jour{(missionDays || 1) > 1 ? 's' : ''} · {formatHours(minutes)} par personne
+          </div>
+          <div style={{ color: T.sub, fontSize: 11, marginBottom: 10 }}>{formatHoursCompact(totalWorkerHours)} de travail au total</div>
+          <div style={{ color: T.text, fontSize: 16, fontWeight: 900 }}>Coût total estimé : {formatMoney(structureTotalCents)}</div>
+          {!f.solid && (
+            <button onClick={() => setShowDetail((v) => !v)} style={{ marginTop: 9, background: 'none', border: 'none', cursor: 'pointer', fontSize: 10.5, color: T.mu, textDecoration: 'underline', fontWeight: 600, padding: 0 }}>
+              {showDetail ? 'Masquer le détail' : 'Voir le détail'}
+            </button>
+          )}
+          {showDetail && !f.solid && (
+            <div style={{ marginTop: 9, borderTop: `1px solid ${T.cb}`, paddingTop: 9, display: 'grid', gap: 7 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: T.sub, fontSize: 11 }}><span>Rémunération totale des travailleurs</span><strong style={{ color: T.text }}>{formatMoney(workerSubtotalCents)}</strong></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: T.sub, fontSize: 11 }}><span>Frais de service UROSI</span><strong style={{ color: T.text }}>{formatMoney(serviceFeeCents)}</strong></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: T.text, fontSize: 12, fontWeight: 900 }}><span>Total à payer</span><span>{formatMoney(structureTotalCents)}</span></div>
+            </div>
+          )}
+          {f.solid && <div style={{ color: T.green, fontSize: 11, fontWeight: 800, marginTop: 8 }}>Mission solidaire : aucun coût, comptabilisée dans le CV vivant.</div>}
+        </div>
+
+        <Fld label="Descriptif">
+          <textarea aria-label="Descriptif" value={f.desc} onChange={(e) => setF((x) => ({ ...x, desc: e.target.value }))} rows={3} placeholder="Ce que le travailleur fera concrètement…" style={{ ...inp, resize: 'none', lineHeight: 1.5 }} />
+        </Fld>
+
+        {(error || validationMessage) && <div style={{ fontSize: 11, color: T.red, marginBottom: 10 }}>{error || validationMessage}</div>}
+        <button onClick={publish} disabled={!ok} style={{ width: '100%', background: ok ? '#fff' : T.row, color: ok ? '#000' : T.mu, border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: ok ? 'pointer' : 'not-allowed' }}>
+          {busy ? '…' : f.solid ? 'Publier — Solidaire' : `Publier — ${formatMoney(structureTotalCents)}`}
         </button>
       </div>
     </div>

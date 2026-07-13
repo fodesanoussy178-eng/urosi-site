@@ -5,7 +5,10 @@ import type { MissionSlot } from '@/types/database.types';
 export function slotMinutes(s: MissionSlot): number {
   const [sh, sm] = s.start.split(':').map(Number);
   const [eh, em] = s.end.split(':').map(Number);
-  return (eh ?? 0) * 60 + (em ?? 0) - ((sh ?? 0) * 60 + (sm ?? 0));
+  const start = (sh ?? 0) * 60 + (sm ?? 0);
+  const end = (eh ?? 0) * 60 + (em ?? 0);
+  if (end === start) return 0;
+  return end > start ? end - start : end + 1440 - start;
 }
 
 export function totalMinutes(slots: MissionSlot[]): number {
@@ -52,7 +55,7 @@ export function scheduleSummary(slots: MissionSlot[] | null, fallbackDate: strin
     const ranges = slots
       .slice()
       .sort((a, b) => a.start.localeCompare(b.start))
-      .map((s) => `${s.start}–${s.end}`)
+      .map((s) => `${s.start}–${s.end}${s.end < s.start ? ' +1' : ''}`)
       .join(' et ');
     return `${formatDay(first)} · ${ranges}`;
   }
@@ -66,6 +69,6 @@ export function groupByDay(slots: MissionSlot[]): Array<{ date: string; ranges: 
     ranges: slots
       .filter((s) => s.date === date)
       .sort((a, b) => a.start.localeCompare(b.start))
-      .map((s) => `${s.start} – ${s.end}`),
+      .map((s) => `${s.start} – ${s.end}${s.end < s.start ? ' +1' : ''}`),
   }));
 }

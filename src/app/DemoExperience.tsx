@@ -11,6 +11,14 @@ import { hasDemoFounderAccess, hasRememberedFounderAccess, isDemoFounderCode, is
 const DEMO_SECONDS = 30;
 const DEMO_KEY = 'urosi_internal_demo_seconds_v1';
 const DEMO_SHARED_KEY = 'urosi_founder_demo_shared_v1';
+const DEMO_SERVICE_FEE_RATE = 0.18;
+
+const DEMO_SHORTCUTS = [
+  { label: 'Matin', start: '08:00', end: '12:00' },
+  { label: 'Après-midi', start: '13:00', end: '17:00' },
+  { label: 'Soir', start: '18:00', end: '23:00' },
+  { label: 'Nuit', start: '22:00', end: '03:00' },
+];
 
 type DemoRole = 'worker' | 'structure';
 type WorkerTab = 'flux' | 'moi' | 'wallet';
@@ -48,6 +56,12 @@ type DemoSharedState = {
   publishedMissions: DemoMission[];
   candidates: DemoCandidate[];
   acceptedMissionIds: string[];
+};
+
+type DemoMissionDay = {
+  date: string;
+  start: string;
+  end: string;
 };
 
 const workerMissions: DemoMission[] = [
@@ -663,6 +677,41 @@ function BottomTabs({ tabs, current, onChange }: { tabs: [string, string][]; cur
   );
 }
 
+function demoTodayPlus(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function demoAddDays(date: string, days: number): string {
+  const d = new Date(`${date}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function demoSlotMinutes(day: DemoMissionDay): number {
+  if (!day.start || !day.end || day.start === day.end) return 0;
+  const startParts = day.start.split(':').map(Number);
+  const endParts = day.end.split(':').map(Number);
+  const sh = startParts[0] ?? NaN;
+  const sm = startParts[1] ?? NaN;
+  const eh = endParts[0] ?? NaN;
+  const em = endParts[1] ?? NaN;
+  if ([sh, sm, eh, em].some((n) => !Number.isFinite(n))) return 0;
+  const start = sh * 60 + sm;
+  const end = eh * 60 + em;
+  return end > start ? end - start : end + 1440 - start;
+}
+
+function demoHours(minutes: number): string {
+  const hours = minutes / 60;
+  return Number.isInteger(hours) ? `${hours} h` : `${hours.toFixed(1).replace('.', ',')} h`;
+}
+
+function demoDayLabel(date: string): string {
+  return new Date(`${date}T00:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
 function PublishDemoModal({
   isAsso,
   onClose,
@@ -672,10 +721,33 @@ function PublishDemoModal({
   onClose: () => void;
   onPublish: (mission: DemoMission) => void;
 }) {
-  const [f, setF] = useState({ title: 'Renfort service du midi', place: 'Lille centre', hourly: isAsso ? 0 : 14, places: 2, duration: 3, days: 1, solid: isAsso });
-  const workerAmount = f.solid ? 0 : f.hourly * f.duration * f.days;
-  const ok = f.title.trim().length >= 2 && f.place.trim().length >= 2 && (f.solid || workerAmount > 0);
-  const total = f.solid ? 0 : Math.round(workerAmount * f.places * 1.18);
+  const [f, setF] = useState({ title: 'Renfort service du midi', place: 'Lille centre', hourly: isAsso ? 0 : 14, places: 2, solid: isAsso });
+  const [days, setDays] = useState<DemoMissionDay[]>([{ date: demoTodayPlus(1), start: '12:00', end: '16:00' }]);
+  const [showDetail, setShowDetail] = useState(false);
+  const minutes = days.reduce((sum, day) => sum + demoSlotMinutes(day), 0);
+  const workerAmount = f.solid ? 0 : Math.round(f.hourly * (minutes / 60));
+  const workerSubtotal = workerAmount * f.places;
+  const serviceFee = f.solid ? 0 : Math.round(workerSubtotal * DEMO_SERVICE_FEE_RATE);
+  const total = workerSubtotal + serviceFee;
+  const firstDay = days[0] ?? { date: demoTodayPlus(1), start: '12:00', end: '16:00' };
+  const ok = f.title.trim().length >= 2 && f.place.trim().length >= 2 && days.every((day) => day.date && day.start && day.end && demoSlotMinutes(day) > 0) && (f.solid || workerAmount > 0);
+
+  function setDay(i: number, patch: Partial<DemoMissionDay>) {
+    setDays((prev) => prev.map((day, idx) => (idx === i ? { ...day, ...patch } : day)));
+  }
+
+  function addDay() {
+    setDays((prev) => {
+      const last = prev[prev.length - 1] ?? firstDay;
+      return [...prev, { date: demoAddDays(last.date, 1), start: last.start, end: last.end }];
+    });
+  }
+
+  const whenLabel =
+    days.length === 1
+      ? `${demoDayLabel(firstDay.date)} · ${firstDay.start}-${firstDay.end}${firstDay.end < firstDay.start ? ' +1' : ''}`
+      : `${days.length} jours · ${demoHours(minutes)} par personne`;
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.74)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 200 }} onClick={onClose}>
       <div style={{ width: '100%', maxWidth: 430, maxHeight: '90vh', overflowY: 'auto', background: T.card, borderRadius: '24px 24px 0 0', padding: '20px 18px 28px' }} onClick={(e) => e.stopPropagation()}>
@@ -704,33 +776,55 @@ function PublishDemoModal({
           </Fld>
         </div>
         <Fld label="Horaires">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 6, marginBottom: 8 }}>
-            {[1, 2, 3, 4, 5].map((h) => (
-              <button key={h} onClick={() => setF((x) => ({ ...x, duration: h }))} style={{ background: f.duration === h ? '#fff' : T.row, color: f.duration === h ? '#05060d' : T.sub, border: `1px solid ${f.duration === h ? '#fff' : T.cb}`, borderRadius: 16, padding: '9px 0', fontWeight: 900, cursor: 'pointer' }}>{h}h</button>
-            ))}
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6 }}>
-            {[1, 2, 3].map((d) => (
-              <button key={d} onClick={() => setF((x) => ({ ...x, days: d }))} style={{ background: f.days === d ? '#fff' : T.row, color: f.days === d ? '#05060d' : T.sub, border: `1px solid ${f.days === d ? '#fff' : T.cb}`, borderRadius: 16, padding: '9px 0', fontWeight: 900, cursor: 'pointer' }}>{d}j</button>
-            ))}
-          </div>
+          {days.map((day, i) => (
+            <div key={`${day.date}-${i}`} style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 10, marginBottom: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <strong style={{ color: T.text, fontSize: 12 }}>Jour {i + 1}</strong>
+                {days.length > 1 && (
+                  <button onClick={() => setDays((prev) => prev.filter((_, idx) => idx !== i))} style={{ background: 'rgba(239,68,68,.14)', color: '#f87171', border: 'none', borderRadius: 8, width: 26, height: 26, cursor: 'pointer' }}>×</button>
+                )}
+              </div>
+              <input type="date" value={day.date} onChange={(e) => setDay(i, { date: e.target.value })} style={{ ...inp, marginBottom: 8, padding: '10px 9px', fontSize: 12 }} />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 5, marginBottom: 8 }}>
+                {DEMO_SHORTCUTS.map((shortcut) => (
+                  <button key={shortcut.label} onClick={() => setDay(i, { start: shortcut.start, end: shortcut.end })} style={{ background: T.card, color: T.sub, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 0', fontSize: 9.5, fontWeight: 800, cursor: 'pointer' }}>
+                    {shortcut.label}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <input type="time" value={day.start} onChange={(e) => setDay(i, { start: e.target.value })} style={{ ...inp, marginBottom: 0, padding: '10px 9px', fontSize: 12 }} />
+                <input type="time" value={day.end} onChange={(e) => setDay(i, { end: e.target.value })} style={{ ...inp, marginBottom: 0, padding: '10px 9px', fontSize: 12 }} />
+              </div>
+              <div style={{ color: T.mu, fontSize: 10, marginTop: 7 }}>{day.end < day.start ? `Fin le lendemain · ${demoHours(demoSlotMinutes(day))}` : demoHours(demoSlotMinutes(day))}</div>
+            </div>
+          ))}
+          <button onClick={addDay} style={{ background: 'none', border: `1px dashed ${T.cb}`, color: T.sub, borderRadius: 9, padding: '9px 0', width: '100%', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+            + Ajouter un jour
+          </button>
         </Fld>
         <div style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 13, marginBottom: 14 }}>
           <div style={{ color: T.mu, fontSize: 11, lineHeight: 1.45, marginBottom: 8 }}>
-            {f.solid ? 'Mission bénévole : aucun coût.' : `${f.duration} h × ${f.days} jour${f.days > 1 ? 's' : ''} × ${f.hourly} €/h = ${workerAmount} € / personne`}
+            {whenLabel}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: T.sub, fontSize: 12, marginBottom: 6 }}>
-            <span>{f.solid ? 'Mission solidaire' : `Rémunération x ${f.places}`}</span>
-            <strong style={{ color: T.text }}>{f.solid ? '0 €' : `${workerAmount * f.places} €`}</strong>
+          <div style={{ color: T.text, fontSize: 13, fontWeight: 900, marginBottom: 6 }}>
+            {f.places} personne{f.places > 1 ? 's' : ''} · {days.length} jour{days.length > 1 ? 's' : ''} · {demoHours(minutes)} par personne
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: T.sub, fontSize: 12 }}>
-            <span>Commission structure 18 %</span>
-            <strong style={{ color: T.text }}>{f.solid ? '0 €' : `${total - workerAmount * f.places} €`}</strong>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: T.text, fontSize: 14, fontWeight: 900, borderTop: `1px solid ${T.cb}`, paddingTop: 9, marginTop: 9 }}>
-            <span>Total wallet</span>
-            <span>{total} €</span>
-          </div>
+          <div style={{ color: T.sub, fontSize: 11, marginBottom: 9 }}>{demoHours((minutes * f.places))} de travail au total</div>
+          <div style={{ color: T.text, fontSize: 15, fontWeight: 900 }}>Coût total estimé : {total} €</div>
+          {!f.solid && (
+            <button onClick={() => setShowDetail((v) => !v)} style={{ marginTop: 8, background: 'none', border: 'none', color: T.mu, textDecoration: 'underline', fontSize: 10.5, padding: 0, cursor: 'pointer' }}>
+              {showDetail ? 'Masquer le détail' : 'Voir le détail'}
+            </button>
+          )}
+          {showDetail && !f.solid && (
+            <div style={{ borderTop: `1px solid ${T.cb}`, marginTop: 9, paddingTop: 9, display: 'grid', gap: 7 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: T.sub, fontSize: 12 }}><span>Rémunération totale des travailleurs</span><strong style={{ color: T.text }}>{workerSubtotal} €</strong></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: T.sub, fontSize: 12 }}><span>Frais de service UROSI</span><strong style={{ color: T.text }}>{serviceFee} €</strong></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: T.text, fontSize: 13, fontWeight: 900 }}><span>Total à payer</span><span>{total} €</span></div>
+            </div>
+          )}
+          {f.solid && <div style={{ color: T.green, fontSize: 11, fontWeight: 800, marginTop: 8 }}>Mission solidaire : aucun coût, comptabilisée dans le CV vivant.</div>}
         </div>
         <Button
           disabled={!ok}
@@ -741,8 +835,8 @@ function PublishDemoModal({
               structure: isAsso || f.solid ? 'Banque Alimentaire' : 'Burger Nord',
               amount: workerAmount,
               city: f.place.trim(),
-              when: f.days === 1 ? `Aujourd’hui · ${f.duration} h` : `${f.days} jours · ${f.duration} h/jour`,
-              duration: `${f.duration * f.days} h`,
+              when: whenLabel,
+              duration: demoHours(minutes),
               rating: isAsso || f.solid ? 4.8 : 4.7,
               distance: 'démo',
               solid: f.solid,
