@@ -64,16 +64,6 @@ export async function signOut() {
   if (error) throw error;
 }
 
-export async function claimFounderAccess(code: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc('claim_founder_access', { p_code: code });
-  if (error) throw error;
-  if (data) {
-    const { data: userData } = await supabase.auth.getUser();
-    rememberFounderAccess(userData.user?.id);
-  }
-  return Boolean(data);
-}
-
 export async function hasFounderAccess(): Promise<boolean> {
   const { data, error } = await supabase.rpc('has_founder_access');
   if (error) throw error;

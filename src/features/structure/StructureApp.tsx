@@ -21,7 +21,6 @@ import { confirmRemoteAttendance, reportWorkerAbsence } from '@/features/mission
 import { fetchUnreadCounts } from '@/features/messages/messagesService';
 import { geocodeMelCity } from '@/lib/geo';
 import { distinctDays, slotMinutes, spanDays, totalMinutes } from '@/lib/slots';
-import { hasRememberedFounderAccess, isFounderEmail } from '@/lib/founder';
 import { formatSiret, isValidSiret, normalizeSiret } from '@/features/structure/verification';
 import type { Mission, Structure } from '@/features/missions/types';
 import type { MissionDayOfWeek, MissionSlot, MissionTimeSlot } from '@/types/database.types';
@@ -186,7 +185,9 @@ export function StructureApp() {
     (async () => {
       if (!session) return;
       try {
-        const founder = isFounderEmail(session.user.email) || hasRememberedFounderAccess(session.user.id) || (await hasFounderAccess().catch(() => false));
+        // L'acces fondateur vient uniquement de Supabase. Une valeur locale
+        // ne doit jamais piloter un contournement de verification en prod.
+        const founder = await hasFounderAccess().catch(() => false);
         setFounderAccess(founder);
         let mine = await fetchMyStructures(session.user.id);
         if (mine.length === 0) {
@@ -351,6 +352,7 @@ export function StructureApp() {
           </div>
           <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
             {session && <NotificationBell profileId={session.user.id} onDataChanged={() => reload().catch(() => undefined)} />}
+            {founderAccess && <button onClick={() => window.location.assign('/fondateur/kyc')} style={{ fontSize: 10, color: T.cyan, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>KYC</button>}
             <button onClick={() => setDocKey('cgu')} style={{ fontSize: 10, color: T.mu, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>? Aide</button>
             <button onClick={() => signOut()} style={{ fontSize: 10, color: T.mu, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>Déconnexion</button>
           </div>

@@ -228,6 +228,38 @@ export interface Database {
           },
         ];
       };
+      kyc_status_history: {
+        Row: {
+          id: number;
+          profile_id: string;
+          previous_status: ProfileKycStatus | null;
+          new_status: ProfileKycStatus;
+          reason: string | null;
+          source: 'system' | 'mission_acceptance' | 'worker_submit' | 'founder_review';
+          changed_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          profile_id: string;
+          previous_status?: ProfileKycStatus | null;
+          new_status: ProfileKycStatus;
+          reason?: string | null;
+          source?: 'system' | 'mission_acceptance' | 'worker_submit' | 'founder_review';
+          changed_by?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['kyc_status_history']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'kyc_status_history_profile_id_fkey';
+            columns: ['profile_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       missions: {
         Row: {
           id: string;
@@ -1013,10 +1045,6 @@ export interface Database {
       };
     };
     Functions: {
-      claim_founder_access: {
-        Args: { p_code: string };
-        Returns: boolean;
-      };
       compute_mission_pricing: {
         Args: {
           p_structure_id: string;
@@ -1038,6 +1066,34 @@ export interface Database {
       has_founder_access: {
         Args: Record<string, never>;
         Returns: boolean;
+      };
+      submit_worker_kyc: {
+        Args: {
+          p_iban_country: string;
+          p_iban_last4: string;
+          p_document_name: string;
+          p_document_path: string;
+        };
+        Returns: Database['public']['Tables']['profiles']['Row'];
+      };
+      founder_list_kyc_submissions: {
+        Args: Record<string, never>;
+        Returns: Array<{
+          profile_id: string;
+          full_name: string;
+          kyc_status: ProfileKycStatus;
+          kyc_requested_at: string | null;
+          kyc_submitted_at: string | null;
+          iban_country: string | null;
+          iban_last4: string | null;
+          identity_document_name: string | null;
+          identity_document_path: string | null;
+          identity_document_uploaded_at: string | null;
+        }>;
+      };
+      founder_set_kyc_status: {
+        Args: { p_profile_id: string; p_status: 'verified' | 'rejected'; p_reason?: string | null };
+        Returns: undefined;
       };
       withdraw_wallet: {
         Args: { p_amount_cents: number };

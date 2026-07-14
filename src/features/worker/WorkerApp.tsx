@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { signOut } from '@/features/auth/authService';
-import { updateProfile, uploadIdentityDocument, type Profile } from '@/features/profile/profileService';
+import { submitWorkerKyc, updateProfile, uploadIdentityDocument, type Profile } from '@/features/profile/profileService';
 import { T, FONT, inp } from '@/components/ui/theme';
 import { Fld } from '@/components/ui/Fld';
 import { QRBadge } from '@/components/ui/QRBadge';
@@ -959,15 +959,16 @@ export function WorkerApp() {
 
         {kycFor && session && (
           <KycSheet
-            profile={profile}
             missionTitle={kycFor.mission?.title ?? 'Mission acceptée'}
             onClose={() => setKycFor(null)}
             onSave={async (updates, file) => {
-              const uploaded = file ? await uploadIdentityDocument(session.user.id, file) : null;
-              await updateProfile(session.user.id, {
-                ...updates,
-                identity_document_name: uploaded?.name ?? updates.identity_document_name,
-                identity_document_path: uploaded?.path ?? updates.identity_document_path,
+              if (!file) throw new Error("Ajoute une pièce d'identité.");
+              const uploaded = await uploadIdentityDocument(session.user.id, file);
+              await submitWorkerKyc({
+                ibanCountry: updates.ibanCountry,
+                ibanLast4: updates.ibanLast4,
+                documentName: uploaded.name,
+                documentPath: uploaded.path,
               });
               await refreshProfile();
               notif('Infos envoyées ✓ Tu peux maintenant pointer la mission.');
@@ -982,24 +983,22 @@ export function WorkerApp() {
 }
 
 function KycSheet({
-  profile,
   missionTitle,
   onClose,
   onSave,
 }: {
-  profile: Profile | null;
   missionTitle: string;
   onClose: () => void;
-  onSave: (updates: ProfileUpdate, file: File | null) => Promise<void>;
+  onSave: (updates: { ibanCountry: string; ibanLast4: string }, file: File | null) => Promise<void>;
 }) {
   const [iban, setIban] = useState('');
-  const [docName, setDocName] = useState(profile?.identity_document_name ?? '');
+  const [docName, setDocName] = useState('');
   const [docFile, setDocFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const ibanClean = normalizeIban(iban);
   const ibanOk = /^[A-Z]{2}[0-9]{2}[A-Z0-9]{10,30}$/.test(ibanClean);
-  const ok = ibanOk && (docFile !== null || docName.trim().length >= 3);
+  const ok = ibanOk && docFile !== null;
 
   async function submit() {
     if (!ok || busy) return;
@@ -1007,16 +1006,9 @@ function KycSheet({
     setError(null);
     let saved = false;
     try {
-      const now = new Date().toISOString();
       await onSave({
-        kyc_status: 'submitted',
-        kyc_requested_at: profile?.kyc_requested_at ?? now,
-        kyc_submitted_at: now,
-        iban_country: ibanClean.slice(0, 2),
-        iban_last4: ibanClean.slice(-4),
-        identity_document_name: docName.trim(),
-        identity_document_path: profile?.identity_document_path ?? null,
-        identity_document_uploaded_at: now,
+        ibanCountry: ibanClean.slice(0, 2),
+        ibanLast4: ibanClean.slice(-4),
       }, docFile);
       saved = true;
       onClose();
@@ -1060,7 +1052,7 @@ function KycSheet({
             onChange={(e) => {
               const file = e.target.files?.[0] ?? null;
               setDocFile(file);
-              setDocName(file?.name ?? profile?.identity_document_name ?? '');
+              setDocName(file?.name ?? '');
             }}
             style={{ ...inp, padding: '10px 12px' }}
           />
@@ -1075,7 +1067,7 @@ function KycSheet({
           {busy ? '…' : ok ? 'Valider et débloquer le QR' : 'Ajoute IBAN et pièce'}
         </button>
         <div style={{ fontSize: 9, color: T.mu, lineHeight: 1.45, marginTop: 10 }}>
-          Le fichier est envoyé dans le bucket privé KYC. L'IBAN complet n'est pas stocké en clair dans la table profil.
+          Le fichier est envoyé dans le bucket privé KYC. L'IBAN complet n'est pas stocké en clair dans la table profil. Le retrait reste bloqué jusqu'à la vérification du dossier.
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { Database, ProfileKycStatus } from '@/types/database.types';
+import type { Database } from '@/types/database.types';
 
 export type Profile = Database['public']['Tables']['profiles']['Row'];
 
@@ -18,27 +18,48 @@ export async function updateProfile(
     phone?: string | null;
     bio?: string | null;
     skills?: string[];
-    kyc_status?: ProfileKycStatus;
-    kyc_requested_at?: string | null;
-    kyc_submitted_at?: string | null;
-    iban_country?: string | null;
-    iban_last4?: string | null;
-    identity_document_name?: string | null;
-    identity_document_path?: string | null;
-    identity_document_uploaded_at?: string | null;
   },
 ) {
   const { error } = await supabase.from('profiles').update(updates).eq('id', userId);
   if (error) throw error;
 }
 
+const KYC_MAX_FILE_SIZE = 10 * 1024 * 1024;
+const KYC_FILE_EXTENSIONS: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'application/pdf': 'pdf',
+};
+
 export async function uploadIdentityDocument(userId: string, file: File): Promise<{ path: string; name: string }> {
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-90) || 'identity-document';
-  const path = `${userId}/${Date.now()}-${safeName}`;
+  const extension = KYC_FILE_EXTENSIONS[file.type];
+  if (!extension) throw new Error('Format refusé : utilise JPG, PNG, WebP ou PDF.');
+  if (file.size <= 0 || file.size > KYC_MAX_FILE_SIZE) throw new Error('Le document doit faire moins de 10 Mo.');
+
+  // Le nom original n'est jamais utilise dans le chemin Storage : il peut
+  // contenir des informations personnelles et n'est pas une source fiable.
+  const path = `${userId}/${crypto.randomUUID()}.${extension}`;
   const { error } = await supabase.storage.from('kyc-documents').upload(path, file, {
-    contentType: file.type || undefined,
+    contentType: file.type,
     upsert: false,
   });
   if (error) throw error;
-  return { path, name: file.name };
+  return { path, name: file.name.slice(0, 160) };
+}
+
+export async function submitWorkerKyc(input: {
+  ibanCountry: string;
+  ibanLast4: string;
+  documentName: string;
+  documentPath: string;
+}): Promise<Profile> {
+  const { data, error } = await supabase.rpc('submit_worker_kyc', {
+    p_iban_country: input.ibanCountry,
+    p_iban_last4: input.ibanLast4,
+    p_document_name: input.documentName,
+    p_document_path: input.documentPath,
+  });
+  if (error) throw error;
+  return data as Profile;
 }
