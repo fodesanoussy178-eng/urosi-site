@@ -703,6 +703,7 @@ export interface Database {
           worker_id: string;
           score: number;
           direction: RatingDirection;
+          comment: string | null;
           created_at: string;
         };
         Insert: {
@@ -712,6 +713,7 @@ export interface Database {
           worker_id: string;
           score: number;
           direction?: RatingDirection;
+          comment?: string | null;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['ratings']['Insert']>;
@@ -1094,6 +1096,32 @@ export interface Database {
       founder_set_kyc_status: {
         Args: { p_profile_id: string; p_status: 'verified' | 'rejected'; p_reason?: string | null };
         Returns: undefined;
+      };
+      public_structure_rating_summary: {
+        Args: { p_structure_ids: string[] };
+        Returns: Array<{ structure_id: string; average: number; review_count: number }>;
+      };
+      worker_public_rating_summary: {
+        Args: { p_worker_id: string };
+        Returns: Json;
+      };
+      structure_weekly_reviews: {
+        Args: { p_structure_id: string };
+        Returns: Array<{ score: number; comment: string | null; published_week: string }>;
+      };
+      structure_mission_history: {
+        Args: { p_structure_id: string };
+        Returns: Array<{
+          mission_id: string;
+          title: string;
+          scheduled_date: string;
+          address: string | null;
+          completed_workers: number;
+          worker_paid_cents: number;
+          commission_cents: number;
+          total_expense_cents: number;
+          paid_at: string | null;
+        }>;
       };
       withdraw_wallet: {
         Args: { p_amount_cents: number };

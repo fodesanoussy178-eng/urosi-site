@@ -9,6 +9,7 @@ import { ChatSheet } from '@/components/ui/ChatSheet';
 import { WalletCard } from '@/components/ui/WalletCard';
 import { fetchMyStructures, createStructure, updateStructureAbout, subscribeStructure } from './structureService';
 import { StatsPanel } from './StatsPanel';
+import { StructureHistoryPanel } from './StructureHistoryPanel';
 import { fetchMissionsForStructure, createMission } from '@/features/missions/missionsService';
 import {
   fetchApplicationsForMission,
@@ -608,6 +609,7 @@ export function StructureApp() {
             {tab === 'pilotage' && session && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <StatsPanel structureId={structure.id} />
+                <StructureHistoryPanel structureId={structure.id} />
                 <WalletCard profileId={session.user.id} mode="structure" notif={notif} />
                 <AideRegles onOpen={setDocKey} />
                 <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '13px 15px' }}>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Logo } from '@/components/ui/Logo';
 import { Stars } from '@/components/ui/Stars';
 import { Fld } from '@/components/ui/Fld';
@@ -27,7 +27,7 @@ const DEMO_SHORTCUTS = [
 
 type DemoRole = 'worker' | 'structure';
 type WorkerTab = 'flux' | 'moi' | 'wallet';
-type StructureTab = 'missions' | 'candidats' | 'habitues';
+type StructureTab = 'missions' | 'candidats' | 'habitues' | 'historique';
 type StructureKind = 'pme' | 'asso';
 type CandidateStatus = 'pending' | 'accepted' | 'rejected';
 
@@ -220,6 +220,45 @@ const structureSeed: Record<
     regulars: [],
   },
 };
+
+const demoStructureHistory: Record<StructureKind, Array<{ date: string; title: string; address: string; amount: number }>> = {
+  pme: [
+    { date: '2026-07-10', title: 'Renfort service soir', address: '12 rue Nationale, Lille', amount: 76 },
+    { date: '2026-07-08', title: 'Rush du midi', address: '12 rue Nationale, Lille', amount: 54 },
+    { date: '2026-07-05', title: 'Préparation événement', address: '8 place Rihour, Lille', amount: 132 },
+    { date: '2026-07-02', title: 'Renfort comptoir', address: '12 rue Nationale, Lille', amount: 61 },
+    { date: '2026-06-28', title: 'Service du samedi', address: '12 rue Nationale, Lille', amount: 88 },
+    { date: '2026-06-24', title: 'Inventaire cuisine', address: '12 rue Nationale, Lille', amount: 47 },
+    { date: '2026-06-20', title: 'Renfort livraison', address: '4 rue de Béthune, Lille', amount: 69 },
+  ],
+  asso: [
+    { date: '2026-07-11', title: 'Distribution alimentaire', address: '18 rue du Faubourg, Lille', amount: 0 },
+    { date: '2026-07-04', title: 'Préparation des colis', address: '18 rue du Faubourg, Lille', amount: 0 },
+    { date: '2026-06-27', title: 'Accueil des bénéficiaires', address: '18 rue du Faubourg, Lille', amount: 0 },
+    { date: '2026-06-20', title: 'Collecte solidaire', address: '2 avenue de Dunkerque, Lomme', amount: 0 },
+    { date: '2026-06-13', title: 'Tri des dons', address: '18 rue du Faubourg, Lille', amount: 0 },
+    { date: '2026-06-06', title: 'Distribution du samedi', address: '18 rue du Faubourg, Lille', amount: 0 },
+  ],
+};
+
+function downloadDemoHistory(kind: StructureKind) {
+  const rows = demoStructureHistory[kind];
+  const cell = (value: string | number) => {
+    const text = String(value);
+    const safeText = /^[=+\-@]/.test(text) ? `'${text}` : text;
+    return `"${safeText.replaceAll('"', '""')}"`;
+  };
+  const csv = `\uFEFFDate;Mission;Adresse;Dépense totale (€)\n${rows.map((row) => [row.date, row.title, row.address, row.amount.toFixed(2)].map(cell).join(';')).join('\n')}`;
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'urosi-demo-depenses.csv';
+  link.hidden = true;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
 
 function emptyDemoState(): DemoSharedState {
   return { publishedMissions: [], candidates: [], acceptedMissionIds: [] };
@@ -438,7 +477,7 @@ function TopBar({
         {founder && <span style={{ fontSize: 10, color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 14, padding: '5px 10px', fontWeight: 900 }}>Accès fondateur</span>}
         {onBack && (
           <button onClick={onBack} style={{ background: T.row, color: T.sub, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
-            ← Accueil
+            ← Choix démo
           </button>
         )}
       </div>
@@ -964,6 +1003,7 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
   const [candidates, setCandidates] = useState<DemoCandidate[]>(() => structureCandidates('pme'));
   const [panel, setPanel] = useState<DemoCandidate | null>(null);
   const [showPub, setShowPub] = useState(false);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -1064,6 +1104,7 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
             ['missions', `Missions ${missions.length}`],
             ['candidats', `Candidats ${pending.length}`],
             ['habitues', `Habitués ${regulars.length}`],
+            ['historique', 'Historique'],
           ]}
           current={tab}
           onChange={(v) => setTab(v as StructureTab)}
@@ -1108,6 +1149,35 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
                 </div>
                 <Button tone="ghost" onClick={onSwitchWorker}>Basculer côté travailleur →</Button>
               </div>
+            </div>
+          </div>
+        )}
+        {tab === 'historique' && (
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 16, padding: 15 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', marginBottom: 10 }}>
+                <div>
+                  <div style={{ color: T.text, fontSize: 13, fontWeight: 900 }}>Missions terminées</div>
+                  <div style={{ color: T.mu, fontSize: 9 }}>5 affichées par défaut</div>
+                </div>
+                <button onClick={() => downloadDemoHistory(kind)} style={{ background: T.row, color: T.cyan, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 9px', fontSize: 9.5, fontWeight: 800, cursor: 'pointer' }}>Télécharger</button>
+              </div>
+              {(historyExpanded ? demoStructureHistory[kind] : demoStructureHistory[kind].slice(0, 5)).map((row) => (
+                <div key={`${row.date}-${row.title}`} style={{ borderTop: `1px solid ${T.cb}`, padding: '9px 0', display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                  <div>
+                    <div style={{ color: T.text, fontSize: 11, fontWeight: 800 }}>{row.title}</div>
+                    <div style={{ color: T.mu, fontSize: 9, marginTop: 3 }}>{new Date(`${row.date}T12:00:00`).toLocaleDateString('fr-FR')} · 📍 {row.address}</div>
+                  </div>
+                  <div style={{ color: row.amount === 0 ? T.green : T.text, fontWeight: 900, fontSize: 11, whiteSpace: 'nowrap' }}>{row.amount === 0 ? 'Solidaire' : `${row.amount} €`}</div>
+                </div>
+              ))}
+              {demoStructureHistory[kind].length > 5 && <Button tone="ghost" onClick={() => setHistoryExpanded((value) => !value)}>{historyExpanded ? 'Réduire' : 'Voir tout l’historique'}</Button>}
+            </div>
+            <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 16, padding: 15 }}>
+              <div style={{ color: T.text, fontSize: 13, fontWeight: 900 }}>Avis anonymes</div>
+              <div style={{ color: T.mu, fontSize: 9, margin: '3px 0 9px' }}>Publication le lundi par lots de 3 avis · sinon report · aucun auteur affiché</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}><Stars n={4.7} size={13} /><strong>4,7</strong><span style={{ color: T.mu, fontSize: 10 }}>(21 avis)</span></div>
+              <div style={{ color: T.sub, fontSize: 10.5, borderTop: `1px solid ${T.cb}`, marginTop: 9, paddingTop: 9 }}>★★★★★ · « Équipe accueillante et consignes claires. »</div>
             </div>
           </div>
         )}
@@ -1272,6 +1342,7 @@ function DemoLimitOverlay({ role, onUnlock }: { role: DemoRole; onUnlock: () => 
 
 export function DemoExperience() {
   const { session } = useAuth();
+  const navigate = useNavigate();
   const [params] = useSearchParams();
   const initialRole = params.get('role') === 'structure' ? 'structure' : params.get('role') === 'worker' ? 'worker' : null;
   const [role, setRole] = useState<DemoRole | null>(initialRole);
@@ -1331,6 +1402,11 @@ export function DemoExperience() {
     setDemoVersion((value) => value + 1);
   }
 
+  function returnToDemoChoice() {
+    setRole(null);
+    navigate('/demo', { replace: true });
+  }
+
   if (!role) {
     return (
       <DemoShell>
@@ -1369,9 +1445,9 @@ export function DemoExperience() {
       )}
       <DemoShell>
         {role === 'worker' ? (
-          <WorkerDemo key={`worker-${demoVersion}`} founder={founder} onBack={() => setRole(null)} />
+          <WorkerDemo key={`worker-${demoVersion}`} founder={founder} onBack={returnToDemoChoice} />
         ) : (
-          <StructureDemo key={`structure-${demoVersion}`} founder={founder} onBack={() => setRole(null)} onSwitchWorker={() => setRole('worker')} />
+          <StructureDemo key={`structure-${demoVersion}`} founder={founder} onBack={returnToDemoChoice} onSwitchWorker={() => setRole('worker')} />
         )}
       </DemoShell>
       {frozen && <DemoLimitOverlay role={role} onUnlock={() => {
