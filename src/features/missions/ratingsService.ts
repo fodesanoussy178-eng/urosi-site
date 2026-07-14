@@ -15,6 +15,7 @@ export async function rate(input: {
   workerId: string;
   score: number;
   direction: RatingDirection;
+  comment?: string;
 }): Promise<void> {
   const { error } = await supabase.from('ratings').insert({
     application_id: input.applicationId,
@@ -22,26 +23,18 @@ export async function rate(input: {
     worker_id: input.workerId,
     score: input.score,
     direction: input.direction,
+    comment: input.comment?.trim() || null,
   });
   if (error) throw error;
 }
 
 export async function fetchStructureRatings(structureIds: string[]): Promise<Map<string, StructureRating>> {
   if (structureIds.length === 0) return new Map();
-  const { data, error } = await supabase
-    .from('ratings')
-    .select('structure_id, score')
-    .eq('direction', 'worker_to_structure')
-    .in('structure_id', structureIds);
+  const { data, error } = await supabase.rpc('public_structure_rating_summary', { p_structure_ids: structureIds });
   if (error) throw error;
-  const map = new Map<string, StructureRating>();
-  for (const row of data ?? []) {
-    const entry = map.get(row.structure_id) ?? { average: 0, count: 0 };
-    entry.average = (entry.average * entry.count + row.score) / (entry.count + 1);
-    entry.count += 1;
-    map.set(row.structure_id, entry);
-  }
-  return map;
+  return new Map(
+    (data ?? []).map((row) => [row.structure_id, { average: Number(row.average), count: Number(row.review_count) }]),
+  );
 }
 
 // Notes RECUES par un travailleur (donnees par les structures) : c'est ce qui
@@ -75,13 +68,8 @@ export interface WorkerReputation {
 }
 
 export async function fetchWorkerReputation(workerId: string): Promise<WorkerReputation> {
-  const { data, error } = await supabase
-    .from('ratings')
-    .select('score')
-    .eq('worker_id', workerId)
-    .eq('direction', 'structure_to_worker');
+  const { data, error } = await supabase.rpc('worker_public_rating_summary', { p_worker_id: workerId });
   if (error) throw error;
-  const scores = (data ?? []).map((r) => r.score);
-  if (scores.length === 0) return { average: null, count: 0 };
-  return { average: scores.reduce((s, v) => s + v, 0) / scores.length, count: scores.length };
+  const summary = data as { average: number | null; count: number } | null;
+  return { average: summary?.average == null ? null : Number(summary.average), count: Number(summary?.count ?? 0) };
 }

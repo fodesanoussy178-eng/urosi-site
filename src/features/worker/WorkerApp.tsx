@@ -101,6 +101,8 @@ export function WorkerApp() {
   const [detail, setDetail] = useState<MissionWithStructure | null>(null);
   const [structSheet, setStructSheet] = useState<MissionWithStructure | null>(null);
   const [ratingFor, setRatingFor] = useState<ApplicationWithMission | null>(null);
+  const [structureRatingScore, setStructureRatingScore] = useState<number | null>(null);
+  const [structureRatingNote, setStructureRatingNote] = useState('');
   const [chatFor, setChatFor] = useState<ApplicationWithMission | null>(null);
   const [alrt, setAlrt] = useState<{ app: ApplicationWithMission; type: 'retard' | 'annulation' } | null>(null);
   const [kycFor, setKycFor] = useState<ApplicationWithMission | null>(null);
@@ -228,22 +230,25 @@ export function WorkerApp() {
     }
   }
 
-  async function noterStructure(score: number) {
-    if (!session || !ratingFor?.mission) return;
+  async function noterStructure() {
+    if (!session || !ratingFor?.mission || structureRatingScore == null) return;
     try {
       await rate({
         applicationId: ratingFor.id,
         structureId: ratingFor.mission.structure_id,
         workerId: session.user.id,
-        score,
+        score: structureRatingScore,
         direction: 'worker_to_structure',
+        comment: structureRatingNote.slice(0, 280),
       });
       await load();
-      notif('Mission ajoutée à ton CV vivant ✓ — paiement crédité sur ton wallet.');
+      notif('Avis enregistré anonymement. Il sera publié un lundi dès qu’un lot de 3 avis sera constitué.');
     } catch (e) {
       notif(e instanceof Error ? e.message : 'Notation impossible.');
     } finally {
       setRatingFor(null);
+      setStructureRatingScore(null);
+      setStructureRatingNote('');
     }
   }
 
@@ -932,12 +937,24 @@ export function WorkerApp() {
               <div style={{ fontSize: 12, color: T.text, fontWeight: 700, marginBottom: 9 }}>Note la structure :</div>
               <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
                 {[1, 2, 3, 4, 5].map((n) => (
-                  <button key={n} onClick={() => noterStructure(n)} style={{ flex: 1, padding: '12px 0', fontSize: 22, background: T.row, border: `1px solid ${T.cb}`, borderRadius: 10, cursor: 'pointer', color: '#f59e0b' }}>
+                  <button key={n} aria-label={`${n} étoile${n > 1 ? 's' : ''}`} onClick={() => setStructureRatingScore(n)} style={{ flex: 1, padding: '12px 0', fontSize: 22, background: structureRatingScore === n ? T.amberBg : T.row, border: `1px solid ${structureRatingScore === n ? T.amberBorder : T.cb}`, borderRadius: 10, cursor: 'pointer', color: '#f59e0b' }}>
                     ★
                   </button>
                 ))}
               </div>
-              <button onClick={() => setRatingFor(null)} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: T.mu, padding: '4px 0' }}>
+              <textarea
+                aria-label="Commentaire anonyme"
+                value={structureRatingNote}
+                onChange={(event) => setStructureRatingNote(event.target.value.slice(0, 280))}
+                rows={3}
+                placeholder="Ajoute une courte note facultative…"
+                style={{ ...inp, resize: 'none', lineHeight: 1.5, marginBottom: 5 }}
+              />
+              <div style={{ color: T.mu, fontSize: 9, marginBottom: 10 }}>{structureRatingNote.length}/280 · Publication anonyme un lundi, uniquement par lots de 3 avis.</div>
+              <button onClick={noterStructure} disabled={structureRatingScore == null} style={{ width: '100%', background: structureRatingScore == null ? T.row : '#fff', color: structureRatingScore == null ? T.mu : '#000', border: 'none', borderRadius: 9, padding: '11px 0', fontSize: 12, fontWeight: 900, cursor: structureRatingScore == null ? 'not-allowed' : 'pointer', marginBottom: 6 }}>
+                Envoyer anonymement
+              </button>
+              <button onClick={() => { setRatingFor(null); setStructureRatingScore(null); setStructureRatingNote(''); }} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: T.mu, padding: '4px 0' }}>
                 Passer
               </button>
             </div>

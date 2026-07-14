@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { T } from '@/components/ui/theme';
-import { Stars } from '@/components/ui/Stars';
 import { formatEuros } from '@/lib/format';
 import { fetchStructureStats, type StructureStats } from '@/features/stats/statsService';
 
@@ -68,26 +67,15 @@ export function StatsPanel({ structureId }: { structureId: string }) {
         ))}
       </div>
 
-      <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '13px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 5 }}>Réputation</div>
-          {stats.avg_rating ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-              <Stars n={stats.avg_rating} size={13} />
-              <span style={{ fontSize: 14, fontWeight: 900, color: T.text }}>{stats.avg_rating.toFixed(1).replace('.', ',')}</span>
-              <span style={{ fontSize: 10, color: T.mu }}>({stats.ratings_count} avis)</span>
-            </div>
-          ) : (
-            <span style={{ fontSize: 11, color: T.mu }}>Pas encore d'avis.</span>
-          )}
-        </div>
-        {fillRate !== null && (
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 18, fontWeight: 900, color: T.cyan }}>{fillRate} %</div>
-            <div style={{ fontSize: 8.5, color: T.mu }}>taux de réalisation</div>
+      {fillRate !== null && (
+        <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '13px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 5 }}>Taux de réalisation</div>
+            <div style={{ fontSize: 10, color: T.mu }}>Missions terminées sur les missions publiées.</div>
           </div>
-        )}
-      </div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: T.cyan }}>{fillRate} %</div>
+        </div>
+      )}
     </div>
   );
 }
