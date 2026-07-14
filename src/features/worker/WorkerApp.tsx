@@ -8,6 +8,7 @@ import { QRBadge } from '@/components/ui/QRBadge';
 import { Stars } from '@/components/ui/Stars';
 import { DocModal, AideRegles, type DocKey } from '@/components/ui/DocModal';
 import { NotificationBell } from '@/components/ui/NotificationBell';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { ChatSheet } from '@/components/ui/ChatSheet';
 import { WalletCard } from '@/components/ui/WalletCard';
 import { PricingDetails } from '@/components/ui/PricingDetails';
@@ -388,6 +389,7 @@ export function WorkerApp() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 11, color: T.mu, fontWeight: 700 }}>{prenom}</span>
+            <ThemeToggle />
             {session && <NotificationBell profileId={session.user.id} onDataChanged={() => load()} />}
           </div>
         </div>

@@ -3,6 +3,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Logo } from '@/components/ui/Logo';
 import { Stars } from '@/components/ui/Stars';
 import { Fld } from '@/components/ui/Fld';
+import { QRBadge } from '@/components/ui/QRBadge';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { T, FONT, inp } from '@/components/ui/theme';
 import { useAuth } from '@/features/auth/AuthContext';
 import { hasFounderAccess } from '@/features/auth/authService';
@@ -474,6 +476,7 @@ function TopBar({
         </div>
       </div>
       <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
+        <ThemeToggle />
         {founder && <span style={{ fontSize: 10, color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 14, padding: '5px 10px', fontWeight: 900 }}>Accès fondateur</span>}
         {onBack && (
           <button onClick={onBack} style={{ background: T.row, color: T.sub, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
@@ -593,6 +596,7 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
   const [wallet, setWallet] = useState(182);
   const [withdrawAmount, setWithdrawAmount] = useState(50);
   const [missionAlert, setMissionAlert] = useState<{ mission: DemoMission; type: 'delay' | 'cancel' } | null>(null);
+  const [demoQrMission, setDemoQrMission] = useState<DemoMission | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -667,7 +671,7 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
                     </div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 10 }}>
-                    <Button tone="green" onClick={() => notif('QR de début affiché dans la vraie app.')}>QR début</Button>
+                    <Button tone="green" onClick={() => setDemoQrMission(m)}>QR début</Button>
                     <Button tone="light" onClick={() => setMissionAlert({ mission: m, type: 'delay' })}>Retard</Button>
                     <Button tone="red" onClick={() => setMissionAlert({ mission: m, type: 'cancel' })}>Annuler</Button>
                   </div>
@@ -734,6 +738,30 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
           </div>
         )}
       </div>
+      {demoQrMission && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="QR fictif de début de mission"
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 195, padding: 18 }}
+          onClick={() => setDemoQrMission(null)}
+        >
+          <div style={{ width: '100%', maxWidth: 350, background: T.card, border: `1px solid ${T.cb}`, borderRadius: 22, padding: 22, textAlign: 'center' }} onClick={(event) => event.stopPropagation()}>
+            <div style={{ color: T.text, fontSize: 18, fontWeight: 900 }}>QR de début · Démo</div>
+            <div style={{ color: T.sub, fontSize: 11, lineHeight: 1.5, margin: '6px 0 16px' }}>
+              {demoQrMission.title}<br />{demoQrMission.structure}
+            </div>
+            <div style={{ display: 'inline-flex', background: '#fff', padding: 10, borderRadius: 12 }}>
+              <QRBadge value={`UROSI-DEMO|FAUX-POINTAGE|${demoQrMission.id}|START`} size={190} />
+            </div>
+            <div style={{ color: T.amber, background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 10, padding: 10, fontSize: 10.5, lineHeight: 1.45, margin: '16px 0 12px' }}>
+              QR fictif : il simule le scan et ne valide aucune présence réelle.
+            </div>
+            <div style={{ color: T.mu, fontSize: 10, marginBottom: 14 }}>Valable 10 minutes dans la simulation</div>
+            <Button tone="light" onClick={() => setDemoQrMission(null)}>Fermer</Button>
+          </div>
+        </div>
+      )}
       {missionAlert && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 190 }} onClick={() => setMissionAlert(null)}>
           <div style={{ width: '100%', maxWidth: 430, background: T.card, borderRadius: '24px 24px 0 0', padding: '20px 18px 28px' }} onClick={(event) => event.stopPropagation()}>
@@ -1424,7 +1452,8 @@ export function DemoExperience() {
   if (!role) {
     return (
       <DemoShell embedded={embedded}>
-        <div style={{ minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div style={{ minHeight: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div style={{ position: 'absolute', top: 16, right: 16 }}><ThemeToggle /></div>
           <div style={{ width: '100%', textAlign: 'center' }}>
             <Logo sz={72} />
             <div style={{ color: T.text, fontSize: 25, fontWeight: 900, marginTop: 18 }}>Démo interne UROSI</div>

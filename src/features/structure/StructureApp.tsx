@@ -5,6 +5,7 @@ import { T, FONT, inp } from '@/components/ui/theme';
 import { Fld } from '@/components/ui/Fld';
 import { DocModal, AideRegles, type DocKey } from '@/components/ui/DocModal';
 import { NotificationBell } from '@/components/ui/NotificationBell';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { ChatSheet } from '@/components/ui/ChatSheet';
 import { WalletCard } from '@/components/ui/WalletCard';
 import { fetchMyStructures, createStructure, updateStructureAbout, subscribeStructure } from './structureService';
@@ -352,6 +353,7 @@ export function StructureApp() {
             <span style={{ fontWeight: 900, fontSize: 15, color: T.text }}>Espace structure</span>
           </div>
           <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
+            <ThemeToggle />
             {session && <NotificationBell profileId={session.user.id} onDataChanged={() => reload().catch(() => undefined)} />}
             {founderAccess && <button onClick={() => window.location.assign('/fondateur/kyc')} style={{ fontSize: 10, color: T.cyan, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>KYC</button>}
             <button onClick={() => setDocKey('cgu')} style={{ fontSize: 10, color: T.mu, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>? Aide</button>
