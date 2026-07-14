@@ -14,6 +14,7 @@ import { WorkerApp } from '@/features/worker/WorkerApp';
 import { StructureApp } from '@/features/structure/StructureApp';
 import { CheckinPage } from '@/features/missions/CheckinPage';
 import { ScanPage } from '@/features/missions/ScanPage';
+import { KycReviewPage } from '@/features/founder/KycReviewPage';
 
 function Centered({ text }: { text: string }) {
   return (
@@ -72,6 +73,7 @@ function AppShell() {
       <Route path="/demo" element={<DemoExperience />} />
       <Route path="/connexion" element={<SignInPage />} />
       <Route path="/app" element={profile.role === 'structure_admin' ? <StructureApp /> : <WorkerApp />} />
+      <Route path="/fondateur/kyc" element={<KycReviewPage />} />
       <Route path="/reinitialisation" element={<ResetPasswordPage />} />
       <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
       <Route path="/scan/:token" element={<ScanPage />} />

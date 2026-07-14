@@ -7,20 +7,20 @@
 
 ## 1. Appliquer les migrations
 
-> Etat actuel : **toutes les migrations `0001` -> `0011` sont deja appliquees
-> sur le projet Supabase de production (`urosit`)**, et l'Edge Function `psp`
-> est deployee. Les etapes ci-dessous ne servent que pour recreer un
-> environnement neuf.
+> Les migrations du dossier sont la source de verite. Verifie toujours la
+> migration distante avec `supabase migration list` avant un `db push`.
+> La migration KYC ne doit d'abord etre appliquee que sur un environnement
+> local ou une branche Supabase de test, jamais directement en production.
 
 **Option A — SQL Editor (le plus simple)**
 Dashboard Supabase -> SQL Editor -> colle puis execute, dans l'ordre :
-`supabase/migrations/0001_schema.sql` -> `0011_security_hardening.sql`
-(l'ordre des numeros fait foi ; chaque fichier est re-executable).
+les fichiers de `supabase/migrations/` dans l'ordre lexicographique.
 
 **Option B — CLI**
 ```bash
 npm i -g supabase
 supabase link --project-ref <ton-project-ref>
+supabase db push --dry-run
 supabase db push
 ```
 
@@ -54,9 +54,17 @@ passe dans les metadonnees (`worker` / `structure_admin`) via
 ```bash
 cp .env.example .env
 ```
-Renseigne `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY`
+Renseigne `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` et `VITE_KYC_MODE`
 (Dashboard -> Project Settings -> API). Sur ta plateforme d'hebergement,
-ajoute les deux `VITE_*` en variables d'environnement de build.
+ajoute ces trois `VITE_*` en variables d'environnement de build.
+
+- `VITE_KYC_MODE=simulation` : la revue manuelle est disponible pour les
+  comptes presents dans `founder_access` via `/fondateur/kyc`.
+- `VITE_KYC_MODE=lemonway` : les boutons de decision manuelle sont masques ;
+  un futur webhook serveur du prestataire devra appeler la transition KYC.
+
+Ne mets jamais une cle `service_role`, un secret Lemonway ou une cle privee
+dans une variable `VITE_*` : elles sont integrees au JavaScript public.
 
 ## 4. Lancer
 ```bash
@@ -70,7 +78,8 @@ npm run build # typecheck + build de production
 1. Cree un compte "Structure" et un compte "Travailleur" via l'ecran
    d'inscription de l'app.
 2. Connecte en tant que structure : l'app te propose de creer ta structure,
-   puis de publier une mission (titre, ville, date, duree <= 5h, taux net).
+   puis de publier une mission (titre, ville, date, duree de 1 h a 3 jours,
+   remuneration choisie par la structure).
 3. Connecte en tant que travailleur, tu dois voir la mission dans la liste
    des missions ouvertes ; clique "Postuler".
 4. Reconnecte-toi en structure : la candidature apparait dans "Voir les
@@ -79,6 +88,11 @@ npm run build # typecheck + build de production
    chez la meme structure pour un travailleur non micro-entrepreneur ->
    l'insert/update doit etre bloque par le trigger
    `applications_consecutive_days_cap`.
+6. Apres acceptation, verifie que le travailleur passe en KYC `requested`,
+   qu'il peut envoyer un PDF/JPG/PNG/WebP de 10 Mo maximum, puis qu'un compte
+   fondateur peut verifier ou refuser le dossier dans `/fondateur/kyc`.
+7. Tant que le statut n'est pas `verified`, un retrait wallet doit etre
+   refuse par la base, meme si la RPC est appelee directement.
 
 ## 6. Fonctionnalites branchees dans cette version
 - **Remuneration intelligente** : regles `pay_rules` administrables dans le
