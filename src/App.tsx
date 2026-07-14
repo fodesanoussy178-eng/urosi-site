@@ -55,6 +55,7 @@ function AppShell() {
         <Route path="/connexion" element={<SignInPage />} />
         <Route path="/inscription/travailleur" element={<WorkerSignupPage />} />
         <Route path="/inscription/structure" element={<StructureSignupPage />} />
+        <Route path="/fondateur/kyc" element={<Navigate to="/connexion?next=/fondateur/kyc" replace />} />
         <Route path="/reinitialisation" element={<ResetPasswordPage />} />
         <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
         <Route path="/scan/:token" element={<ScanPage />} />

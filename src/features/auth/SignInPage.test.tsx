@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { SignInPage } from './SignInPage';
 import * as authService from './authService';
 
@@ -15,10 +15,16 @@ vi.mock('./authService', () => ({
   isUnconfirmedEmailError: vi.fn(() => false),
 }));
 
-function renderPage() {
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location">{location.pathname}</div>;
+}
+
+function renderPage(initialEntry = '/connexion') {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <SignInPage />
+      <LocationProbe />
     </MemoryRouter>,
   );
 }
@@ -26,6 +32,7 @@ function renderPage() {
 describe('SignInPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(authService.signIn).mockReset().mockResolvedValue(undefined);
   });
 
   it('signs in with email and password', async () => {
@@ -49,5 +56,16 @@ describe('SignInPage', () => {
     await user.click(screen.getByRole('button', { name: 'Se connecter' }));
 
     expect(await screen.findByText('Invalid login credentials')).toBeInTheDocument();
+  });
+
+  it('opens the founder area after a founder login request', async () => {
+    const user = userEvent.setup();
+    renderPage('/connexion?next=/fondateur/kyc');
+
+    await user.type(screen.getByLabelText('Email'), 'fondateur@urosi.fr');
+    await user.type(screen.getByLabelText('Mot de passe'), 'secret123');
+    await user.click(screen.getByRole('button', { name: 'Accéder à l’espace fondateur' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/fondateur/kyc'));
   });
 });

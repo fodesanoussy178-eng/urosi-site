@@ -95,6 +95,18 @@
         box-shadow: 0 34px 90px rgba(29,42,46,.25), 0 0 0 1px rgba(255,255,255,.55);
         overflow: hidden;
       }
+      .phone.live-preview { background: #070814; }
+      .phone.live-preview .phone-notch,
+      .phone.live-preview .demo-badge,
+      .phone.live-preview .screen { display: none; }
+      .phone-live-frame { width: 100%; height: 100%; border: 0; display: block; background: #070814; }
+      .preview-role-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: min(330px, calc(100vw - 56px)); margin-top: 14px; }
+      .preview-role {
+        border: 1px solid var(--cb); border-radius: 999px; padding: 9px 13px; background: rgba(255,255,255,.72);
+        color: var(--sub); font: inherit; font-size: 11px; font-weight: 900; cursor: pointer; transition: .2s ease;
+      }
+      .preview-role:hover, .preview-role:focus-visible { border-color: var(--cyan); color: var(--text); }
+      .preview-role.on { background: var(--text); border-color: var(--text); color: #fff; }
       .phone-notch { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 96px; height: 23px; background: #12191b; border-radius: 14px; z-index: 5; border: 1px solid #2f3d42; }
       .demo-badge { position: absolute; top: 15px; right: 15px; z-index: 6; font-size: 9px; font-weight: 900; color: var(--text); background: #f6dda1; border-radius: 10px; padding: 3px 9px; }
       .screen { position: absolute; inset: 0; padding: 58px 18px 70px; overflow-y: auto; opacity: 0; transform: translateX(24px); transition: opacity .38s cubic-bezier(.2,.8,.2,1), transform .38s cubic-bezier(.2,.8,.2,1); pointer-events: none; background: #fbfaf5; color: var(--text); scrollbar-width: none; }
@@ -255,9 +267,16 @@
         <div id="demo" class="phone-zone">
           <div class="float-card float-earned"><small>Mission terminée</small><strong>+58 €</strong></div>
           <div class="float-card float-profile"><small>CV enrichi</small><strong>13 preuves</strong></div>
-      <div class="phone" id="phone">
+      <div class="phone live-preview" id="phone">
         <div class="phone-notch"></div>
         <div class="demo-badge">MODE DÉMO</div>
+        <iframe
+          id="phonePreview"
+          class="phone-live-frame"
+          src="/demo?role=worker&amp;embed=1"
+          title="Aperçu défilable de l’espace Travailleur UROSI"
+          loading="eager"
+        ></iframe>
 
         <!-- Choix -->
         <div class="screen on" data-s="choice">
@@ -465,12 +484,11 @@
         </div>
       </div>
 
-      <div class="demo-controls" aria-label="Contrôles de la démo">
-        <button class="demo-arrow" type="button" data-demo-prev aria-label="Écran précédent">‹</button>
-        <div class="dots" id="dots"></div>
-        <button class="demo-arrow" type="button" data-demo-next aria-label="Écran suivant">›</button>
+      <div class="preview-role-switch" aria-label="Choisir l’aperçu affiché dans le téléphone">
+        <button class="preview-role on" type="button" data-preview-role="worker" aria-pressed="true">Travailleur</button>
+        <button class="preview-role" type="button" data-preview-role="structure" aria-pressed="false">Structure</button>
       </div>
-      <div class="phone-hint"><b id="demoStatus">Aperçu automatique</b> · <a href="/demo" style="color:var(--cyan)">ouvrir la démo complète →</a></div>
+      <div class="phone-hint"><b>Fais défiler l’écran dans le téléphone</b> · <a href="/demo" style="color:var(--cyan)">ouvrir la démo complète →</a></div>
         </div>
       </main>
 
@@ -558,6 +576,24 @@
       (function () {
         var phone = document.getElementById('phone');
         if (!phone) return;
+        var preview = document.getElementById('phonePreview');
+        if (preview) {
+          document.querySelectorAll('[data-preview-role]').forEach(function (button) {
+            button.addEventListener('click', function () {
+              var role = button.dataset.previewRole === 'structure' ? 'structure' : 'worker';
+              preview.src = '/demo?role=' + role + '&embed=1';
+              preview.title = role === 'structure'
+                ? 'Aperçu défilable de l’espace Structure UROSI'
+                : 'Aperçu défilable de l’espace Travailleur UROSI';
+              document.querySelectorAll('[data-preview-role]').forEach(function (item) {
+                var active = item === button;
+                item.classList.toggle('on', active);
+                item.setAttribute('aria-pressed', active ? 'true' : 'false');
+              });
+            });
+          });
+          return;
+        }
         var screens = phone.querySelectorAll('.screen');
         var order = ['flux', 'mission', 'worker-structure', 'cv', 'wallet', 'choice', 'struct-home', 'struct-publish', 'struct-live', 'struct-candidates'];
         var dotsEl = document.getElementById('dots');
