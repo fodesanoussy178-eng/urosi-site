@@ -485,10 +485,10 @@ function TopBar({
   );
 }
 
-function DemoShell({ children }: { children: ReactNode }) {
+function DemoShell({ children, embedded = false }: { children: ReactNode; embedded?: boolean }) {
   return (
-    <div style={{ minHeight: '100vh', background: '#000', color: T.text, fontFamily: FONT, display: 'flex', justifyContent: 'center', padding: '22px 14px' }}>
-      <div style={{ width: '100%', maxWidth: 430, minHeight: 'calc(100vh - 44px)', background: T.bg, border: `1px solid ${T.cb}`, borderRadius: 32, overflow: 'hidden', boxShadow: '0 24px 90px rgba(0,0,0,.75)' }}>{children}</div>
+    <div style={{ minHeight: '100vh', background: embedded ? T.bg : '#000', color: T.text, fontFamily: FONT, display: 'flex', justifyContent: 'center', padding: embedded ? 0 : '22px 14px' }}>
+      <div style={{ width: '100%', maxWidth: embedded ? 'none' : 430, minHeight: embedded ? '100vh' : 'calc(100vh - 44px)', background: T.bg, border: embedded ? 'none' : `1px solid ${T.cb}`, borderRadius: embedded ? 0 : 32, overflow: 'hidden', boxShadow: embedded ? 'none' : '0 24px 90px rgba(0,0,0,.75)' }}>{children}</div>
     </div>
   );
 }
@@ -1283,7 +1283,7 @@ function CandidateCard({
   );
 }
 
-function DemoLimitOverlay({ role, onUnlock }: { role: DemoRole; onUnlock: () => void }) {
+function DemoLimitOverlay({ role, embedded, onFounder }: { role: DemoRole; embedded: boolean; onFounder: () => void }) {
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -1294,7 +1294,7 @@ function DemoLimitOverlay({ role, onUnlock }: { role: DemoRole; onUnlock: () => 
       return;
     }
     rememberDemoFounderAccess();
-    onUnlock();
+    onFounder();
   }
 
   return (
@@ -1305,10 +1305,10 @@ function DemoLimitOverlay({ role, onUnlock }: { role: DemoRole; onUnlock: () => 
         <div style={{ color: T.sub, fontSize: 12, lineHeight: 1.65, marginBottom: 18 }}>
           Crée ton compte ou connecte-toi pour continuer.
         </div>
-        <Link to={role === 'structure' ? '/inscription/structure' : '/inscription/travailleur'} style={{ textDecoration: 'none', display: 'block', marginBottom: 8 }}>
+        <Link to={role === 'structure' ? '/inscription/structure' : '/inscription/travailleur'} target={embedded ? '_top' : undefined} style={{ textDecoration: 'none', display: 'block', marginBottom: 8 }}>
           <Button>Créer mon compte</Button>
         </Link>
-        <Link to="/connexion" style={{ textDecoration: 'none', display: 'block', marginBottom: 16 }}>
+        <Link to="/connexion" target={embedded ? '_top' : undefined} style={{ textDecoration: 'none', display: 'block', marginBottom: 16 }}>
           <Button tone="light">J’ai déjà un compte</Button>
         </Link>
         {open && (
@@ -1327,7 +1327,7 @@ function DemoLimitOverlay({ role, onUnlock }: { role: DemoRole; onUnlock: () => 
               autoComplete="off"
             />
             {error && <div style={{ color: T.red, fontSize: 11, marginBottom: 8 }}>{error}</div>}
-            <Button onClick={unlock}>Entrer</Button>
+            <Button onClick={unlock}>Ouvrir l’espace fondateur</Button>
           </div>
         )}
         <button
@@ -1344,17 +1344,22 @@ export function DemoExperience() {
   const { session } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const embedded = params.get('embed') === '1';
   const initialRole = params.get('role') === 'structure' ? 'structure' : params.get('role') === 'worker' ? 'worker' : null;
   const [role, setRole] = useState<DemoRole | null>(initialRole);
   const [used, setUsed] = useState(() => readNumber(DEMO_KEY));
   const [demoVersion, setDemoVersion] = useState(0);
   const [founderByCode, setFounderByCode] = useState(() => hasDemoFounderAccess() || hasRememberedFounderAccess(session?.user.id));
   const founder = isFounderEmail(session?.user.email) || founderByCode;
+  const displayedFounder = embedded ? false : founder;
   const frozen = Boolean(role && !founder && used >= DEMO_SECONDS);
   const left = Math.max(0, DEMO_SECONDS - used);
 
   useEffect(() => {
     let alive = true;
+    if (embedded) {
+      return undefined;
+    }
     if (!session) {
       setFounderByCode(hasDemoFounderAccess());
       return undefined;
@@ -1373,7 +1378,7 @@ export function DemoExperience() {
     return () => {
       alive = false;
     };
-  }, [session]);
+  }, [embedded, session]);
 
   useEffect(() => {
     if (!role || founder || frozen) return undefined;
@@ -1404,12 +1409,21 @@ export function DemoExperience() {
 
   function returnToDemoChoice() {
     setRole(null);
-    navigate('/demo', { replace: true });
+    navigate(embedded ? '/demo?embed=1' : '/demo', { replace: true });
+  }
+
+  function openFounderArea() {
+    const destination = session ? '/fondateur/kyc' : '/connexion?next=/fondateur/kyc&fondateur=1';
+    if (embedded && window.top && window.top !== window) {
+      window.top.location.assign(destination);
+      return;
+    }
+    navigate(destination, { replace: true });
   }
 
   if (!role) {
     return (
-      <DemoShell>
+      <DemoShell embedded={embedded}>
         <div style={{ minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <div style={{ width: '100%', textAlign: 'center' }}>
             <Logo sz={72} />
@@ -1438,22 +1452,19 @@ export function DemoExperience() {
           Aperçu démo · {left}s
         </div>
       )}
-      {founder && (
+      {!embedded && founder && (
         <button onClick={resetDemo} style={{ position: 'fixed', top: 18, right: 18, zIndex: 450, background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 18, padding: '7px 13px', fontFamily: FONT, fontSize: 12, fontWeight: 900, cursor: 'pointer' }}>
           Accès fondateur
         </button>
       )}
-      <DemoShell>
+      <DemoShell embedded={embedded}>
         {role === 'worker' ? (
-          <WorkerDemo key={`worker-${demoVersion}`} founder={founder} onBack={returnToDemoChoice} />
+          <WorkerDemo key={`worker-${demoVersion}`} founder={displayedFounder} onBack={returnToDemoChoice} />
         ) : (
-          <StructureDemo key={`structure-${demoVersion}`} founder={founder} onBack={returnToDemoChoice} onSwitchWorker={() => setRole('worker')} />
+          <StructureDemo key={`structure-${demoVersion}`} founder={displayedFounder} onBack={returnToDemoChoice} onSwitchWorker={() => setRole('worker')} />
         )}
       </DemoShell>
-      {frozen && <DemoLimitOverlay role={role} onUnlock={() => {
-        setFounderByCode(true);
-        setUsed(0);
-      }} />}
+      {frozen && <DemoLimitOverlay role={role} embedded={embedded} onFounder={openFounderArea} />}
     </>
   );
 }

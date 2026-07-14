@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Fld } from '@/components/ui/Fld';
 import { T, inp } from '@/components/ui/theme';
 import { isDemoFounderCode, rememberDemoFounderAccess } from '@/lib/founder';
@@ -7,6 +7,7 @@ import { isUnconfirmedEmailError, requestPasswordReset, resendConfirmationEmail,
 
 export function SignInForm() {
   const nav = useNavigate();
+  const [params] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [founderOpen, setFounderOpen] = useState(false);
@@ -15,6 +16,7 @@ export function SignInForm() {
   const [info, setInfo] = useState<string | null>(null);
   const [showResend, setShowResend] = useState(false);
   const [busy, setBusy] = useState(false);
+  const founderDestination = params.get('next') === '/fondateur/kyc';
 
   async function submit() {
     if (busy) return;
@@ -30,9 +32,11 @@ export function SignInForm() {
         return;
       }
       rememberDemoFounderAccess();
-      nav('/demo', { replace: true });
-      setBusy(false);
-      return;
+      if (!email.trim() || !password) {
+        setInfo('Code fondateur validé. Connecte-toi maintenant avec ton compte fondateur.');
+        setBusy(false);
+        return;
+      }
     }
     try {
       await signIn({ email: email.trim(), password });
@@ -42,7 +46,7 @@ export function SignInForm() {
       setBusy(false);
       return;
     }
-    nav('/app', { replace: true });
+    nav(wantsFounderDemo || founderDestination ? '/fondateur/kyc' : '/app', { replace: true });
     setBusy(false);
   }
 
@@ -111,7 +115,7 @@ export function SignInForm() {
         disabled={busy}
         style={{ width: '100%', background: busy ? T.row : '#fff', color: busy ? T.mu : '#000', border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: busy ? 'not-allowed' : 'pointer', marginTop: 4 }}
       >
-        {busy ? '…' : internalCode.trim() ? 'Entrer dans la démo' : 'Se connecter'}
+        {busy ? '…' : internalCode.trim() || founderDestination ? 'Accéder à l’espace fondateur' : 'Se connecter'}
       </button>
       <button
         onClick={forgotPassword}
