@@ -19,23 +19,29 @@ const DEMO_STRUCTURE_IDS = {
   asso: 'demo-structure-banque-alimentaire',
 } as const;
 const DEMO_WORKER_HISTORY = [
-  'Renfort service midi · 64 €',
-  'Inventaire magasin · 42 €',
-  'Montage festival · 91 €',
-  'Préparation commandes · 61 €',
-  'Accueil au stade · 112 €',
-  'Installation forum étudiant · 44 €',
-  'Assistant tournage · 95 €',
-  'Accueil spectacle · 52 €',
-  'Classement bibliothèque · 39 €',
-  'Accueil au musée · 78 €',
-  'Livraison interne · 57 €',
-  'Renfort association · Solidaire',
-  'Aide photographe · 46 €',
-  'Mise en place événement · 73 €',
-  'Accueil hospitalier · 48 €',
+  { label: 'Renfort service midi · 64 €', category: 'Restauration' },
+  { label: 'Inventaire magasin · 42 €', category: 'Logistique' },
+  { label: 'Montage festival · 91 €', category: 'Événementiel' },
+  { label: 'Préparation commandes · 61 €', category: 'Logistique' },
+  { label: 'Accueil au stade · 112 €', category: 'Événementiel' },
+  { label: 'Installation forum étudiant · 44 €', category: 'Événementiel' },
+  { label: 'Assistant tournage · 95 €', category: 'Événementiel' },
+  { label: 'Accueil spectacle · 52 €', category: 'Événementiel' },
+  { label: 'Classement bibliothèque · 39 €', category: 'Logistique' },
+  { label: 'Accueil au musée · 78 €', category: 'Logistique' },
+  { label: 'Livraison interne · 57 €', category: 'Logistique' },
+  { label: 'Renfort association · Solidaire', category: 'Logistique' },
+  { label: 'Aide photographe · 46 €', category: 'Événementiel' },
+  { label: 'Mise en place événement · 73 €', category: 'Événementiel' },
+  { label: 'Service en salle · 48 €', category: 'Restauration' },
 ] as const;
-const DEMO_WORKER_SKILLS = ['Restauration', 'Événementiel', 'Logistique'] as const;
+
+const DEMO_WORKER_CATEGORIES = Object.entries(
+  DEMO_WORKER_HISTORY.reduce<Record<string, number>>((counts, mission) => {
+    counts[mission.category] = (counts[mission.category] ?? 0) + 1;
+    return counts;
+  }, {}),
+);
 
 const DEMO_SHORTCUTS = [
   { label: 'Matin', start: '08:00', end: '12:00' },
@@ -827,6 +833,19 @@ function TopBar({ onBack }: {
   );
 }
 
+function StructureStats({ stats, live = false }: { stats: [string, string][]; live?: boolean }) {
+  return (
+    <div aria-label="Statistiques de la structure" aria-live={live ? 'polite' : undefined} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 7, marginBottom: 12 }}>
+      {stats.map(([value, label]) => (
+        <div key={label} style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 13, padding: '11px 7px', textAlign: 'center' }}>
+          <div style={{ color: label.includes('avis') ? T.amber : T.text, fontSize: value.startsWith('★') ? 15 : 19, fontWeight: 900, lineHeight: 1.1 }}>{value}</div>
+          <div style={{ color: T.mu, fontSize: 8.5, marginTop: 5, lineHeight: 1.2 }}>{label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function DemoShell({ children, embedded = false }: { children: ReactNode; embedded?: boolean }) {
   return (
     <div style={{ minHeight: '100vh', background: embedded ? T.bg : '#000', color: T.text, fontFamily: FONT, display: 'flex', justifyContent: 'center', padding: embedded ? 0 : '22px 14px' }}>
@@ -936,6 +955,7 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
   const [accepted, setAccepted] = useState<string[]>(() => readDemoState().acceptedMissionIds);
   const [profileName, setProfileName] = useState<string | null>(null);
   const [wallet, setWallet] = useState(182);
+  const [showEarnings, setShowEarnings] = useState(true);
   const [withdrawAmount, setWithdrawAmount] = useState(50);
   const [missionAlert, setMissionAlert] = useState<{ mission: DemoMission; type: 'delay' | 'cancel' } | null>(null);
   const [demoQr, setDemoQr] = useState<{ mission: DemoMission; step: DemoQrStep } | null>(null);
@@ -1072,6 +1092,9 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
                   <div style={{ color: T.mu, fontSize: 11 }}>Lille · CV vivant · compte fictif</div>
                 </div>
               </div>
+              <div style={{ color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 12, padding: '10px 12px', fontSize: 10.5, fontWeight: 900, marginBottom: 10 }}>
+                ✓ Compte et identité vérifiés (démo)
+              </div>
               <div style={{ color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 12, padding: '10px 12px', fontSize: 11, fontWeight: 900, marginBottom: 10 }}>
                 Disponible demain
               </div>
@@ -1080,15 +1103,18 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
                 <div style={{ background: T.row, borderRadius: 12, padding: 12, textAlign: 'center' }}><strong style={{ color: T.text, fontSize: 22 }}>★ 4,7</strong><div style={{ color: T.mu, fontSize: 9 }}>Note moyenne</div></div>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
-                {DEMO_WORKER_SKILLS.map((skill) => <span key={skill} style={{ color: T.cyan, background: '#22d3ee12', border: `1px solid ${T.cb}`, borderRadius: 999, padding: '5px 8px', fontSize: 9.5, fontWeight: 900 }}>{skill}</span>)}
+                {DEMO_WORKER_CATEGORIES.map(([category, count]) => <span key={category} style={{ color: T.cyan, background: '#22d3ee12', border: `1px solid ${T.cb}`, borderRadius: 999, padding: '5px 8px', fontSize: 9.5, fontWeight: 900 }}>{category} · {count}</span>)}
               </div>
-              <div style={{ color: T.mu, fontSize: 9, fontWeight: 900, textTransform: 'uppercase', marginBottom: 8 }}>Historique vérifié</div>
-              {DEMO_WORKER_HISTORY.slice(0, 5).map((h) => {
-                const [title, amount] = h.split(' · ');
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
+                <div style={{ color: T.mu, fontSize: 9, fontWeight: 900, textTransform: 'uppercase' }}>Historique vérifié</div>
+                <button type="button" onClick={() => setShowEarnings((visible) => !visible)} aria-label={showEarnings ? 'Masquer les gains' : 'Afficher les gains'} style={{ background: T.row, color: T.cyan, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '5px 8px', fontSize: 9, fontWeight: 900, cursor: 'pointer' }}>{showEarnings ? 'Masquer' : 'Afficher'}</button>
+              </div>
+              {DEMO_WORKER_HISTORY.slice(0, 5).map((mission) => {
+                const [title, amount] = mission.label.split(' · ');
                 return (
-                  <div key={h} style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${T.cb}`, padding: '9px 0', color: T.text, fontSize: 12, fontWeight: 800 }}>
-                    <span>{title ?? h}</span>
-                    <span style={{ color: T.mu }}>{amount ?? ''}</span>
+                  <div key={mission.label} style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${T.cb}`, padding: '9px 0', color: T.text, fontSize: 12, fontWeight: 800 }}>
+                    <span>{title ?? mission.label}</span>
+                    <span style={{ color: T.mu }}>{showEarnings ? (amount ?? '') : '•••'}</span>
                   </div>
                 );
               })}
@@ -1099,10 +1125,13 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
         {tab === 'wallet' && (
           <div style={{ display: 'grid', gap: 12 }}>
             <div style={{ background: '#032e18', border: '1px solid #0f6b36', borderRadius: 16, padding: 20 }}>
-              <div style={{ color: T.green, fontSize: 11, fontWeight: 900 }}>DISPONIBLE</div>
-              <div style={{ color: '#fff', fontSize: 48, fontWeight: 900, letterSpacing: -2 }}>{availableWallet}<span style={{ color: T.green, fontSize: 22 }}>€</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <div style={{ color: T.green, fontSize: 11, fontWeight: 900 }}>DISPONIBLE</div>
+                <button type="button" onClick={() => setShowEarnings((visible) => !visible)} aria-label={showEarnings ? 'Masquer le solde' : 'Afficher le solde'} style={{ background: '#ffffff12', color: '#fff', border: '1px solid #ffffff25', borderRadius: 9, padding: '6px 9px', fontSize: 9.5, fontWeight: 900, cursor: 'pointer' }}>{showEarnings ? 'Masquer' : 'Afficher'}</button>
+              </div>
+              <div style={{ color: '#fff', fontSize: 48, fontWeight: 900, letterSpacing: -2 }}>{showEarnings ? availableWallet : '•••'}{showEarnings && <span style={{ color: T.green, fontSize: 22 }}>€</span>}</div>
               <div style={{ marginTop: 10 }}>
-                <div style={{ color: T.green, fontSize: 13, fontWeight: 900 }}>En attente · virement J+3<br /><span style={{ fontSize: 27 }}>40 €</span></div>
+                <div style={{ color: T.green, fontSize: 13, fontWeight: 900 }}>En attente · virement J+3<br /><span style={{ fontSize: 27 }}>{showEarnings ? '40 €' : '•••'}</span></div>
               </div>
             </div>
             <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 16, padding: 16 }}>
@@ -1147,7 +1176,7 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
               ].map(([label, amount, color]) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, borderTop: `1px solid ${T.cb}`, padding: '10px 0', fontSize: 10.5 }}>
                   <span style={{ color: T.sub }}>{label}</span>
-                  <strong style={{ color, whiteSpace: 'nowrap' }}>{amount}</strong>
+                  <strong style={{ color, whiteSpace: 'nowrap' }}>{showEarnings ? amount : '•••'}</strong>
                 </div>
               ))}
             </div>
@@ -1612,6 +1641,7 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
   const [showPub, setShowPub] = useState(false);
   const [managedMission, setManagedMission] = useState<{ mission: DemoMission; mode?: MissionManageMode } | null>(null);
   const [historyExpanded, setHistoryExpanded] = useState(false);
+  const [showStatsIntro, setShowStatsIntro] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -1629,6 +1659,13 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
     return () => window.removeEventListener('storage', refresh);
   }, [kind]);
 
+  useEffect(() => {
+    if (!kind) return;
+    setShowStatsIntro(true);
+    const timer = window.setTimeout(() => setShowStatsIntro(false), 3000);
+    return () => window.clearTimeout(timer);
+  }, [kind]);
+
   function notif(m: string) {
     setToast(m);
     clearTimeout(tr.current);
@@ -1637,6 +1674,7 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
 
   function choose(next: StructureKind) {
     setKind(next);
+    setShowStatsIntro(true);
     setMissions(structureMissions(next));
     setCandidates(structureCandidates(next));
     setTab('missions');
@@ -1790,14 +1828,10 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
           </div>
           <button onClick={() => setKind(null)} style={{ background: T.row, color: T.mu, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 10px', fontSize: 10, fontWeight: 800, cursor: 'pointer' }}>Changer</button>
         </div>
-        <div aria-label="Statistiques de la structure" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 7, marginBottom: 12 }}>
-          {seed.stats.map(([value, label]) => (
-            <div key={label} style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 13, padding: '11px 7px', textAlign: 'center' }}>
-              <div style={{ color: label === '21 avis' || label === '15 avis' ? T.amber : T.text, fontSize: value.startsWith('★') ? 15 : 19, fontWeight: 900, lineHeight: 1.1 }}>{value}</div>
-              <div style={{ color: T.mu, fontSize: 8.5, marginTop: 5, lineHeight: 1.2 }}>{label}</div>
-            </div>
-          ))}
+        <div style={{ color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 12, padding: '10px 12px', fontSize: 10.5, fontWeight: 900, marginBottom: 12 }}>
+          ✓ Structure vérifiée · identité et SIRET confirmés (démo)
         </div>
+        {showStatsIntro && tab !== 'historique' && <StructureStats stats={seed.stats} live />}
         <BottomTabs
           tabs={[
             ['missions', `Missions ${missions.length}`],
@@ -1842,6 +1876,10 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
         )}
         {tab === 'historique' && (
           <div style={{ display: 'grid', gap: 10 }}>
+            <div>
+              <div style={{ color: T.text, fontSize: 13, fontWeight: 900, marginBottom: 8 }}>Performance de la structure</div>
+              <StructureStats stats={seed.stats} />
+            </div>
             {archivedMissions.length > 0 && (
               <div style={{ background: T.card, border: `1px solid ${T.amberBorder}`, borderRadius: 16, padding: 15 }}>
                 <div style={{ color: T.text, fontSize: 13, fontWeight: 900 }}>Missions archivées · {archivedMissions.length}</div>

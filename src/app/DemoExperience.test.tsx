@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { DemoExperience } from './DemoExperience';
@@ -115,11 +115,25 @@ describe('DemoExperience founder scan', () => {
   it('shows the structure activity statistics at a glance', () => {
     renderStructure();
 
+    expect(screen.getByText('✓ Structure vérifiée · identité et SIRET confirmés (démo)')).toBeInTheDocument();
     expect(screen.getByText('12')).toBeInTheDocument();
     expect(screen.getByText('missions publiées')).toBeInTheDocument();
     expect(screen.getByText('94 %')).toBeInTheDocument();
     expect(screen.getByText('★ 4,8')).toBeInTheDocument();
     expect(screen.getByText('21 avis')).toBeInTheDocument();
+  });
+
+  it('moves the structure statistics to history after three seconds', () => {
+    vi.useFakeTimers();
+    renderStructure();
+
+    expect(screen.getByLabelText('Statistiques de la structure')).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(3000));
+    expect(screen.queryByLabelText('Statistiques de la structure')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Historique' }));
+    expect(screen.getByLabelText('Statistiques de la structure')).toBeInTheDocument();
+    vi.useRealTimers();
   });
 
   it('uses varied structures, jobs and ratings in the worker feed', () => {
@@ -140,15 +154,21 @@ describe('DemoExperience founder scan', () => {
 
     await user.click(screen.getByRole('button', { name: /Missions/ }));
     expect(screen.getByText('Disponible demain')).toBeInTheDocument();
+    expect(screen.getByText('✓ Compte et identité vérifiés (démo)')).toBeInTheDocument();
     expect(screen.getByText('15')).toBeInTheDocument();
-    expect(screen.getByText('Restauration')).toBeInTheDocument();
-    expect(screen.getByText('Événementiel')).toBeInTheDocument();
-    expect(screen.getByText('Logistique')).toBeInTheDocument();
+    expect(screen.getByText('Restauration · 2')).toBeInTheDocument();
+    expect(screen.getByText('Événementiel · 7')).toBeInTheDocument();
+    expect(screen.getByText('Logistique · 6')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Banque/ }));
     expect(screen.getByText('Historique des virements')).toBeInTheDocument();
     expect(screen.getByText('IBAN vérifié')).toBeInTheDocument();
     expect(screen.getByText('Carte d’identité vérifiée')).toBeInTheDocument();
     expect(screen.getByText('Compte vérifié')).toBeInTheDocument();
+
+    expect(screen.getByText('182')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Masquer le solde' }));
+    expect(screen.queryByText('182')).not.toBeInTheDocument();
+    expect(screen.getAllByText('•••').length).toBeGreaterThan(1);
   });
 });
