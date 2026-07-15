@@ -483,7 +483,7 @@ function TopBar({ onBack }: {
         <button aria-label="Revenir au choix de la démo" onClick={onBack} style={{ width: 38, height: 38, background: 'transparent', color: T.sub, border: 'none', borderRadius: 12, fontSize: 22, cursor: 'pointer' }}>‹</button>
       ) : <span />}
       <div style={{ display: 'grid', placeItems: 'center' }}><Logo sz={22} showWord={false} /></div>
-      <span />
+      <div style={{ display: 'grid', placeItems: 'center' }}><ThemeToggle /></div>
     </header>
   );
 }
@@ -812,14 +812,13 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
 
 function BottomTabs({ tabs, current, onChange }: { tabs: [string, string, string?][]; current: string; onChange: (v: string) => void }) {
   return (
-    <nav aria-label="Navigation de la démo" style={{ width: '100%', maxWidth: 430, borderTop: `1px solid ${T.cb}`, padding: '8px 10px 10px', display: 'grid', gridTemplateColumns: `repeat(${tabs.length + 1}, 1fr)`, gap: 5, background: T.bg, position: 'fixed', zIndex: 180, bottom: 0, left: '50%', transform: 'translateX(-50%)', boxShadow: '0 -10px 28px rgba(0,0,0,.16)' }}>
+    <nav aria-label="Navigation de la démo" style={{ width: '100%', maxWidth: 430, borderTop: `1px solid ${T.cb}`, padding: '8px 10px 10px', display: 'grid', gridTemplateColumns: `repeat(${tabs.length}, 1fr)`, gap: 5, background: T.bg, position: 'fixed', zIndex: 180, bottom: 0, left: '50%', transform: 'translateX(-50%)', boxShadow: '0 -10px 28px rgba(0,0,0,.16)' }}>
       {tabs.map(([key, label, icon]) => (
         <button aria-pressed={current === key} key={key} onClick={() => onChange(key)} style={{ background: current === key ? '#fff' : 'transparent', color: current === key ? '#05060d' : T.mu, border: 'none', borderRadius: 12, minHeight: 48, padding: '6px 3px', cursor: 'pointer', fontSize: tabs.length > 3 ? 10 : 11, fontWeight: 900, display: 'grid', placeItems: 'center', gap: 1 }}>
           {icon && <span aria-hidden="true" style={{ fontSize: 15, lineHeight: 1 }}>{icon}</span>}
           <span>{label}</span>
         </button>
       ))}
-      <div style={{ display: 'grid', placeItems: 'center' }}><ThemeToggle /></div>
     </nav>
   );
 }
