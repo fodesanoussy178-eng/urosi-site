@@ -651,7 +651,7 @@ export function WorkerApp() {
           {/* ── PROFIL : wallet, stats, infos ── */}
           {tab === 'profil' && session && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <WalletCard profileId={session.user.id} mode="worker" notif={notif} amountsVisible={showEarnings} onAmountsVisibleChange={setShowEarnings} />
+              <WalletCard profileId={session.user.id} mode="worker" amountsVisible={showEarnings} onAmountsVisibleChange={setShowEarnings} />
               {stats && stats.monthly.length > 0 && (
                 <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 15 }}>
                   <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 9 }}>Mes gains par mois</div>

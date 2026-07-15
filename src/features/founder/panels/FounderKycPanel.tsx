@@ -29,7 +29,7 @@ export function FounderKycPanel() {
 
   async function openDocument(row: KycSubmission) {
     if (!row.identity_document_path) return;
-    try { window.open(await createKycDocumentUrl(row.identity_document_path), '_blank', 'noopener,noreferrer'); }
+    try { window.open(await createKycDocumentUrl(row.profile_id, row.identity_document_path), '_blank', 'noopener,noreferrer'); }
     catch (cause) { setError(cause instanceof Error ? cause.message : 'Document inaccessible.'); }
   }
 

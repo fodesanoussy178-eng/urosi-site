@@ -3,37 +3,35 @@ import { T } from '@/components/ui/theme';
 import { formatEuros } from '@/lib/format';
 import {
   fetchWallet,
+  fetchWalletFundSummary,
   fetchWalletTransactions,
-  walletDeposit,
-  walletWithdraw,
   TX_KIND_LABELS,
   type Wallet,
   type WalletTransaction,
+  type WalletFundSummary,
 } from '@/features/wallet/walletService';
 
 function euros(cents: number): string {
   return formatEuros(cents).replace(' EUR', ' €');
 }
 
-// Wallet partage Worker/Structure : solde, historique, et selon le role
-// provisionnement (structure) ou retrait (travailleur).
+// Wallet partagé Worker/Structure : lecture des fonds et de leur disponibilité.
+// Les mouvements réels seront déclenchés uniquement par le backend du PSP.
 export function WalletCard({
   profileId,
   mode,
-  notif,
   amountsVisible: controlledAmountsVisible,
   onAmountsVisibleChange,
 }: {
   profileId: string;
   mode: 'worker' | 'structure';
-  notif: (m: string) => void;
   amountsVisible?: boolean;
   onAmountsVisibleChange?: (visible: boolean) => void;
 }) {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [txs, setTxs] = useState<WalletTransaction[]>([]);
+  const [summary, setSummary] = useState<WalletFundSummary>({ available_cents: 0, pending_cents: 0, blocked_cents: 0 });
   const [showAll, setShowAll] = useState(false);
-  const [busy, setBusy] = useState(false);
   const [internalAmountsVisible, setInternalAmountsVisible] = useState(mode === 'structure');
   const amountsVisible = controlledAmountsVisible ?? internalAmountsVisible;
 
@@ -46,7 +44,11 @@ export function WalletCard({
     try {
       const w = await fetchWallet(profileId);
       setWallet(w);
-      if (w) setTxs(await fetchWalletTransactions(w.id));
+      if (w) {
+        const [transactions, totals] = await Promise.all([fetchWalletTransactions(w.id), fetchWalletFundSummary()]);
+        setTxs(transactions);
+        setSummary(totals);
+      }
     } catch {
       // wallet pas encore cree : rien a afficher
     }
@@ -56,33 +58,9 @@ export function WalletCard({
     load();
   }, [load]);
 
-  async function move(action: 'deposit' | 'withdraw') {
-    if (busy) return;
-    const label = action === 'deposit' ? 'Montant à provisionner (€)' : 'Montant à retirer (€)';
-    const raw = window.prompt(label, action === 'deposit' ? '100' : '');
-    if (!raw) return;
-    const amount = Math.round(Number(raw.replace(',', '.')) * 100);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      notif('Montant invalide.');
-      return;
-    }
-    setBusy(true);
-    try {
-      const balance = action === 'deposit' ? await walletDeposit(amount) : await walletWithdraw(amount);
-      notif(action === 'deposit'
-        ? `✓ Wallet provisionné — solde ${euros(balance)}.`
-        : amountsVisible
-          ? `✓ Retrait demandé — solde ${euros(balance)}.`
-          : '✓ Retrait demandé.');
-      await load();
-    } catch (e) {
-      notif(e instanceof Error ? e.message : 'Opération impossible.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const balance = wallet?.balance_cents ?? 0;
+  const balance = wallet ? summary.available_cents : 0;
+  const pending = summary.pending_cents;
+  const blocked = summary.blocked_cents;
   const shown = showAll ? txs : txs.slice(0, 5);
 
   return (
@@ -103,20 +81,19 @@ export function WalletCard({
           Solde à provisionner : les rémunérations versées dépassent ton provisionnement.
         </div>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 6, marginBottom: 12 }}>
-        {mode === 'structure' ? (
-          <button onClick={() => move('deposit')} disabled={busy} style={{ background: T.grad, color: '#fff', border: 'none', borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 900, cursor: 'pointer' }}>
-            {busy ? '…' : '＋ Provisionner le wallet'}
-          </button>
-        ) : (
-          <button
-            onClick={() => move('withdraw')}
-            disabled={busy || balance < 100}
-            style={{ background: balance >= 100 ? '#fff' : T.row, color: balance >= 100 ? '#000' : T.mu, border: 'none', borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 900, cursor: balance >= 100 ? 'pointer' : 'not-allowed' }}
-          >
-            {busy ? '…' : '↓ Retirer vers mon compte'}
-          </button>
-        )}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 12 }}>
+        {[
+          ['Disponible', balance, T.green],
+          ['En attente', pending, T.amber],
+          ['Bloqué', blocked, T.red],
+        ].map(([label, amount, color]) => (
+          <div key={String(label)} style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 9, padding: '8px 6px', minWidth: 0 }}>
+            <div style={{ color: T.mu, fontSize: 8, marginBottom: 3 }}>{label}</div>
+            <div style={{ color: String(color), fontSize: 10.5, fontWeight: 900, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {amountsVisible ? euros(Number(amount)) : '•••'}
+            </div>
+          </div>
+        ))}
       </div>
       <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 7 }}>Historique</div>
       {txs.length === 0 && <div style={{ fontSize: 11, color: T.mu }}>Aucun mouvement pour l'instant.</div>}
@@ -126,6 +103,7 @@ export function WalletCard({
             <div style={{ fontSize: 11.5, fontWeight: 700, color: T.text }}>{TX_KIND_LABELS[tx.kind]}</div>
             {tx.label && <div style={{ fontSize: 9.5, color: T.mu, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.label}</div>}
             <div style={{ fontSize: 8.5, color: T.mu }}>{new Date(tx.created_at).toLocaleDateString('fr-FR')}</div>
+            {tx.fund_status !== 'available' && <div style={{ fontSize: 8.5, color: tx.fund_status === 'pending' ? T.amber : T.red }}>{tx.fund_status === 'pending' ? 'En attente' : 'Bloqué'}</div>}
           </div>
           <span style={{ fontSize: 12.5, fontWeight: 900, color: tx.amount_cents > 0 ? T.green : T.red, flexShrink: 0 }}>
             {amountsVisible ? `${tx.amount_cents > 0 ? '+' : ''}${euros(tx.amount_cents)}` : '•••'}

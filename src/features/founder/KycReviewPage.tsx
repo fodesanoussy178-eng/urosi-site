@@ -50,7 +50,7 @@ export function KycReviewPage() {
   async function openDocument(row: KycSubmission) {
     if (!row.identity_document_path) return;
     try {
-      const url = await createKycDocumentUrl(row.identity_document_path);
+      const url = await createKycDocumentUrl(row.profile_id, row.identity_document_path);
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Document inaccessible.');

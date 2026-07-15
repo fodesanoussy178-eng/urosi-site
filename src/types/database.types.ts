@@ -131,6 +131,7 @@ export interface Database {
           identity_document_name: string | null;
           identity_document_path: string | null;
           identity_document_uploaded_at: string | null;
+          identity_document_delete_after: string | null;
           created_at: string;
         };
         Insert: {
@@ -152,6 +153,7 @@ export interface Database {
           identity_document_name?: string | null;
           identity_document_path?: string | null;
           identity_document_uploaded_at?: string | null;
+          identity_document_delete_after?: string | null;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>;
@@ -586,6 +588,7 @@ export interface Database {
           kind: WalletTransactionKind;
           application_id: string | null;
           label: string;
+          fund_status: 'pending' | 'available' | 'blocked';
           created_at: string;
         };
         Insert: {
@@ -595,6 +598,7 @@ export interface Database {
           kind: WalletTransactionKind;
           application_id?: string | null;
           label?: string;
+          fund_status?: 'pending' | 'available' | 'blocked';
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['wallet_transactions']['Insert']>;
@@ -1142,6 +1146,14 @@ export interface Database {
       founder_set_kyc_status: {
         Args: { p_profile_id: string; p_status: 'verified' | 'rejected'; p_reason?: string | null };
         Returns: undefined;
+      };
+      log_kyc_document_access: {
+        Args: { p_profile_id: string; p_document_path: string; p_purpose?: 'manual_review' | 'compliance_review' | 'support_review' };
+        Returns: undefined;
+      };
+      wallet_fund_summary: {
+        Args: Record<string, never>;
+        Returns: Array<{ available_cents: number; pending_cents: number; blocked_cents: number }>;
       };
       public_structure_rating_summary: {
         Args: { p_structure_ids: string[] };

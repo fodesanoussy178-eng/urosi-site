@@ -3,6 +3,7 @@ import type { Database } from '@/types/database.types';
 
 export type Wallet = Database['public']['Tables']['wallets']['Row'];
 export type WalletTransaction = Database['public']['Tables']['wallet_transactions']['Row'];
+export type WalletFundSummary = Database['public']['Functions']['wallet_fund_summary']['Returns'][number];
 
 export async function fetchWallet(profileId: string): Promise<Wallet | null> {
   const { data, error } = await supabase.from('wallets').select('*').eq('profile_id', profileId).maybeSingle();
@@ -21,24 +22,10 @@ export async function fetchWalletTransactions(walletId: string, limit = 30): Pro
   return data ?? [];
 }
 
-// Provisionnement / retrait via l'Edge Function `psp` (abstraction du
-// service de paiement : simulation interne aujourd'hui, integration neutre demain).
-export async function walletDeposit(amountCents: number): Promise<number> {
-  const { data, error } = await supabase.functions.invoke('psp', {
-    body: { action: 'deposit', amount_cents: amountCents },
-  });
-  if (error) throw new Error("Provisionnement impossible pour l'instant.");
-  if (data?.error) throw new Error(String(data.error));
-  return Number(data.balance_cents);
-}
-
-export async function walletWithdraw(amountCents: number): Promise<number> {
-  const { data, error } = await supabase.functions.invoke('psp', {
-    body: { action: 'withdraw', amount_cents: amountCents },
-  });
-  if (error) throw new Error("Retrait impossible pour l'instant.");
-  if (data?.error) throw new Error(String(data.error));
-  return Number(data.balance_cents);
+export async function fetchWalletFundSummary(): Promise<WalletFundSummary> {
+  const { data, error } = await supabase.rpc('wallet_fund_summary');
+  if (error) throw error;
+  return data?.[0] ?? { available_cents: 0, pending_cents: 0, blocked_cents: 0 };
 }
 
 export const TX_KIND_LABELS: Record<WalletTransaction['kind'], string> = {

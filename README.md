@@ -66,9 +66,9 @@ Supabase (migrations, auth, variables d'environnement).
   (week-end, jours feries, nuit, duree, secteur, difficulte, urgence,
   distance, tension offre/demande, bonus). Calcul en SQL, apercu live a la
   publication, detail transparent affiche au travailleur.
-- **Paiements + wallet** : paiement automatique a la completion (commission
-  plateforme incluse), wallets credite/debite, historique complet, Edge
-  Function `psp` fondee sur une interface neutre de service de paiement.
+- **Paiements + wallet** : fonds disponibles, en attente et bloques affiches
+  separement. Aucun wallet de production n'est modifie tant qu'un prestataire
+  de paiement reel n'a pas confirme le mouvement cote serveur.
 - **Messagerie temps reel** par mission (Supabase Realtime) et
   **notifications** en direct (candidatures, decisions, paiements, notes,
   retards, messages).
@@ -93,8 +93,8 @@ Voir `supabase/migrations/0001_schema.sql` (schema), `0002_functions.sql`
 
 ## Hors perimetre (roadmap)
 
-- Service de paiement reel : l'Edge Function `psp` simule le
-  provisionnement/retrait. Une integration externe ne devra confirmer un
-  mouvement qu'apres retour verifie de son API ou webhook.
+- Service de paiement reel : l'Edge Function `psp` renvoie volontairement
+  `503` tant qu'aucun prestataire n'est branche. La simulation financiere est
+  bloquee en production et limitee au laboratoire Supabase staging.
 - Auth par SMS (OTP) : necessite un provider (Twilio/MessageBird) configure
   dans le dashboard Supabase. Le telephone est deja collecte sur le profil.
