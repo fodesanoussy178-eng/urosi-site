@@ -83,6 +83,8 @@ export interface FounderRevenue {
   pending_cents: number;
   month_cents: number;
   lifetime_cents: number;
+  simulated_cents: number;
+  confirmed_cents: number;
   simulated: boolean;
 }
 

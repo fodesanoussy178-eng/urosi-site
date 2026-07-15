@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest';
+import { splitPrice } from './priceSplit';
 import { RULE_KINDS, RULE_TEMPLATES, ruleParamsSummary } from './pricingService';
+
+describe('commission UROSI V1', () => {
+  it('ajoute 18 % a la structure sans retenue travailleur', () => {
+    expect(splitPrice(10_000, 18)).toEqual({
+      brutCents: 10_000,
+      commissionStructureCents: 1_800,
+      commissionWorkerCents: 0,
+      netWorkerCents: 10_000,
+      totalStructureCents: 11_800,
+    });
+  });
+});
 
 describe('ruleParamsSummary', () => {
   it('resume les jours de la semaine', () => {

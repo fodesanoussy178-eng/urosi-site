@@ -68,7 +68,7 @@ Supabase (migrations, auth, variables d'environnement).
   publication, detail transparent affiche au travailleur.
 - **Paiements + wallet** : paiement automatique a la completion (commission
   plateforme incluse), wallets credite/debite, historique complet, Edge
-  Function `psp` prete pour Lemonway/Stripe.
+  Function `psp` fondee sur une interface neutre de service de paiement.
 - **Messagerie temps reel** par mission (Supabase Realtime) et
   **notifications** en direct (candidatures, decisions, paiements, notes,
   retards, messages).
@@ -93,8 +93,8 @@ Voir `supabase/migrations/0001_schema.sql` (schema), `0002_functions.sql`
 
 ## Hors perimetre (roadmap)
 
-- PSP reel : l'Edge Function `psp` simule le provisionnement/retrait ;
-  brancher Lemonway ou Stripe en suivant ses commentaires (webhook de
-  confirmation avant credit du wallet).
+- Service de paiement reel : l'Edge Function `psp` simule le
+  provisionnement/retrait. Une integration externe ne devra confirmer un
+  mouvement qu'apres retour verifie de son API ou webhook.
 - Auth par SMS (OTP) : necessite un provider (Twilio/MessageBird) configure
   dans le dashboard Supabase. Le telephone est deja collecte sur le profil.

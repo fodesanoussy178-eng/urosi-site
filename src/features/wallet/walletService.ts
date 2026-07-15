@@ -22,7 +22,7 @@ export async function fetchWalletTransactions(walletId: string, limit = 30): Pro
 }
 
 // Provisionnement / retrait via l'Edge Function `psp` (abstraction du
-// prestataire de paiement : simulation aujourd'hui, Lemonway/Stripe demain).
+// service de paiement : simulation interne aujourd'hui, integration neutre demain).
 export async function walletDeposit(amountCents: number): Promise<number> {
   const { data, error } = await supabase.functions.invoke('psp', {
     body: { action: 'deposit', amount_cents: amountCents },
