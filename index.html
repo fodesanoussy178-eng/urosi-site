@@ -79,6 +79,9 @@
       .grad-text { color: var(--cyan); }
       .hero p { font-size: 23px; color: var(--sub); max-width: 640px; margin: 0 0 32px; line-height: 1.7; }
       .hero-ctas { display: flex; gap: 14px; justify-content: flex-start; flex-wrap: wrap; }
+      .cta-stack { display: inline-flex; flex-direction: column; align-items: stretch; gap: 6px; }
+      .cta-demo-link { color: var(--cyan); font-size: 11px; font-weight: 900; text-align: center; text-decoration: underline; text-underline-offset: 3px; }
+      .cta-demo-link:hover, .cta-demo-link:focus-visible { color: var(--text); }
       .hero-note { color: #748084; font-size: 16px; font-weight: 600; margin-top: 32px; }
       .float-card {
         position: absolute; z-index: 4; min-width: 150px; border: 1px solid rgba(226,222,212,.78);
@@ -285,8 +288,14 @@
           <p>Chaque mission devient une preuve : présence validée, expérience visible, paiement clair.</p>
           <div class="hero-ctas">
             <a class="btn btn-dark" href="/connexion">Se connecter</a>
-            <a class="btn btn-white" href="/acces">Créer un compte</a>
-            <a class="btn btn-ghost" href="/inscription/structure">Espace structure</a>
+            <div class="cta-stack">
+              <a class="btn btn-white" href="/acces">Créer un compte</a>
+              <a class="cta-demo-link" href="/demo?role=worker">Voir la démo</a>
+            </div>
+            <div class="cta-stack">
+              <a class="btn btn-ghost" href="/inscription/structure">Espace structure</a>
+              <a class="cta-demo-link" href="/demo?role=structure">Voir la démo structure</a>
+            </div>
           </div>
           <div class="hero-note">UROSI reste discret. L'expérience passe avant la marque.</div>
         </header>

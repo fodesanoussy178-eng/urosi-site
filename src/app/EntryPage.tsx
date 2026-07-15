@@ -12,36 +12,38 @@ export function EntryPage() {
         </div>
         <div style={{ fontSize: 12, color: T.mu, marginBottom: 30 }}>Micro-missions · Métropole de Lille</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <button
-            onClick={() => nav('/inscription/travailleur')}
-            style={{ textAlign: 'left', padding: '16px 17px', borderRadius: 13, border: `1.5px solid ${T.cb}`, background: T.card, cursor: 'pointer' }}
-          >
-            <div style={{ fontSize: 19, marginBottom: 5 }}>👷</div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: T.text, marginBottom: 2 }}>Je cherche des missions</div>
-            <div style={{ fontSize: 12, color: T.mu }}>Trouver du travail flexible près de chez moi</div>
-          </button>
-          <button
-            onClick={() => nav('/inscription/structure')}
-            style={{ textAlign: 'left', padding: '16px 17px', borderRadius: 13, border: 'none', background: T.grad, cursor: 'pointer' }}
-          >
-            <div style={{ fontSize: 19, marginBottom: 5 }}>🏢</div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', marginBottom: 2 }}>Je cherche des renforts</div>
-            <div style={{ fontSize: 12, color: '#bfdbfe' }}>Publier des missions, gérer mes candidats</div>
-          </button>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 14 }}>
-          <button
-            onClick={() => nav('/demo?role=worker')}
-            style={{ background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 11, padding: '10px 8px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
-          >
-            Démo travailleur
-          </button>
-          <button
-            onClick={() => nav('/demo?role=structure')}
-            style={{ background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 11, padding: '10px 8px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
-          >
-            Démo structure
-          </button>
+          <div>
+            <button
+              onClick={() => nav('/inscription/travailleur')}
+              style={{ width: '100%', textAlign: 'left', padding: '16px 17px', borderRadius: 13, border: `1.5px solid ${T.cb}`, background: T.card, cursor: 'pointer' }}
+            >
+              <div style={{ fontSize: 19, marginBottom: 5 }}>👷</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: T.text, marginBottom: 2 }}>Je cherche des missions</div>
+              <div style={{ fontSize: 12, color: T.mu }}>Trouver du travail flexible près de chez moi</div>
+            </button>
+            <button
+              onClick={() => nav('/demo?role=worker')}
+              style={{ marginTop: 7, background: 'none', color: T.cyan, border: 'none', fontSize: 11, fontWeight: 900, textDecoration: 'underline', cursor: 'pointer' }}
+            >
+              Voir la démo travailleur
+            </button>
+          </div>
+          <div>
+            <button
+              onClick={() => nav('/inscription/structure')}
+              style={{ width: '100%', textAlign: 'left', padding: '16px 17px', borderRadius: 13, border: 'none', background: T.grad, cursor: 'pointer' }}
+            >
+              <div style={{ fontSize: 19, marginBottom: 5 }}>🏢</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', marginBottom: 2 }}>Je cherche des renforts</div>
+              <div style={{ fontSize: 12, color: '#bfdbfe' }}>Publier des missions, gérer mes candidats</div>
+            </button>
+            <button
+              onClick={() => nav('/demo?role=structure')}
+              style={{ marginTop: 7, background: 'none', color: T.cyan, border: 'none', fontSize: 11, fontWeight: 900, textDecoration: 'underline', cursor: 'pointer' }}
+            >
+              Voir la démo structure
+            </button>
+          </div>
         </div>
         <button
           onClick={() => nav('/connexion')}
