@@ -17,11 +17,30 @@ function euros(cents: number): string {
 
 // Wallet partage Worker/Structure : solde, historique, et selon le role
 // provisionnement (structure) ou retrait (travailleur).
-export function WalletCard({ profileId, mode, notif }: { profileId: string; mode: 'worker' | 'structure'; notif: (m: string) => void }) {
+export function WalletCard({
+  profileId,
+  mode,
+  notif,
+  amountsVisible: controlledAmountsVisible,
+  onAmountsVisibleChange,
+}: {
+  profileId: string;
+  mode: 'worker' | 'structure';
+  notif: (m: string) => void;
+  amountsVisible?: boolean;
+  onAmountsVisibleChange?: (visible: boolean) => void;
+}) {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [txs, setTxs] = useState<WalletTransaction[]>([]);
   const [showAll, setShowAll] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [internalAmountsVisible, setInternalAmountsVisible] = useState(mode === 'structure');
+  const amountsVisible = controlledAmountsVisible ?? internalAmountsVisible;
+
+  function setAmountsVisible(visible: boolean) {
+    if (onAmountsVisibleChange) onAmountsVisibleChange(visible);
+    else setInternalAmountsVisible(visible);
+  }
 
   const load = useCallback(async () => {
     try {
@@ -50,7 +69,11 @@ export function WalletCard({ profileId, mode, notif }: { profileId: string; mode
     setBusy(true);
     try {
       const balance = action === 'deposit' ? await walletDeposit(amount) : await walletWithdraw(amount);
-      notif(action === 'deposit' ? `✓ Wallet provisionné — solde ${euros(balance)}.` : `✓ Retrait demandé — solde ${euros(balance)}.`);
+      notif(action === 'deposit'
+        ? `✓ Wallet provisionné — solde ${euros(balance)}.`
+        : amountsVisible
+          ? `✓ Retrait demandé — solde ${euros(balance)}.`
+          : '✓ Retrait demandé.');
       await load();
     } catch (e) {
       notif(e instanceof Error ? e.message : 'Opération impossible.');
@@ -66,9 +89,15 @@ export function WalletCard({ profileId, mode, notif }: { profileId: string; mode
     <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 15 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
         <span style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5 }}>Wallet</span>
-        <span style={{ fontSize: 8.5, color: T.mu }}>paiements sécurisés UROSI</span>
+        {mode === 'worker' ? (
+          <button type="button" onClick={() => setAmountsVisible(!amountsVisible)} aria-label={amountsVisible ? 'Masquer les montants' : 'Afficher les montants'} style={{ background: T.row, color: T.cyan, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '5px 8px', fontSize: 9, fontWeight: 800, cursor: 'pointer' }}>
+            {amountsVisible ? 'Masquer' : 'Afficher'}
+          </button>
+        ) : (
+          <span style={{ fontSize: 8.5, color: T.mu }}>paiements sécurisés UROSI</span>
+        )}
       </div>
-      <div style={{ fontSize: 28, fontWeight: 900, color: balance < 0 ? T.amber : T.text, letterSpacing: -1, marginBottom: 10 }}>{euros(balance)}</div>
+      <div style={{ fontSize: 28, fontWeight: 900, color: balance < 0 ? T.amber : T.text, letterSpacing: -1, marginBottom: 10 }}>{amountsVisible ? euros(balance) : '•••'}</div>
       {mode === 'structure' && balance < 0 && (
         <div style={{ fontSize: 10, color: T.amber, background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 8, padding: '7px 10px', marginBottom: 10, lineHeight: 1.5 }}>
           Solde à provisionner : les rémunérations versées dépassent ton provisionnement.
@@ -99,8 +128,7 @@ export function WalletCard({ profileId, mode, notif }: { profileId: string; mode
             <div style={{ fontSize: 8.5, color: T.mu }}>{new Date(tx.created_at).toLocaleDateString('fr-FR')}</div>
           </div>
           <span style={{ fontSize: 12.5, fontWeight: 900, color: tx.amount_cents > 0 ? T.green : T.red, flexShrink: 0 }}>
-            {tx.amount_cents > 0 ? '+' : ''}
-            {euros(tx.amount_cents)}
+            {amountsVisible ? `${tx.amount_cents > 0 ? '+' : ''}${euros(tx.amount_cents)}` : '•••'}
           </span>
         </div>
       ))}

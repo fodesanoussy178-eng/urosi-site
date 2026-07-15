@@ -5,7 +5,7 @@ import type { Mission } from './types';
 export type Application = Database['public']['Tables']['applications']['Row'];
 
 export interface ApplicationWithMission extends Application {
-  mission: Pick<Mission, 'id' | 'title' | 'city' | 'scheduled_date' | 'start_time' | 'duration_minutes' | 'slots' | 'status' | 'structure_id'> | null;
+  mission: Pick<Mission, 'id' | 'title' | 'city' | 'scheduled_date' | 'start_time' | 'duration_minutes' | 'slots' | 'status' | 'structure_id' | 'sector' | 'mission_category'> | null;
 }
 
 export interface ApplicationWithApplicant extends Application {
@@ -20,7 +20,7 @@ export async function applyToMission(missionId: string, workerId: string): Promi
 export async function fetchMyApplications(workerId: string): Promise<ApplicationWithMission[]> {
   const { data, error } = await supabase
     .from('applications')
-    .select('*, mission:missions(id, title, city, scheduled_date, start_time, duration_minutes, slots, status, structure_id)')
+    .select('*, mission:missions(id, title, city, scheduled_date, start_time, duration_minutes, slots, status, structure_id, sector, mission_category)')
     .eq('worker_id', workerId)
     .order('created_at', { ascending: false });
   if (error) throw error;

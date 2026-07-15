@@ -1,4 +1,4 @@
-# Urosi-t
+# UROSI
 
 Plateforme de micro-missions de la MEL (modele mandataire). Application
 React + TypeScript branchee sur une vraie base Supabase (Postgres + Auth +
@@ -8,9 +8,9 @@ Row Level Security) — plus un prototype a donnees fictives.
 
 - **React 18 + TypeScript** (Vite)
 - **react-router-dom** pour le routing et les vues protegees par role
-- **Supabase** : Postgres, Auth, Row Level Security. Aucune donnee mockee :
-  tout passe par les tables `profiles`, `structures`, `missions`,
-  `applications` definies dans `supabase/migrations/`.
+- **Supabase** : Postgres, Auth, Row Level Security. Les parcours reels passent
+  par `profiles`, `structures`, `missions` et `applications`. La demo et le
+  laboratoire staging restent explicitement isoles des donnees de production.
 - **Vitest + Testing Library** pour les tests
 
 ## Architecture
@@ -74,6 +74,9 @@ Supabase (migrations, auth, variables d'environnement).
   retards, messages).
 - **CV vivant** (missions prouvees + notes bidirectionnelles), statistiques
   Worker et Structure, wallet, abonnement structure.
+- **Centre Fondateur** unique (`/fondateur`) : tableau de bord, comptes,
+  missions, KYC, signalements, revenus UROSI, journal d'administration et
+  laboratoire strictement bloque sur la base de production.
 
 ## Modele metier (mandataire)
 
@@ -95,4 +98,3 @@ Voir `supabase/migrations/0001_schema.sql` (schema), `0002_functions.sql`
   confirmation avant credit du wallet).
 - Auth par SMS (OTP) : necessite un provider (Twilio/MessageBird) configure
   dans le dashboard Supabase. Le telephone est deja collecte sur le profil.
-- Back-office admin.

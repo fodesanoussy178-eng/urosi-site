@@ -66,6 +66,6 @@ describe('SignInPage', () => {
     await user.type(screen.getByLabelText('Mot de passe'), 'secret123');
     await user.click(screen.getByRole('button', { name: 'Accéder à l’espace fondateur' }));
 
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/fondateur/kyc'));
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/fondateur'));
   });
 });

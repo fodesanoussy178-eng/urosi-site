@@ -16,7 +16,7 @@ export function SignInForm() {
   const [info, setInfo] = useState<string | null>(null);
   const [showResend, setShowResend] = useState(false);
   const [busy, setBusy] = useState(false);
-  const founderDestination = params.get('next') === '/fondateur/kyc';
+  const founderDestination = params.get('next')?.startsWith('/fondateur') ?? false;
 
   async function submit() {
     if (busy) return;
@@ -46,7 +46,7 @@ export function SignInForm() {
       setBusy(false);
       return;
     }
-    nav(wantsFounderDemo || founderDestination ? '/fondateur/kyc' : '/app', { replace: true });
+    nav(wantsFounderDemo || founderDestination ? '/fondateur' : '/app', { replace: true });
     setBusy(false);
   }
 

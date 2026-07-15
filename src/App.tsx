@@ -14,7 +14,7 @@ import { WorkerApp } from '@/features/worker/WorkerApp';
 import { StructureApp } from '@/features/structure/StructureApp';
 import { CheckinPage } from '@/features/missions/CheckinPage';
 import { ScanPage } from '@/features/missions/ScanPage';
-import { KycReviewPage } from '@/features/founder/KycReviewPage';
+import { FounderAdminPage } from '@/features/founder/FounderAdminPage';
 
 function Centered({ text }: { text: string }) {
   return (
@@ -60,7 +60,8 @@ function AppShell() {
         <Route path="/connexion" element={<SignInPage />} />
         <Route path="/inscription/travailleur" element={<WorkerSignupPage />} />
         <Route path="/inscription/structure" element={<StructureSignupPage />} />
-        <Route path="/fondateur/kyc" element={<Navigate to="/connexion?next=/fondateur/kyc" replace />} />
+        <Route path="/fondateur" element={<Navigate to="/connexion?next=/fondateur" replace />} />
+        <Route path="/fondateur/kyc" element={<Navigate to="/connexion?next=/fondateur" replace />} />
         <Route path="/reinitialisation" element={<ResetPasswordPage />} />
         <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
         <Route path="/scan/:token" element={<ScanPage />} />
@@ -79,7 +80,8 @@ function AppShell() {
       <Route path="/demo" element={<DemoExperience />} />
       <Route path="/connexion" element={<SignInPage />} />
       <Route path="/app" element={profile.role === 'structure_admin' ? <StructureApp /> : <WorkerApp />} />
-      <Route path="/fondateur/kyc" element={<KycReviewPage />} />
+      <Route path="/fondateur" element={<FounderAdminPage />} />
+      <Route path="/fondateur/kyc" element={<Navigate to="/fondateur?section=kyc" replace />} />
       <Route path="/reinitialisation" element={<ResetPasswordPage />} />
       <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
       <Route path="/scan/:token" element={<ScanPage />} />
