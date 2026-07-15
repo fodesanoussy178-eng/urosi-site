@@ -47,6 +47,8 @@ type DemoMission = {
   distance: string;
   solid?: boolean;
   desc: string;
+  places?: number;
+  status?: 'draft' | 'published';
 };
 
 type DemoCandidate = {
@@ -64,6 +66,12 @@ type DemoSharedState = {
   publishedMissions: DemoMission[];
   candidates: DemoCandidate[];
   acceptedMissionIds: string[];
+  archivedMissionIds: string[];
+  cancelledMissionIds: string[];
+  cancellationReasons: Record<string, string>;
+  deletedMissionIds: string[];
+  missionAmounts: Record<string, number>;
+  missionEdits: Record<string, Partial<Pick<DemoMission, 'title' | 'desc' | 'city' | 'when' | 'duration'>>>;
   startedMissionIds: string[];
   completedMissionIds: string[];
   workerUnreadMissionIds: string[];
@@ -298,6 +306,12 @@ function emptyDemoState(): DemoSharedState {
     publishedMissions: [],
     candidates: [],
     acceptedMissionIds: [],
+    archivedMissionIds: [],
+    cancelledMissionIds: [],
+    cancellationReasons: {},
+    deletedMissionIds: [],
+    missionAmounts: {},
+    missionEdits: {},
     startedMissionIds: [],
     completedMissionIds: [],
     workerUnreadMissionIds: [],
@@ -319,6 +333,12 @@ function readDemoState(): DemoSharedState {
         : [],
       candidates: Array.isArray(parsed.candidates) ? parsed.candidates : [],
       acceptedMissionIds: Array.isArray(parsed.acceptedMissionIds) ? parsed.acceptedMissionIds : [],
+      archivedMissionIds: Array.isArray(parsed.archivedMissionIds) ? parsed.archivedMissionIds : [],
+      cancelledMissionIds: Array.isArray(parsed.cancelledMissionIds) ? parsed.cancelledMissionIds : [],
+      cancellationReasons: parsed.cancellationReasons && typeof parsed.cancellationReasons === 'object' ? parsed.cancellationReasons : {},
+      deletedMissionIds: Array.isArray(parsed.deletedMissionIds) ? parsed.deletedMissionIds : [],
+      missionAmounts: parsed.missionAmounts && typeof parsed.missionAmounts === 'object' ? parsed.missionAmounts : {},
+      missionEdits: parsed.missionEdits && typeof parsed.missionEdits === 'object' ? parsed.missionEdits : {},
       startedMissionIds: Array.isArray(parsed.startedMissionIds) ? parsed.startedMissionIds : [],
       completedMissionIds: Array.isArray(parsed.completedMissionIds) ? parsed.completedMissionIds : [],
       workerUnreadMissionIds: Array.isArray(parsed.workerUnreadMissionIds) ? parsed.workerUnreadMissionIds : [],
@@ -339,13 +359,30 @@ function writeDemoState(state: DemoSharedState) {
   }
 }
 
+function missionFingerprint(mission: DemoMission) {
+  return [mission.structureId, mission.title, mission.city, mission.when, mission.duration, mission.amount]
+    .map((value) => String(value).trim().toLocaleLowerCase('fr-FR'))
+    .join('|');
+}
+
 function uniqueMissions(missions: DemoMission[]) {
   const seen = new Set<string>();
   return missions.filter((mission) => {
-    if (seen.has(mission.id)) return false;
-    seen.add(mission.id);
+    const fingerprint = missionFingerprint(mission);
+    if (seen.has(fingerprint)) return false;
+    seen.add(fingerprint);
     return true;
   });
+}
+
+function applyMissionState(mission: DemoMission, state: DemoSharedState): DemoMission {
+  const amount = state.missionAmounts[mission.id];
+  const edited = state.missionEdits[mission.id] ?? {};
+  return {
+    ...mission,
+    ...edited,
+    ...(typeof amount === 'number' && Number.isFinite(amount) ? { amount } : {}),
+  };
 }
 
 function uniqueCandidates(candidates: DemoCandidate[]) {
@@ -365,17 +402,42 @@ function structureIdForName(name: string): string {
 }
 
 function workerFeedMissions() {
-  const shared = readDemoState().publishedMissions;
-  return uniqueMissions([...shared, ...workerMissions]);
+  const state = readDemoState();
+  const hidden = new Set([...state.archivedMissionIds, ...state.cancelledMissionIds, ...state.deletedMissionIds]);
+  return uniqueMissions([...state.publishedMissions, ...workerMissions]
+    .filter((mission) => !hidden.has(mission.id))
+    .map((mission) => applyMissionState(mission, state)));
 }
 
 function structureMissions(kind: StructureKind) {
-  const shared = readDemoState().publishedMissions;
+  const state = readDemoState();
   const structureId = DEMO_STRUCTURE_IDS[kind];
+  const hidden = new Set([...state.archivedMissionIds, ...state.cancelledMissionIds, ...state.deletedMissionIds]);
   return uniqueMissions([
-    ...shared.filter((mission) => mission.structureId === structureId),
+    ...state.publishedMissions.filter((mission) => mission.structureId === structureId),
     ...structureSeed[kind].missions.filter((mission) => mission.structureId === structureId),
-  ]);
+  ].filter((mission) => !hidden.has(mission.id)).map((mission) => applyMissionState(mission, state)));
+}
+
+function archivedStructureMissions(kind: StructureKind) {
+  const state = readDemoState();
+  const structureId = DEMO_STRUCTURE_IDS[kind];
+  const archived = new Set(state.archivedMissionIds);
+  const deleted = new Set(state.deletedMissionIds);
+  return uniqueMissions([
+    ...state.publishedMissions,
+    ...structureSeed[kind].missions,
+  ].filter((mission) => mission.structureId === structureId && archived.has(mission.id) && !deleted.has(mission.id)).map((mission) => applyMissionState(mission, state)));
+}
+
+function cancelledStructureMissions(kind: StructureKind) {
+  const state = readDemoState();
+  const structureId = DEMO_STRUCTURE_IDS[kind];
+  const cancelled = new Set(state.cancelledMissionIds);
+  return uniqueMissions([
+    ...state.publishedMissions,
+    ...structureSeed[kind].missions,
+  ].filter((mission) => mission.structureId === structureId && cancelled.has(mission.id)).map((mission) => applyMissionState(mission, state)));
 }
 
 function structureCandidates(kind: StructureKind) {
@@ -435,6 +497,80 @@ function forgetAcceptedMission(missionId: string) {
     delayNotices: state.delayNotices.filter((notice) => notice.missionId !== missionId),
   });
   return acceptedMissionIds;
+}
+
+function hideDemoMission(mission: DemoMission, action: 'archive' | 'delete') {
+  const state = readDemoState();
+  const allMissions = [...state.publishedMissions, ...workerMissions, ...structureSeed.pme.missions, ...structureSeed.asso.missions];
+  const duplicateIds = Array.from(new Set(allMissions.filter((item) => missionFingerprint(applyMissionState(item, state)) === missionFingerprint(mission)).map((item) => item.id)));
+  const hiddenIds = duplicateIds.length > 0 ? duplicateIds : [mission.id];
+  const allCandidates = [...state.candidates, ...structureSeed.pme.candidates, ...structureSeed.asso.candidates];
+  const candidateIds = allCandidates.filter((candidate) => hiddenIds.includes(candidate.missionId)).map((candidate) => candidate.id);
+  if (action === 'archive') {
+    writeDemoState({ ...state, archivedMissionIds: Array.from(new Set([...state.archivedMissionIds, ...hiddenIds])) });
+    return true;
+  }
+  if (candidateIds.length > 0) return false;
+  writeDemoState({
+    ...state,
+    archivedMissionIds: state.archivedMissionIds.filter((id) => !hiddenIds.includes(id)),
+    deletedMissionIds: Array.from(new Set([...state.deletedMissionIds, ...hiddenIds])),
+    acceptedMissionIds: state.acceptedMissionIds.filter((id) => !hiddenIds.includes(id)),
+    candidates: state.candidates.filter((candidate) => !hiddenIds.includes(candidate.missionId)),
+    structureUnreadCandidateIds: state.structureUnreadCandidateIds.filter((id) => !candidateIds.includes(id)),
+    workerUnreadMissionIds: state.workerUnreadMissionIds.filter((id) => !hiddenIds.includes(id)),
+    workerUnreadWalletMissionIds: state.workerUnreadWalletMissionIds.filter((id) => !hiddenIds.includes(id)),
+    delayNotices: state.delayNotices.filter((notice) => !hiddenIds.includes(notice.missionId)),
+  });
+  return true;
+}
+
+function restoreDemoMission(mission: DemoMission) {
+  const state = readDemoState();
+  const allMissions = [...state.publishedMissions, ...workerMissions, ...structureSeed.pme.missions, ...structureSeed.asso.missions];
+  const duplicateIds = allMissions.filter((item) => missionFingerprint(applyMissionState(item, state)) === missionFingerprint(mission)).map((item) => item.id);
+  writeDemoState({ ...state, archivedMissionIds: state.archivedMissionIds.filter((id) => !duplicateIds.includes(id)) });
+}
+
+function updateDemoMissionAmount(missionId: string, amount: number) {
+  const state = readDemoState();
+  writeDemoState({ ...state, missionAmounts: { ...state.missionAmounts, [missionId]: Math.max(0, Math.round(amount)) } });
+}
+
+function updateDemoMissionDetails(missionId: string, patch: Partial<Pick<DemoMission, 'title' | 'desc' | 'city' | 'when' | 'duration'>>) {
+  const state = readDemoState();
+  writeDemoState({ ...state, missionEdits: { ...state.missionEdits, [missionId]: { ...(state.missionEdits[missionId] ?? {}), ...patch } } });
+}
+
+function cancelDemoMission(missionId: string, reason: string) {
+  const state = readDemoState();
+  writeDemoState({
+    ...state,
+    cancelledMissionIds: Array.from(new Set([...state.cancelledMissionIds, missionId])),
+    cancellationReasons: { ...state.cancellationReasons, [missionId]: reason.trim() || 'Besoin annulé' },
+  });
+}
+
+function duplicateDemoMission(mission: DemoMission) {
+  const state = readDemoState();
+  const copy: DemoMission = {
+    ...mission,
+    id: `copy-${Date.now()}`,
+    title: `${mission.title} · copie`,
+    when: 'Date et horaires à vérifier',
+    status: 'draft',
+  };
+  writeDemoState({ ...state, publishedMissions: [copy, ...state.publishedMissions] });
+}
+
+function downloadDemoMissionRecap(mission: DemoMission) {
+  const csv = `\uFEFFMission;Lieu;Horaires;Durée;Prix\n"${mission.title.replaceAll('"', '""')}";"${mission.city.replaceAll('"', '""')}";"${mission.when.replaceAll('"', '""')}";"${mission.duration.replaceAll('"', '""')}";${mission.amount}`;
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `urosi-mission-${mission.id}.csv`;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function rememberCandidateDecision(candidate: DemoCandidate, status: CandidateStatus) {
@@ -698,7 +834,7 @@ function StructureProfile({ name, onBack }: { name: string; onBack: () => void }
 
 function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void }) {
   const [tab, setTab] = useState<WorkerTab>('flux');
-  const [feed] = useState<DemoMission[]>(() => workerFeedMissions());
+  const [feed, setFeed] = useState<DemoMission[]>(() => workerFeedMissions());
   const [demoState, setDemoState] = useState<DemoSharedState>(() => readDemoState());
   const [accepted, setAccepted] = useState<string[]>(() => readDemoState().acceptedMissionIds);
   const [profileName, setProfileName] = useState<string | null>(null);
@@ -715,6 +851,7 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
       const next = readDemoState();
       setDemoState(next);
       setAccepted(next.acceptedMissionIds);
+      setFeed(workerFeedMissions());
     }
     window.addEventListener('storage', refresh);
     return () => window.removeEventListener('storage', refresh);
@@ -1183,6 +1320,161 @@ function Stepper({
   );
 }
 
+type MissionManageMode = 'menu' | 'edit' | 'schedule' | 'price' | 'archive' | 'delete' | 'cancel';
+
+function DemoStructureMissionCard({ mission, index, candidateCount, completed, onOpen, onRepublish }: { mission: DemoMission; index: number; candidateCount: number; completed: boolean; onOpen: (mode?: MissionManageMode) => void; onRepublish: () => void }) {
+  const [swiped, setSwiped] = useState(false);
+  const startX = useRef(0);
+  const holdTimer = useRef<ReturnType<typeof setTimeout>>();
+  const held = useRef(false);
+
+  function clearHold() {
+    clearTimeout(holdTimer.current);
+  }
+
+  return (
+    <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 12 }}>
+      {swiped && (
+        <div style={{ position: 'absolute', inset: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', background: T.row }}>
+          <button onClick={() => completed ? onRepublish() : onOpen('edit')} style={{ border: 'none', background: '#1d4ed8', color: '#fff', fontSize: 11, fontWeight: 900 }}>{completed ? 'Republier' : 'Modifier'}</button>
+          <button onClick={() => onOpen(candidateCount === 0 && mission.status === 'draft' ? 'delete' : 'archive')} style={{ border: 'none', background: candidateCount === 0 && mission.status === 'draft' ? '#991b1b' : '#475569', color: '#fff', fontSize: 11, fontWeight: 900 }}>{candidateCount === 0 && mission.status === 'draft' ? 'Supprimer' : 'Archiver'}</button>
+        </div>
+      )}
+      <div
+        style={{ position: 'relative', transform: swiped ? 'translateX(-42%)' : 'translateX(0)', transition: 'transform 180ms ease', background: T.bg }}
+        onPointerDown={(event) => {
+          startX.current = event.clientX;
+          held.current = false;
+          holdTimer.current = setTimeout(() => {
+            held.current = true;
+            onOpen();
+          }, 900);
+        }}
+        onPointerUp={(event) => {
+          clearHold();
+          if (!held.current && event.clientX - startX.current < -55) setSwiped(true);
+        }}
+        onPointerCancel={clearHold}
+        onPointerLeave={clearHold}
+      >
+        {index === 0 && <div style={{ fontSize: 9, fontWeight: 800, color: T.cyan, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6, marginTop: 4 }}>★ Dernière mission publiée</div>}
+        <div style={{ background: T.card, border: `1px solid ${index === 0 ? '#0e7490' : T.cb}`, borderRadius: 12, padding: '13px 15px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+            <button type="button" onClick={() => { if (!held.current) onOpen(); }} style={{ flex: 1, minWidth: 0, padding: 0, border: 'none', background: 'none', color: 'inherit', textAlign: 'left', cursor: 'pointer' }}>
+              <div style={{ color: T.text, fontSize: 14, fontWeight: 900 }}>{mission.title}</div>
+              <div style={{ color: T.mu, fontSize: 10, marginTop: 4 }}>{mission.structure} · {mission.city} · {mission.when} · {mission.duration}</div>
+              <div style={{ color: T.sub, fontSize: 10.5, marginTop: 5, lineHeight: 1.45 }}>{mission.desc}</div>
+            </button>
+            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+              <button aria-label={`Actions pour ${mission.title}`} onClick={() => onOpen()} style={{ border: 'none', background: 'none', color: T.mu, fontSize: 20, fontWeight: 900, cursor: 'pointer', padding: '0 0 4px 12px' }}>•••</button>
+              <div style={{ color: mission.solid ? T.green : T.text, fontSize: 18, fontWeight: 900 }}>{mission.solid ? 'Solidaire' : `${mission.amount} €`}</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12 }}>
+            <span style={{ color: mission.status === 'draft' ? T.amber : completed ? T.cyan : T.green, background: mission.status === 'draft' ? T.amberBg : completed ? '#22d3ee15' : T.greenBg, borderRadius: 10, padding: '2px 8px', fontSize: 9, fontWeight: 900 }}>{mission.status === 'draft' ? 'Brouillon' : completed ? 'Terminée' : candidateCount > 0 ? 'Candidatures reçues' : 'Active'}</span>
+            <span style={{ color: candidateCount > 0 ? T.cyan : T.mu, fontSize: 10 }}>{candidateCount > 0 ? `${candidateCount} candidat${candidateCount > 1 ? 's' : ''}` : 'Aucun candidat'}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MissionManageSheet({
+  mission,
+  candidateCount,
+  hasAcceptedCandidate,
+  completed,
+  initialMode = 'menu',
+  onClose,
+  onArchive,
+  onDelete,
+  onCancel,
+  onDuplicate,
+  onContact,
+  onUpdateDetails,
+  onUpdateAmount,
+}: {
+  mission: DemoMission;
+  candidateCount: number;
+  hasAcceptedCandidate: boolean;
+  completed: boolean;
+  initialMode?: MissionManageMode;
+  onClose: () => void;
+  onArchive: () => void;
+  onDelete: () => void;
+  onCancel: (reason: string) => void;
+  onDuplicate: () => void;
+  onContact: () => void;
+  onUpdateDetails: (patch: Partial<Pick<DemoMission, 'title' | 'desc' | 'city' | 'when' | 'duration'>>) => void;
+  onUpdateAmount: (amount: number) => void;
+}) {
+  const [mode, setMode] = useState<MissionManageMode>(initialMode);
+  const [amount, setAmount] = useState(mission.amount);
+  const [details, setDetails] = useState({ title: mission.title, desc: mission.desc, city: mission.city, when: mission.when, duration: mission.duration });
+  const [reason, setReason] = useState('Besoin annulé');
+  const [showCost, setShowCost] = useState(false);
+  const places = mission.places ?? 1;
+
+  const actionButton = (label: string, action: () => void, tone: 'light' | 'ghost' | 'red' | 'green' = 'light') => <Button tone={tone} onClick={action}>{label}</Button>;
+
+  return (
+    <div role="dialog" aria-modal="true" aria-label={`Gérer la mission ${mission.title}`} onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 210 }}>
+      <div onClick={(event) => event.stopPropagation()} style={{ width: '100%', maxWidth: 430, background: T.card, borderRadius: '24px 24px 0 0', padding: '20px 18px 28px' }}>
+        <div style={{ width: 42, height: 4, borderRadius: 3, background: T.cb, margin: '0 auto 16px' }} />
+        <div style={{ color: T.text, fontSize: 17, fontWeight: 900 }}>{mission.title}</div>
+        <div style={{ color: T.mu, fontSize: 10, margin: '4px 0 16px' }}>{mission.when} · {mission.city}</div>
+
+        {mode === 'menu' && (
+          <div style={{ display: 'grid', gap: 8 }}>
+            {completed ? (
+              <>
+                {actionButton('Voir les détails', () => setMode('edit'))}
+                {actionButton('Télécharger le récapitulatif', () => downloadDemoMissionRecap(mission))}
+                {actionButton('Republier cette mission', onDuplicate, 'green')}
+                {actionButton('Archiver', () => setMode('archive'), 'ghost')}
+              </>
+            ) : hasAcceptedCandidate ? (
+              <>
+                {actionButton('Voir / modifier les informations non sensibles', () => setMode('edit'))}
+                {actionButton('Contacter le candidat', onContact, 'green')}
+                {actionButton('Dupliquer la mission', onDuplicate)}
+                {actionButton('Annuler la mission', () => setMode('cancel'), 'red')}
+              </>
+            ) : (
+              <>
+                {actionButton('Modifier la mission', () => setMode('edit'))}
+                {!mission.solid && actionButton('Modifier le prix', () => setMode('price'))}
+                {actionButton('Modifier la date et les horaires', () => setMode('schedule'))}
+                {actionButton('Dupliquer la mission', onDuplicate, 'green')}
+                {actionButton('Archiver', () => setMode('archive'), 'ghost')}
+                {candidateCount > 0 ? actionButton('Annuler la mission', () => setMode('cancel'), 'red') : actionButton('Supprimer', () => setMode('delete'), 'red')}
+              </>
+            )}
+            {actionButton('Fermer', onClose, 'ghost')}
+          </div>
+        )}
+
+        {mode === 'price' && !mission.solid && (
+          <div style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 13, padding: 12, marginBottom: 10 }}>
+            <label htmlFor="demo-mission-amount" style={{ display: 'block', color: T.sub, fontSize: 10, fontWeight: 900, marginBottom: 7 }}>Prix par personne</label>
+            <input id="demo-mission-amount" type="number" min={1} value={amount || ''} onChange={(event) => setAmount(Math.max(0, Number(event.target.value) || 0))} style={inp} />
+            <div style={{ color: T.sub, fontSize: 10, lineHeight: 1.6 }}>Nombre d’heures : {mission.duration}<br />Personnes recherchées : {places}<br /><strong style={{ color: T.text }}>Coût estimé : {amount * places} €</strong></div>
+            <button onClick={() => setShowCost((value) => !value)} style={{ background: 'none', border: 'none', color: T.cyan, padding: '8px 0', fontSize: 10, cursor: 'pointer' }}>Voir le détail du coût</button>
+            {showCost && <div style={{ color: T.mu, fontSize: 9.5, marginBottom: 8 }}>Rémunération : {amount * places} € · estimation avant éventuels frais affichés au récapitulatif.</div>}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}><Button tone="ghost" onClick={() => setMode('menu')}>Retour</Button><Button disabled={amount < 1} onClick={() => onUpdateAmount(amount)}>Enregistrer</Button></div>
+          </div>
+        )}
+        {mode === 'edit' && <div style={{ display: 'grid', gap: 8 }}><input disabled={completed} value={details.title} onChange={(e) => setDetails((v) => ({ ...v, title: e.target.value }))} aria-label="Titre de la mission" style={inp} /><textarea disabled={completed} value={details.desc} onChange={(e) => setDetails((v) => ({ ...v, desc: e.target.value }))} aria-label="Description de la mission" style={{ ...inp, minHeight: 82 }} /><input disabled={completed} value={details.city} onChange={(e) => setDetails((v) => ({ ...v, city: e.target.value }))} aria-label="Adresse de la mission" style={inp} />{hasAcceptedCandidate && <div style={{ color: T.amber, background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 10, padding: 10, fontSize: 10 }}>Seules les informations non sensibles sont modifiables. Le prix et les horaires restent bloqués.</div>}{completed ? <Button tone="ghost" onClick={() => setMode('menu')}>Retour</Button> : <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}><Button tone="ghost" onClick={() => setMode('menu')}>Retour</Button><Button onClick={() => onUpdateDetails({ title: details.title, desc: details.desc, city: details.city })}>Enregistrer</Button></div>}</div>}
+        {mode === 'schedule' && <div style={{ display: 'grid', gap: 8 }}><label style={{ color: T.sub, fontSize: 10 }}>Date et horaires<input value={details.when} onChange={(e) => setDetails((v) => ({ ...v, when: e.target.value }))} style={{ ...inp, marginTop: 5 }} /></label><label style={{ color: T.sub, fontSize: 10 }}>Durée<input value={details.duration} onChange={(e) => setDetails((v) => ({ ...v, duration: e.target.value }))} style={{ ...inp, marginTop: 5 }} /></label><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}><Button tone="ghost" onClick={() => setMode('menu')}>Retour</Button><Button onClick={() => onUpdateDetails({ when: details.when, duration: details.duration })}>Enregistrer</Button></div></div>}
+        {mode === 'archive' && <div style={{ background: T.row, borderRadius: 13, padding: 13 }}><div style={{ color: T.text, fontSize: 14, fontWeight: 900 }}>Archiver cette mission ?</div><div style={{ color: T.sub, fontSize: 10.5, lineHeight: 1.5, margin: '6px 0 12px' }}>Elle ne sera plus affichée dans les missions actives, mais restera disponible dans ton historique.</div><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}><Button tone="ghost" onClick={() => setMode('menu')}>Annuler</Button><Button onClick={onArchive}>Archiver</Button></div></div>}
+        {mode === 'delete' && <div style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, borderRadius: 13, padding: 13 }}><div style={{ color: T.red, fontSize: 14, fontWeight: 900 }}>Supprimer cette mission ?</div><div style={{ color: T.sub, fontSize: 10.5, lineHeight: 1.5, margin: '6px 0 12px' }}>Cette action est définitive. La mission ne sera plus visible dans ton espace.</div><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}><Button tone="ghost" onClick={() => setMode('menu')}>Annuler</Button><Button tone="red" onClick={onDelete}>Supprimer définitivement</Button></div></div>}
+        {mode === 'cancel' && <div style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, borderRadius: 13, padding: 13 }}><div style={{ color: T.red, fontSize: 14, fontWeight: 900 }}>Annuler cette mission ?</div><div style={{ color: T.sub, fontSize: 10.5, lineHeight: 1.5, margin: '6px 0 10px' }}>Les candidats concernés seront informés et la mission restera visible dans l’historique.</div><select value={reason} onChange={(e) => setReason(e.target.value)} aria-label="Motif de l’annulation" style={inp}><option>Besoin annulé</option><option>Changement d’horaires</option><option>Erreur de publication</option><option>Autre</option></select><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}><Button tone="ghost" onClick={() => setMode('menu')}>Retour</Button><Button tone="red" onClick={() => onCancel(reason)}>Confirmer l’annulation</Button></div></div>}
+      </div>
+    </div>
+  );
+}
+
 function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; onBack: () => void; onSwitchWorker: () => void }) {
   const [kind, setKind] = useState<StructureKind | null>('pme');
   const [tab, setTab] = useState<StructureTab>('missions');
@@ -1191,6 +1483,7 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
   const [demoState, setDemoState] = useState<DemoSharedState>(() => readDemoState());
   const [panel, setPanel] = useState<DemoCandidate | null>(null);
   const [showPub, setShowPub] = useState(false);
+  const [managedMission, setManagedMission] = useState<{ mission: DemoMission; mode?: MissionManageMode } | null>(null);
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -1248,6 +1541,8 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
   const candidateUnread = demoState.structureUnreadCandidateIds.filter((id) => visibleCandidateIds.has(id)).length;
   const visibleMissionIds = new Set(missions.map((mission) => mission.id));
   const delayNotices = demoState.delayNotices.filter((notice) => visibleMissionIds.has(notice.missionId));
+  const archivedMissions = archivedStructureMissions(kind);
+  const cancelledMissions = cancelledStructureMissions(kind);
 
   function decide(id: string, status: CandidateStatus) {
     const candidate = candidates.find((item) => item.id === id);
@@ -1270,6 +1565,51 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
     const state = readDemoState();
     writeDemoState({ ...state, delayNotices: state.delayNotices.filter((notice) => notice.missionId !== missionId) });
     setDemoState(readDemoState());
+  }
+
+  function manageMission(action: 'archive' | 'delete', mission: DemoMission) {
+    const changed = hideDemoMission(mission, action);
+    if (!changed) {
+      notif('Suppression impossible : cette mission possède déjà une candidature. Utilise Annuler ou Archiver.');
+      return;
+    }
+    refreshFromDemoState();
+    setManagedMission(null);
+    notif(action === 'archive' ? 'Mission archivée des deux côtés.' : 'Mission supprimée des deux côtés. Les doublons identiques ont aussi été retirés.');
+  }
+
+  function updateMissionAmount(mission: DemoMission, amount: number) {
+    updateDemoMissionAmount(mission.id, amount);
+    refreshFromDemoState();
+    setManagedMission(null);
+    notif(`Prix de la mission modifié : ${Math.round(amount)} €.`);
+  }
+
+  function updateMissionDetails(mission: DemoMission, patch: Partial<Pick<DemoMission, 'title' | 'desc' | 'city' | 'when' | 'duration'>>) {
+    updateDemoMissionDetails(mission.id, patch);
+    refreshFromDemoState();
+    setManagedMission(null);
+    notif('Mission modifiée.');
+  }
+
+  function duplicateMission(mission: DemoMission, completed: boolean) {
+    duplicateDemoMission(mission);
+    refreshFromDemoState();
+    setManagedMission(null);
+    notif(completed ? 'Mission republiée en brouillon : vérifie la date et les horaires.' : 'Mission dupliquée en brouillon : vérifie la date et les horaires.');
+  }
+
+  function cancelMissionFromStructure(mission: DemoMission, reason: string) {
+    cancelDemoMission(mission.id, reason);
+    refreshFromDemoState();
+    setManagedMission(null);
+    notif('Mission annulée. Les candidats sont informés.');
+  }
+
+  function restoreMission(mission: DemoMission) {
+    restoreDemoMission(mission);
+    refreshFromDemoState();
+    notif('Mission restaurée dans le flux et dans l’espace structure.');
   }
 
   function refreshFromDemoState() {
@@ -1346,31 +1686,11 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
               </div>
             ))}
             <Button onClick={() => setShowPub(true)}>Publier une mission</Button>
+            <div style={{ color: T.mu, fontSize: 9.5, textAlign: 'center' }}>Touche une mission ou utilise •••. Appui long ou swipe gauche disponibles sur mobile.</div>
             {missions.map((m, i) => {
-              const count = candidates.filter((c) => c.missionId === m.id && c.status === 'pending').length;
-              return (
-                <div key={m.id} style={{ background: T.card, border: `1px solid ${i === 0 ? '#0e7490' : T.cb}`, borderRadius: 16, padding: 15 }}>
-                  {i === 0 && <div style={{ color: T.cyan, fontSize: 9, fontWeight: 900, marginBottom: 7, textTransform: 'uppercase' }}>Dernière mission publiée</div>}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                    <div>
-                      <div style={{ color: T.text, fontSize: 14, fontWeight: 900 }}>{m.title}</div>
-                      <div style={{ color: T.mu, fontSize: 10, marginTop: 4 }}>{m.structure} · {m.city} · {m.when} · {m.duration}</div>
-                      <div style={{ color: T.sub, fontSize: 10.5, marginTop: 5, lineHeight: 1.45 }}>{m.desc}</div>
-                    </div>
-                    <div style={{ color: m.solid ? T.green : T.text, fontSize: 18, fontWeight: 900 }}>{m.solid ? 'Solidaire' : `${m.amount} €`}</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12 }}>
-                    <span style={{ color: T.green, background: T.greenBg, borderRadius: 10, padding: '2px 8px', fontSize: 9, fontWeight: 900 }}>Active</span>
-                    {count > 0 ? (
-                      <button onClick={() => changeStructureTab('candidats')} style={{ color: T.cyan, background: '#22d3ee15', border: 'none', borderRadius: 10, padding: '3px 9px', fontSize: 10, fontWeight: 900, cursor: 'pointer' }}>
-                        {count} candidat{count > 1 ? 's' : ''} →
-                      </button>
-                    ) : (
-                      <span style={{ color: T.mu, fontSize: 10 }}>Aucun candidat</span>
-                    )}
-                  </div>
-                </div>
-              );
+              const allMissionCandidates = candidates.filter((candidate) => candidate.missionId === m.id);
+              const completed = demoState.completedMissionIds.includes(m.id);
+              return <DemoStructureMissionCard key={m.id} mission={m} index={i} candidateCount={allMissionCandidates.length} completed={completed} onOpen={(mode) => setManagedMission({ mission: m, mode })} onRepublish={() => duplicateMission(m, completed)} />;
             })}
             <div style={{ border: `1px solid ${T.amberBorder}`, background: T.amberBg, borderRadius: 16, padding: 14, marginTop: 8 }}>
               <div style={{ color: T.amber, fontSize: 9, fontWeight: 900, letterSpacing: 1.2, marginBottom: 10 }}>MODE DÉMO</div>
@@ -1387,6 +1707,33 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
         )}
         {tab === 'historique' && (
           <div style={{ display: 'grid', gap: 10 }}>
+            {archivedMissions.length > 0 && (
+              <div style={{ background: T.card, border: `1px solid ${T.amberBorder}`, borderRadius: 16, padding: 15 }}>
+                <div style={{ color: T.text, fontSize: 13, fontWeight: 900 }}>Missions archivées · {archivedMissions.length}</div>
+                <div style={{ color: T.mu, fontSize: 9, margin: '3px 0 8px' }}>Masquées du flux travailleur et de la liste active.</div>
+                {archivedMissions.map((mission) => (
+                  <div key={mission.id} style={{ borderTop: `1px solid ${T.cb}`, padding: '9px 0', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: T.text, fontSize: 11, fontWeight: 800 }}>{mission.title}</div>
+                      <div style={{ color: T.mu, fontSize: 9, marginTop: 2 }}>{mission.when} · {mission.solid ? 'Solidaire' : `${mission.amount} €`}</div>
+                    </div>
+                    <button onClick={() => restoreMission(mission)} style={{ background: T.row, color: T.cyan, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 9px', fontSize: 9, fontWeight: 900, cursor: 'pointer' }}>Restaurer</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {cancelledMissions.length > 0 && (
+              <div style={{ background: T.card, border: `1px solid ${T.redBorder}`, borderRadius: 16, padding: 15 }}>
+                <div style={{ color: T.text, fontSize: 13, fontWeight: 900 }}>Missions annulées · {cancelledMissions.length}</div>
+                <div style={{ color: T.mu, fontSize: 9, margin: '3px 0 8px' }}>Conservées avec leurs candidatures et leur motif.</div>
+                {cancelledMissions.map((mission) => (
+                  <div key={mission.id} style={{ borderTop: `1px solid ${T.cb}`, padding: '9px 0' }}>
+                    <div style={{ color: T.text, fontSize: 11, fontWeight: 800 }}>{mission.title}</div>
+                    <div style={{ color: T.red, fontSize: 9, marginTop: 2 }}>{demoState.cancellationReasons[mission.id] ?? 'Besoin annulé'}</div>
+                  </div>
+                ))}
+              </div>
+            )}
             <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 16, padding: 15 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', marginBottom: 10 }}>
                 <div>
@@ -1478,6 +1825,26 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
             )}
           </div>
         </div>
+      )}
+      {managedMission && (
+        <MissionManageSheet
+          mission={managedMission.mission}
+          initialMode={managedMission.mode}
+          candidateCount={candidates.filter((candidate) => candidate.missionId === managedMission.mission.id).length}
+          hasAcceptedCandidate={candidates.some((candidate) => candidate.missionId === managedMission.mission.id && candidate.status === 'accepted')}
+          completed={demoState.completedMissionIds.includes(managedMission.mission.id)}
+          onClose={() => setManagedMission(null)}
+          onArchive={() => manageMission('archive', managedMission.mission)}
+          onDelete={() => manageMission('delete', managedMission.mission)}
+          onCancel={(reason) => cancelMissionFromStructure(managedMission.mission, reason)}
+          onDuplicate={() => duplicateMission(managedMission.mission, demoState.completedMissionIds.includes(managedMission.mission.id))}
+          onContact={() => {
+            setTab('candidats');
+            setManagedMission(null);
+          }}
+          onUpdateDetails={(patch) => updateMissionDetails(managedMission.mission, patch)}
+          onUpdateAmount={(amount) => updateMissionAmount(managedMission.mission, amount)}
+        />
       )}
       {showPub && <PublishDemoModal isAsso={kind === 'asso'} onClose={() => setShowPub(false)} onPublish={publish} />}
     </>
