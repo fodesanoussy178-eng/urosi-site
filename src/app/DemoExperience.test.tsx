@@ -17,6 +17,15 @@ function renderScan(step: 'start' | 'end') {
   );
 }
 
+function renderStructure() {
+  localStorage.setItem(DEMO_FOUNDER_ACCESS_KEY, '1');
+  return render(
+    <MemoryRouter initialEntries={['/demo?role=structure']}>
+      <DemoExperience />
+    </MemoryRouter>,
+  );
+}
+
 describe('DemoExperience founder scan', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -42,5 +51,31 @@ describe('DemoExperience founder scan', () => {
     };
     expect(state.completedMissionIds).toContain('m1');
     expect(state.workerUnreadWalletMissionIds).toContain('m1');
+  });
+
+  it('updates a mission price from its management sheet', async () => {
+    const user = userEvent.setup();
+    renderStructure();
+
+    await user.click(screen.getByRole('button', { name: /Renfort service midi/ }));
+    const amount = screen.getByLabelText('Rémunération travailleur');
+    await user.clear(amount);
+    await user.type(amount, '99');
+    await user.click(screen.getByRole('button', { name: 'Modifier le prix' }));
+
+    expect(screen.getByRole('button', { name: /Renfort service midi.*99 €/ })).toBeInTheDocument();
+  });
+
+  it('deletes a mission from both demo sides after confirmation', async () => {
+    const user = userEvent.setup();
+    renderStructure();
+
+    await user.click(screen.getByRole('button', { name: /Renfort service midi/ }));
+    await user.click(screen.getByRole('button', { name: 'Supprimer la mission' }));
+    await user.click(screen.getByRole('button', { name: 'Confirmer' }));
+
+    expect(screen.queryByRole('button', { name: /Renfort service midi/ })).not.toBeInTheDocument();
+    const state = JSON.parse(localStorage.getItem('urosi_founder_demo_shared_v1') || '{}') as { deletedMissionIds?: string[] };
+    expect(state.deletedMissionIds).toContain('m1');
   });
 });
