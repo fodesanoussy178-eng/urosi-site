@@ -7,13 +7,13 @@ function euros(cents: number): string {
   return formatEuros(cents).replace(' EUR', ' €');
 }
 
-// Statistiques de la structure : activite, taux de remplissage, flux payes.
-export function StatsPanel({ structureId }: { structureId: string }) {
+function useStructureStats(structureId: string) {
   const [stats, setStats] = useState<StructureStats | null>(null);
   const [error, setError] = useState(false);
 
   useEffect(() => {
     let active = true;
+    setError(false);
     fetchStructureStats(structureId)
       .then((s) => active && setStats(s))
       .catch(() => active && setError(true));
@@ -21,6 +21,39 @@ export function StatsPanel({ structureId }: { structureId: string }) {
       active = false;
     };
   }, [structureId]);
+
+  return { stats, error };
+}
+
+export function StructureStatsSummary({ structureId, acceptedCount, decidedCount }: { structureId: string; acceptedCount: number; decidedCount: number }) {
+  const { stats, error } = useStructureStats(structureId);
+
+  if (error) return <div style={{ fontSize: 11, color: T.mu, textAlign: 'center', padding: 12 }}>Résumé indisponible.</div>;
+  if (!stats) return <div style={{ fontSize: 11, color: T.mu, textAlign: 'center', padding: 12 }}>Chargement des statistiques…</div>;
+
+  const acceptanceRate = decidedCount > 0 ? `${Math.round((acceptedCount / decidedCount) * 100)} %` : '—';
+  const rating = stats.avg_rating == null ? '—' : `★ ${stats.avg_rating.toFixed(1).replace('.', ',')}`;
+  const summary: [string, string][] = [
+    [String(stats.missions_total), 'missions publiées'],
+    [acceptanceRate, 'acceptées'],
+    [rating, `${stats.ratings_count} avis`],
+  ];
+
+  return (
+    <div aria-label="Résumé réel de la structure" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 7 }}>
+      {summary.map(([value, label]) => (
+        <div key={label} style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 11, padding: '12px 7px', textAlign: 'center' }}>
+          <div style={{ fontSize: value.startsWith('★') ? 15 : 19, fontWeight: 900, color: value.startsWith('★') ? T.amber : T.text }}>{value}</div>
+          <div style={{ fontSize: 8.5, color: T.mu, marginTop: 4, lineHeight: 1.2 }}>{label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Statistiques de la structure : activite, taux de remplissage, flux payes.
+export function StatsPanel({ structureId }: { structureId: string }) {
+  const { stats, error } = useStructureStats(structureId);
 
   if (error) {
     return <div style={{ fontSize: 11, color: T.mu, textAlign: 'center', padding: 16 }}>Statistiques indisponibles.</div>;

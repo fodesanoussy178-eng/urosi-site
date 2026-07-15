@@ -9,7 +9,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { ChatSheet } from '@/components/ui/ChatSheet';
 import { WalletCard } from '@/components/ui/WalletCard';
 import { fetchMyStructures, createStructure, updateStructureAbout, subscribeStructure } from './structureService';
-import { StatsPanel } from './StatsPanel';
+import { StatsPanel, StructureStatsSummary } from './StatsPanel';
 import { StructureHistoryPanel } from './StructureHistoryPanel';
 import { fetchMissionsForStructure, createMission } from '@/features/missions/missionsService';
 import {
@@ -28,7 +28,7 @@ import type { Mission, Structure } from '@/features/missions/types';
 import type { MissionDayOfWeek, MissionSlot, MissionTimeSlot } from '@/types/database.types';
 import { formatEuros, formatHours } from '@/lib/format';
 
-type Tab = 'missions' | 'candidats' | 'pilotage';
+type Tab = 'missions' | 'candidats' | 'pilotage' | 'historique';
 const DEFAULT_HOURLY_EUR = 14;
 const MIN_HOURLY_EUR = 10;
 const MAX_HOURLY_EUR = 80;
@@ -121,12 +121,12 @@ type CandWithMission = ApplicationWithApplicant & { missionTitle: string };
 
 function isVerifiedStructure(structure: Structure | null): boolean {
   if (!structure) return false;
-  return structure.verification_status === 'verified' || structure.verification_status === 'founder_bypass' || Boolean(structure.siret);
+  return structure.verification_status === 'verified' || structure.verification_status === 'founder_bypass';
 }
 
 function verificationBadge(structure: Structure): { label: string; color: string; bg: string } {
   if (structure.verification_status === 'founder_bypass' || structure.founder_bypass) return { label: 'Accès fondateur', color: T.green, bg: T.greenBg };
-  if (structure.verification_status === 'verified' || structure.siret) return { label: '✓ SIRET vérifié', color: T.green, bg: T.greenBg };
+  if (structure.verification_status === 'verified') return { label: '✓ SIRET vérifié', color: T.green, bg: T.greenBg };
   if (structure.verification_status === 'rejected') return { label: 'SIRET refusé', color: T.red, bg: T.redBg };
   return { label: 'Vérification SIRET', color: T.amber, bg: T.amberBg };
 }
@@ -149,6 +149,7 @@ export function StructureApp() {
   const [chatFor, setChatFor] = useState<CandWithMission | null>(null);
   const [docKey, setDocKey] = useState<DocKey | null>(null);
   const [subBusy, setSubBusy] = useState(false);
+  const [showStatsIntro, setShowStatsIntro] = useState(true);
   const [vf, setVf] = useState({ nom: '', siret: '' });
   const [founderAccess, setFounderAccess] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -182,6 +183,8 @@ export function StructureApp() {
     setMis(missions);
     await loadMissionData(missions);
   }
+
+  const structureId = structure?.id;
 
   useEffect(() => {
     (async () => {
@@ -226,6 +229,13 @@ export function StructureApp() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
+
+  useEffect(() => {
+    if (!structureId) return;
+    setShowStatsIntro(true);
+    const timer = window.setTimeout(() => setShowStatsIntro(false), 3000);
+    return () => window.clearTimeout(timer);
+  }, [structureId]);
 
   async function createFromForm() {
     if (!session) return;
@@ -323,7 +333,7 @@ export function StructureApp() {
   }
 
   const allCands: CandWithMission[] = mis.flatMap((m) => (cands.get(m.id) ?? []).map((c) => ({ ...c, missionTitle: m.title })));
-  const pending = allCands.filter((c) => c.status === 'pending');
+  const pending = [...new Map(allCands.filter((c) => c.status === 'pending').map((candidate) => [candidate.worker_id, candidate])).values()];
   const completedByWorker = new Map<string, CandWithMission[]>();
   for (const c of allCands.filter((x) => x.status === 'completed')) {
     completedByWorker.set(c.worker_id, [...(completedByWorker.get(c.worker_id) ?? []), c]);
@@ -331,7 +341,10 @@ export function StructureApp() {
   const habitues = [...completedByWorker.entries()]
     .map(([workerId, list]) => ({ workerId, nom: list[0]?.profile?.full_name || 'Travailleur', fois: list.length }))
     .sort((a, b) => b.fois - a.fois);
-  const shownCands = candMis ? allCands.filter((c) => c.mission_id === candMis) : allCands;
+  const candidatePool = candMis ? allCands.filter((c) => c.mission_id === candMis) : allCands;
+  const shownCands = [...new Map(candidatePool.map((candidate) => [candidate.worker_id, candidate])).values()];
+  const acceptedDecisionCount = allCands.filter((candidate) => ['accepted', 'in_progress', 'payment_pending', 'completed'].includes(candidate.status)).length;
+  const decidedCount = allCands.filter((candidate) => candidate.status !== 'pending' && candidate.status !== 'cancelled').length;
   const misTitle = (mid: string) => mis.find((m) => m.id === mid)?.title ?? '—';
   const candCount = (mid: string) => (cands.get(mid) ?? []).filter((c) => c.status === 'pending').length;
   const unreadTotal = [...unread.values()].reduce((s, v) => s + v, 0);
@@ -407,6 +420,18 @@ export function StructureApp() {
               <AboutEditor structure={structure} onSaved={(about) => setStructure((s) => (s ? { ...s, about } : s))} notif={notif} />
             </div>
 
+            {structureVerified && (
+              <div style={{ background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 10, padding: '9px 12px', marginBottom: 12, color: T.green, fontSize: 10.5, fontWeight: 900 }}>
+                ✓ Structure vérifiée · identité et SIRET confirmés
+              </div>
+            )}
+
+            {showStatsIntro && tab !== 'historique' && (
+              <div style={{ marginBottom: 12 }}>
+                <StructureStatsSummary structureId={structure.id} acceptedCount={acceptedDecisionCount} decidedCount={decidedCount} />
+              </div>
+            )}
+
             {/* Abonnement requis pour publier */}
             {!structure.subscription_active && (
               <div style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 12, padding: '12px 15px', marginBottom: 12 }}>
@@ -427,6 +452,7 @@ export function StructureApp() {
                   ['missions', 'Missions', mis.length],
                   ['candidats', 'Candidats', pending.length + unreadTotal],
                   ['pilotage', 'Pilotage', 0],
+                  ['historique', 'Historique', 0],
                 ] as [Tab, string, number][]
               ).map(([k, l, n]) => (
                 <button
@@ -611,7 +637,6 @@ export function StructureApp() {
             {tab === 'pilotage' && session && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <StatsPanel structureId={structure.id} />
-                <StructureHistoryPanel structureId={structure.id} />
                 <WalletCard profileId={session.user.id} mode="structure" notif={notif} />
                 <AideRegles onOpen={setDocKey} />
                 <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '13px 15px' }}>
@@ -627,6 +652,16 @@ export function StructureApp() {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {tab === 'historique' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <section style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '13px 15px' }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 9 }}>Performance réelle</div>
+                  <StructureStatsSummary structureId={structure.id} acceptedCount={acceptedDecisionCount} decidedCount={decidedCount} />
+                </section>
+                <StructureHistoryPanel structureId={structure.id} />
               </div>
             )}
 

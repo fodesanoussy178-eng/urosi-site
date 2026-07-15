@@ -80,6 +80,27 @@ function kycBadge(profile: Profile | null | undefined): { label: string; color: 
   return { label: 'Après acceptation', color: T.amber, bg: T.amberBg };
 }
 
+const SECTOR_LABELS: Record<string, string> = {
+  restauration: 'Restauration',
+  vente: 'Vente',
+  logistique: 'Logistique',
+  evenementiel: 'Événementiel',
+  nettoyage: 'Nettoyage',
+  manutention: 'Manutention',
+  administratif: 'Administratif',
+  autre: 'Autre',
+};
+
+function completedMissionCategories(applications: ApplicationWithMission[]): Array<[string, number]> {
+  const counts = applications.reduce<Record<string, number>>((result, application) => {
+    const sector = application.mission?.sector ?? 'autre';
+    const label = SECTOR_LABELS[sector] ?? sector;
+    result[label] = (result[label] ?? 0) + 1;
+    return result;
+  }, {});
+  return Object.entries(counts).sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0], 'fr'));
+}
+
 function normalizeIban(value: string): string {
   return value.replace(/\s/g, '').toUpperCase();
 }
@@ -94,6 +115,7 @@ export function WorkerApp() {
   const [structRatings, setStructRatings] = useState<Map<string, StructureRating>>(new Map());
   const [unread, setUnread] = useState<Map<string, number>>(new Map());
   const [stats, setStats] = useState<WorkerStats | null>(null);
+  const [showEarnings, setShowEarnings] = useState(false);
   const [rates, setRates] = useState<CommissionRates | null>(null);
   const [showPriceDetail, setShowPriceDetail] = useState(false);
   const [position, setPosition] = useState<LatLng | null>(null);
@@ -209,6 +231,7 @@ export function WorkerApp() {
   const acceptedApps = apps.filter((a) => a.status === 'accepted' || a.status === 'in_progress' || a.status === 'payment_pending');
   const pendingCount = apps.filter((a) => a.status === 'pending').length;
   const completedApps = apps.filter((a) => a.status === 'completed');
+  const missionCategories = completedMissionCategories(completedApps);
   const cvCount = completedApps.length;
   const receivedScores = completedApps.map((a) => receivedRatings.get(a.id)).filter((s): s is number => Boolean(s));
   const receivedAvg = receivedScores.length ? receivedScores.reduce((s, v) => s + v, 0) / receivedScores.length : null;
@@ -557,11 +580,21 @@ export function WorkerApp() {
                     <div style={{ fontSize: 10, color: T.mu }}>{ville ? `${ville} · ` : ''}CV vivant</div>
                   </div>
                 </div>
+                {profile?.kyc_status === 'verified' && (
+                  <div style={{ color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 10, padding: '9px 11px', fontSize: 10.5, fontWeight: 900, marginBottom: 12 }}>
+                    ✓ Compte, identité et informations de paiement vérifiés
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+                  <button type="button" onClick={() => setShowEarnings((visible) => !visible)} aria-label={showEarnings ? 'Masquer mes gains' : 'Afficher mes gains'} style={{ background: T.row, color: T.cyan, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '5px 8px', fontSize: 9, fontWeight: 800, cursor: 'pointer' }}>
+                    {showEarnings ? 'Masquer mes gains' : 'Afficher mes gains'}
+                  </button>
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 7, marginBottom: 13 }}>
                   {[
                     ['Missions prouvées', String(cvCount)],
                     ['Note moyenne', receivedAvg ? `★ ${receivedAvg.toFixed(1).replace('.', ',')}` : '—'],
-                    ['Gains totaux', stats ? euros(stats.earnings_total_cents) : '—'],
+                    ['Gains totaux', stats ? (showEarnings ? euros(stats.earnings_total_cents) : '•••') : '—'],
                   ].map(([l, v]) => (
                     <div key={l} style={{ background: T.row, borderRadius: 9, padding: '11px 6px', textAlign: 'center' }}>
                       <div style={{ fontSize: 15, fontWeight: 900, color: T.text }}>{v}</div>
@@ -569,6 +602,18 @@ export function WorkerApp() {
                     </div>
                   ))}
                 </div>
+                {missionCategories.length > 0 && (
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 7 }}>Expérience par secteur</div>
+                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                      {missionCategories.map(([category, count]) => (
+                        <span key={category} style={{ fontSize: 9.5, fontWeight: 800, color: T.cyan, background: '#22d3ee12', border: '1px solid #164e63', borderRadius: 12, padding: '3px 9px' }}>
+                          {category} · {count}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {profile?.skills && profile.skills.length > 0 && (
                   <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 12 }}>
                     {profile.skills.map((s) => (
@@ -605,7 +650,7 @@ export function WorkerApp() {
           {/* ── PROFIL : wallet, stats, infos ── */}
           {tab === 'profil' && session && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <WalletCard profileId={session.user.id} mode="worker" notif={notif} />
+              <WalletCard profileId={session.user.id} mode="worker" notif={notif} amountsVisible={showEarnings} onAmountsVisibleChange={setShowEarnings} />
               {stats && stats.monthly.length > 0 && (
                 <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 15 }}>
                   <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 9 }}>Mes gains par mois</div>
@@ -614,11 +659,11 @@ export function WorkerApp() {
                       <span style={{ color: T.sub }}>
                         {m.month} · {m.missions} mission{m.missions > 1 ? 's' : ''}
                       </span>
-                      <span style={{ color: T.green, fontWeight: 800 }}>{euros(m.earnings_cents)}</span>
+                      <span style={{ color: T.green, fontWeight: 800 }}>{showEarnings ? euros(m.earnings_cents) : '•••'}</span>
                     </div>
                   ))}
                   {stats.bonus_total_cents > 0 && (
-                    <div style={{ fontSize: 10, color: '#facc15', marginTop: 6 }}>⚡ dont {euros(stats.bonus_total_cents)} de bonus (rémunérations boostées)</div>
+                    <div style={{ fontSize: 10, color: '#facc15', marginTop: 6 }}>⚡ dont {showEarnings ? euros(stats.bonus_total_cents) : '•••'} de bonus (rémunérations boostées)</div>
                   )}
                 </div>
               )}
