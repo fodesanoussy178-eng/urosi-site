@@ -59,12 +59,41 @@ Renseigne `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` et `VITE_KYC_MODE`
 ajoute ces trois `VITE_*` en variables d'environnement de build.
 
 - `VITE_KYC_MODE=simulation` : la revue manuelle est disponible pour les
-  comptes presents dans `founder_access` via `/fondateur/kyc`.
+  comptes presents dans `founder_access` via `/fondateur?section=kyc`.
 - `VITE_KYC_MODE=lemonway` : les boutons de decision manuelle sont masques ;
   un futur webhook serveur du prestataire devra appeler la transition KYC.
 
 Ne mets jamais une cle `service_role`, un secret Lemonway ou une cle privee
 dans une variable `VITE_*` : elles sont integrees au JavaScript public.
+
+### Centre Fondateur et laboratoire
+
+Le centre unique est servi sur `/fondateur`. Toutes ses mutations passent
+par des fonctions SQL `SECURITY DEFINER` qui reverifient le role Fondateur,
+et chaque action est ajoutee a `founder_admin_log`. Les notes et avis ne sont
+exposes par aucune RPC de modification.
+
+Le laboratoire est desactive par defaut et ne doit jamais etre active sur la
+base de production. Sur un projet Supabase de staging separe, executer apres
+les migrations :
+
+```sql
+update private.founder_settings
+set environment = 'staging', lab_enabled = true, updated_at = now()
+where singleton;
+```
+
+Pour rendre le niveau MFA AAL2 obligatoire sur toutes les actions Fondateur,
+activer ensuite, uniquement apres avoir configure le second facteur du compte :
+
+```sql
+update private.founder_settings
+set require_mfa = true, updated_at = now()
+where singleton;
+```
+
+Le laboratoire ecrit seulement dans `founder_lab_scenarios` : il ne cree pas
+de comptes Auth, de missions, de KYC ni de paiements dans les tables reelles.
 
 ## 4. Lancer
 ```bash
