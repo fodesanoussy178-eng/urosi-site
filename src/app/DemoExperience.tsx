@@ -658,7 +658,7 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
     <>
       <TopBar title="Mon espace" badge={`${completed} missions au CV`} onBack={onBack} founder={founder} />
       {toast && <div style={{ margin: '10px 14px 0', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 10, padding: '8px 12px', color: T.sub, fontSize: 11 }}>{toast}</div>}
-      <div style={{ padding: 16, minHeight: 620 }}>
+      <div style={{ padding: 16, paddingBottom: 92, minHeight: 620 }}>
         {tab === 'flux' && (
           <div style={{ display: 'grid', gap: 12 }}>
             <div style={{ color: T.mu, fontSize: 10, textAlign: 'center' }}>
@@ -818,9 +818,9 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
       )}
       <BottomTabs
         tabs={[
-          ['flux', 'Flux'],
-          ['moi', 'Missions'],
-          ['wallet', 'Wallet'],
+          ['flux', 'Flux', '⌁'],
+          ['moi', 'Missions', '🌳'],
+          ['wallet', 'Banque', '🏦'],
         ]}
         current={tab}
         onChange={(v) => setTab(v as WorkerTab)}
@@ -829,15 +829,16 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
   );
 }
 
-function BottomTabs({ tabs, current, onChange }: { tabs: [string, string][]; current: string; onChange: (v: string) => void }) {
+function BottomTabs({ tabs, current, onChange }: { tabs: [string, string, string?][]; current: string; onChange: (v: string) => void }) {
   return (
-    <div style={{ borderTop: `1px solid ${T.cb}`, padding: '8px 12px 14px', display: 'grid', gridTemplateColumns: `repeat(${tabs.length}, 1fr)`, gap: 8, background: T.bg, position: 'sticky', bottom: 0 }}>
-      {tabs.map(([key, label]) => (
-        <button key={key} onClick={() => onChange(key)} style={{ background: current === key ? '#fff' : 'transparent', color: current === key ? '#05060d' : T.mu, border: 'none', borderRadius: 12, padding: '11px 0', cursor: 'pointer', fontSize: 12, fontWeight: 900 }}>
-          {label}
+    <nav aria-label="Navigation de la démo" style={{ width: '100%', maxWidth: 430, borderTop: `1px solid ${T.cb}`, padding: '8px 12px 12px', display: 'grid', gridTemplateColumns: `repeat(${tabs.length}, 1fr)`, gap: 7, background: T.bg, position: 'fixed', zIndex: 180, bottom: 0, left: '50%', transform: 'translateX(-50%)', boxShadow: '0 -10px 28px rgba(0,0,0,.16)' }}>
+      {tabs.map(([key, label, icon]) => (
+        <button aria-pressed={current === key} key={key} onClick={() => onChange(key)} style={{ background: current === key ? '#fff' : 'transparent', color: current === key ? '#05060d' : T.mu, border: 'none', borderRadius: 12, minHeight: 48, padding: '6px 3px', cursor: 'pointer', fontSize: tabs.length > 3 ? 10 : 11, fontWeight: 900, display: 'grid', placeItems: 'center', gap: 1 }}>
+          {icon && <span aria-hidden="true" style={{ fontSize: 15, lineHeight: 1 }}>{icon}</span>}
+          <span>{label}</span>
         </button>
       ))}
-    </div>
+    </nav>
   );
 }
 
@@ -1136,7 +1137,7 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
     <>
       <TopBar title="Espace structure" badge={seed.name} onBack={onBack} founder={founder} />
       {toast && <div style={{ margin: '10px 14px 0', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 10, padding: '8px 12px', color: T.sub, fontSize: 11 }}>{toast}</div>}
-      <div style={{ padding: 16, minHeight: 620 }}>
+      <div style={{ padding: 16, paddingBottom: 92, minHeight: 620 }}>
         <div style={{ background: T.card, border: `1px solid ${T.greenBorder}`, borderRadius: 16, padding: 14, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 46, height: 46, borderRadius: 14, background: kind === 'asso' ? '#14532d' : '#075985', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900 }}>{initials(seed.name)}</div>
           <div style={{ flex: 1 }}>
@@ -1351,25 +1352,16 @@ function DemoLimitOverlay({ role, embedded, onFounder }: { role: DemoRole; embed
       <div style={{ width: '100%', maxWidth: 380, background: T.card, border: `1px solid ${T.cb}`, borderRadius: 20, padding: 24, textAlign: 'center' }}>
         <Logo sz={58} />
         <div style={{ color: T.text, fontSize: 19, fontWeight: 900, margin: '18px 0 7px' }}>Fin de l’aperçu gratuit</div>
-        <div style={{ color: T.sub, fontSize: 12, lineHeight: 1.65, marginBottom: 18 }}>
-          Crée ton compte ou connecte-toi pour continuer.
-        </div>
-        <Link to={role === 'structure' ? '/inscription/structure' : '/inscription/travailleur'} target={embedded ? '_top' : undefined} style={{ textDecoration: 'none', display: 'block', marginBottom: 8 }}>
-          <Button>Créer mon compte</Button>
-        </Link>
-        <Link to="/connexion" target={embedded ? '_top' : undefined} style={{ textDecoration: 'none', display: 'block', marginBottom: 16 }}>
-          <Button tone="light">J’ai déjà un compte</Button>
-        </Link>
+        <div style={{ color: T.sub, fontSize: 12, lineHeight: 1.65, marginBottom: 18 }}>Crée ton compte ou connecte-toi pour continuer.</div>
+        <Link to={role === 'structure' ? '/inscription/structure' : '/inscription/travailleur'} target={embedded ? '_top' : undefined} style={{ textDecoration: 'none', display: 'block', marginBottom: 8 }}><Button>Créer mon compte</Button></Link>
+        <Link to="/connexion" target={embedded ? '_top' : undefined} style={{ textDecoration: 'none', display: 'block', marginBottom: 16 }}><Button tone="light">J’ai déjà un compte</Button></Link>
         {open && (
           <div style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 10, marginTop: 8 }}>
             <input
               aria-label="Code interne"
               value={code}
-              onChange={(e) => {
-                setCode(e.target.value.toUpperCase());
-                setError(null);
-              }}
-              onKeyDown={(e) => e.key === 'Enter' && unlock()}
+              onChange={(event) => { setCode(event.target.value.toUpperCase()); setError(null); }}
+              onKeyDown={(event) => event.key === 'Enter' && unlock()}
               placeholder="code"
               style={{ ...inp, marginBottom: 8, fontSize: 11, padding: '9px 10px', textTransform: 'uppercase', letterSpacing: 1 }}
               autoCapitalize="characters"
@@ -1379,11 +1371,7 @@ function DemoLimitOverlay({ role, embedded, onFounder }: { role: DemoRole; embed
             <Button onClick={unlock}>Ouvrir l’espace fondateur</Button>
           </div>
         )}
-        <button
-          aria-label="Accès interne"
-          onClick={() => setOpen((value) => !value)}
-          style={{ width: 6, height: 6, borderRadius: 999, background: open ? T.cyan : T.cb, border: 'none', opacity: open ? 0.9 : 0.3, cursor: 'pointer', padding: 0, marginTop: 14 }}
-        />
+        <button aria-label="Accès interne" onClick={() => setOpen((value) => !value)} style={{ width: 6, height: 6, borderRadius: 999, background: open ? T.cyan : T.cb, border: 'none', opacity: open ? 0.9 : 0.3, cursor: 'pointer', padding: 0, marginTop: 14 }} />
       </div>
     </div>
   );
@@ -1432,8 +1420,8 @@ export function DemoExperience() {
   useEffect(() => {
     if (!role || founder || frozen) return undefined;
     const id = window.setInterval(() => {
-      setUsed((prev) => {
-        const next = prev + 1;
+      setUsed((previous) => {
+        const next = previous + 1;
         try {
           localStorage.setItem(DEMO_KEY, String(next));
         } catch {
@@ -1486,9 +1474,7 @@ export function DemoExperience() {
             <Link to="/acces" style={{ textDecoration: 'none', display: 'block', marginBottom: 16 }}><Button tone="ghost">Créer un compte</Button></Link>
             {founder ? (
               <button onClick={resetDemo} style={{ background: 'none', color: T.green, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 900 }}>Accès fondateur actif · réinitialiser</button>
-            ) : (
-              <div style={{ color: T.mu, fontSize: 11 }}>Aperçu gratuit : {left}s restantes</div>
-            )}
+            ) : <div style={{ color: T.mu, fontSize: 11 }}>Aperçu gratuit : {left}s restantes</div>}
           </div>
         </div>
       </DemoShell>

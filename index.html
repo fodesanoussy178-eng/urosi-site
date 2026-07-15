@@ -66,8 +66,6 @@
       .btn:hover, .btn:focus-visible { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(29,42,46,.16); }
       .btn-grad, .btn-dark { background: var(--text); color: #fff; padding: 11px 24px; font-size: 15px; box-shadow: 0 12px 30px rgba(29,42,46,.12); }
       .btn-white { background: #fff; color: var(--text); border: 1px solid var(--cb); padding: 11px 24px; font-size: 15px; }
-      .cta-publish::after { content: '→'; width: 0; opacity: 0; overflow: hidden; transform: translateX(-5px); transition: width .22s ease, opacity .22s ease, transform .22s ease; }
-      .cta-publish:hover::after, .cta-publish:focus-visible::after { width: 18px; opacity: 1; transform: translateX(7px); }
       .btn-ghost { background: rgba(255,255,255,.62); color: var(--text); border: 1px solid var(--cb); padding: 11px 24px; font-size: 15px; font-weight: 900; }
 
       .hero-stage {
@@ -120,6 +118,12 @@
       .phone.live-preview .screen { display: none; }
       .phone-live-frame { width: 100%; height: 100%; border: 0; display: block; background: #070814; opacity: 1; transform: translateY(0); transition: opacity .25s ease, transform .25s ease; }
       .phone-live-frame.is-switching { opacity: 0; transform: translateY(7px); }
+      .phone-open-demo {
+        position: absolute; z-index: 8; top: -12px; right: -12px; width: 40px; height: 40px; border-radius: 50%;
+        display: grid; place-items: center; background: var(--text); color: #fff; border: 3px solid var(--bg);
+        box-shadow: 0 9px 24px rgba(29,42,46,.2); font-size: 17px; font-weight: 900; transition: transform .22s ease, box-shadow .22s ease;
+      }
+      .phone-open-demo:hover, .phone-open-demo:focus-visible { transform: translateY(-2px) scale(1.04); box-shadow: 0 12px 30px rgba(29,42,46,.26); }
       .preview-role-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: min(330px, calc(100vw - 56px)); margin-top: 14px; }
       .preview-role {
         border: 1px solid var(--cb); border-radius: 999px; padding: 9px 13px; background: rgba(255,255,255,.72);
@@ -267,7 +271,7 @@
         <div class="nav-inner">
           <a class="brand" href="/"><span class="brand-dot">U</span>UROSI</a>
           <div class="nav-actions">
-            <a class="btn btn-white" href="/app">Mon espace</a>
+            <a class="btn btn-white" href="/connexion">Connexion</a>
             <a class="btn btn-dark" href="/inscription/structure">Côté structure</a>
           </div>
         </div>
@@ -280,8 +284,9 @@
           <h1>Ton CV grandit<br /><span class="grad-text">avec l'expérience.</span></h1>
           <p>Chaque mission devient une preuve : présence validée, expérience visible, paiement clair.</p>
           <div class="hero-ctas">
-            <a class="btn btn-dark" href="/demo?role=worker">Essayer la démo</a>
-            <a class="btn btn-white cta-publish" href="/inscription/structure">Publier un besoin</a>
+            <a class="btn btn-dark" href="/connexion">Se connecter</a>
+            <a class="btn btn-white" href="/acces">Créer un compte</a>
+            <a class="btn btn-ghost" href="/inscription/structure">Espace structure</a>
           </div>
           <div class="hero-note">UROSI reste discret. L'expérience passe avant la marque.</div>
         </header>
@@ -300,6 +305,7 @@
           title="Aperçu défilable de l’espace Travailleur UROSI"
           loading="eager"
         ></iframe>
+        <a class="phone-open-demo" href="/demo?role=worker" aria-label="Agrandir la démo" title="Agrandir la démo">↗</a>
 
         <!-- Choix -->
         <div class="screen on" data-s="choice">
