@@ -19,7 +19,15 @@ revoke execute on function public.trg_notify_application_status() from public, a
 revoke execute on function public.trg_notify_rating() from public, anon, authenticated;
 revoke execute on function public.trg_notify_message() from public, anon, authenticated;
 revoke execute on function public.trg_notify_delay() from public, anon, authenticated;
-revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
+-- Cette fonction n'existe que sur certains projets historiques. La migration
+-- doit aussi pouvoir etre rejouee depuis une base Supabase neuve.
+do $$
+begin
+  if to_regprocedure('public.rls_auto_enable()') is not null then
+    execute 'revoke execute on function public.rls_auto_enable() from public, anon, authenticated';
+  end if;
+end
+$$;
 
 -- RPC reservees aux utilisateurs connectes : anon n'a rien a y faire.
 revoke execute on function public.deposit_wallet(bigint, text) from anon;
