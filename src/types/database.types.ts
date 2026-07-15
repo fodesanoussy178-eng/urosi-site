@@ -30,7 +30,9 @@ export type ApplicationStatus =
   | 'completed'
   | 'disputed';
 export type PaymentStatus = 'pending' | 'held' | 'released' | 'failed';
-export type PaymentProvider = 'internal' | 'stripe' | 'lemonway';
+export type PaymentProvider = string;
+export type InternalPaymentStatus = 'pending' | 'released' | 'failed' | 'refunded';
+export type ExternalPaymentStatus = 'not_connected' | 'pending' | 'confirmed' | 'failed' | 'refunded';
 export type RatingDirection = 'worker_to_structure' | 'structure_to_worker';
 export type ReportMotif = 'absent' | 'conditions' | 'securite' | 'autre';
 export type DisputeStatus = 'open' | 'reviewing' | 'resolved' | 'rejected';
@@ -618,12 +620,18 @@ export interface Database {
           id: boolean;
           commission_pct: number;
           commission_worker_pct: number;
+          vat_enabled: boolean;
+          vat_pct: number;
+          vat_legal_reference: string | null;
           updated_at: string;
         };
         Insert: {
           id?: boolean;
           commission_pct?: number;
           commission_worker_pct?: number;
+          vat_enabled?: boolean;
+          vat_pct?: number;
+          vat_legal_reference?: string | null;
           updated_at?: string;
         };
         Update: Partial<Database['public']['Tables']['platform_settings']['Insert']>;
@@ -640,6 +648,10 @@ export interface Database {
           structure_id: string | null;
           worker_id: string | null;
           provider: PaymentProvider;
+          internal_status: InternalPaymentStatus;
+          provider_status: ExternalPaymentStatus;
+          provider_transaction_id: string | null;
+          reconciled_at: string | null;
           released_at: string | null;
           breakdown: PricingBreakdown | null;
           status: PaymentStatus;
@@ -655,6 +667,10 @@ export interface Database {
           structure_id?: string | null;
           worker_id?: string | null;
           provider?: PaymentProvider;
+          internal_status?: InternalPaymentStatus;
+          provider_status?: ExternalPaymentStatus;
+          provider_transaction_id?: string | null;
+          reconciled_at?: string | null;
           released_at?: string | null;
           breakdown?: PricingBreakdown | null;
           status?: PaymentStatus;
@@ -671,23 +687,53 @@ export interface Database {
           },
         ];
       };
-      lemonway_accounts: {
+      platform_revenue: {
+        Row: {
+          id: string;
+          application_id: string;
+          payment_id: string;
+          amount_cents: number;
+          commission_pct: number;
+          payment_provider: string | null;
+          provider_transaction_id: string | null;
+          provider_status: string | null;
+          reconciled_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          application_id: string;
+          payment_id: string;
+          amount_cents: number;
+          commission_pct: number;
+          payment_provider?: string | null;
+          provider_transaction_id?: string | null;
+          provider_status?: string | null;
+          reconciled_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['platform_revenue']['Insert']>;
+        Relationships: [];
+      };
+      payment_accounts: {
         Row: {
           id: string;
           profile_id: string;
-          lemonway_wallet_id: string;
+          provider_account_id: string;
+          payment_provider: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           profile_id: string;
-          lemonway_wallet_id: string;
+          provider_account_id: string;
+          payment_provider?: string | null;
           created_at?: string;
         };
-        Update: Partial<Database['public']['Tables']['lemonway_accounts']['Insert']>;
+        Update: Partial<Database['public']['Tables']['payment_accounts']['Insert']>;
         Relationships: [
           {
-            foreignKeyName: 'lemonway_accounts_profile_id_fkey';
+            foreignKeyName: 'payment_accounts_profile_id_fkey';
             columns: ['profile_id'];
             isOneToOne: true;
             referencedRelation: 'profiles';

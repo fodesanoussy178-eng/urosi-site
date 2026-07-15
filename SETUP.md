@@ -60,10 +60,10 @@ ajoute ces trois `VITE_*` en variables d'environnement de build.
 
 - `VITE_KYC_MODE=simulation` : la revue manuelle est disponible pour les
   comptes presents dans `founder_access` via `/fondateur?section=kyc`.
-- `VITE_KYC_MODE=lemonway` : les boutons de decision manuelle sont masques ;
+- `VITE_KYC_MODE=external` : les boutons de decision manuelle sont masques ;
   un futur webhook serveur du prestataire devra appeler la transition KYC.
 
-Ne mets jamais une cle `service_role`, un secret Lemonway ou une cle privee
+Ne mets jamais une cle `service_role`, un secret de paiement ou une cle privee
 dans une variable `VITE_*` : elles sont integrees au JavaScript public.
 
 ### Centre Fondateur et laboratoire
@@ -135,9 +135,9 @@ npm run build # typecheck + build de production
   commission plateforme, cf. `platform_settings.commission_pct`), credite le
   wallet du travailleur et debite celui de la structure. Historique complet
   dans `payments` / `wallet_transactions`.
-- **Edge Function `psp`** : abstraction du prestataire de paiement
-  (provisionnement / retrait simules). Pour brancher Lemonway ou Stripe,
-  suivre les commentaires dans `supabase/functions/psp/index.ts`.
+- **Edge Function `psp`** : abstraction neutre du service de paiement
+  (provisionnement / retrait simules). Une implementation externe future
+  devra respecter l'interface de `supabase/functions/psp/index.ts`.
 - **Messagerie temps reel** : table `messages` (un fil par candidature
   acceptee), publiee sur `supabase_realtime` (RLS respectee).
 - **Notifications** : table `notifications` + triggers (candidature,
@@ -149,8 +149,9 @@ npm run build # typecheck + build de production
   travailleur ne quitte jamais son navigateur).
 
 ## Ce qui reste a brancher
-- **PSP reel (Lemonway/Stripe)** : remplacer `simulateProvider` dans l'Edge
-  Function `psp` et ne crediter le wallet qu'apres webhook de confirmation.
+- **Service de paiement reel** : remplacer uniquement
+  `InternalSimulatedPaymentProvider` et ne crediter le wallet qu'apres une
+  confirmation externe verifiee.
 - **Auth SMS** : provider Twilio/MessageBird a configurer dans le dashboard.
 - **Generation automatique des types** : `src/types/database.types.ts` est
   aligne manuellement sur les migrations. Des que le projet est lie en CLI,

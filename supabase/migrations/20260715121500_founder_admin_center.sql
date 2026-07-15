@@ -557,11 +557,13 @@ as $$
 begin
   perform private.assert_founder();
   return jsonb_build_object(
-    'generated_cents', coalesce((select sum(commission_cents) from public.payments), 0),
-    'pending_cents', coalesce((select sum(commission_cents) from public.payments where status in ('pending', 'held')), 0),
-    'month_cents', coalesce((select sum(commission_cents) from public.payments where status = 'released' and released_at >= date_trunc('month', now())), 0),
-    'lifetime_cents', coalesce((select sum(commission_cents) from public.payments where status = 'released'), 0),
-    'simulated', not exists (select 1 from public.payments where provider <> 'internal')
+    'generated_cents', coalesce((select sum(amount_cents) from public.platform_revenue), 0),
+    'pending_cents', coalesce((select sum(amount_cents) from public.platform_revenue where reconciled_at is null), 0),
+    'month_cents', coalesce((select sum(amount_cents) from public.platform_revenue where created_at >= date_trunc('month', now())), 0),
+    'lifetime_cents', coalesce((select sum(amount_cents) from public.platform_revenue), 0),
+    'simulated_cents', coalesce((select sum(amount_cents) from public.platform_revenue where provider_status = 'simulated'), 0),
+    'confirmed_cents', coalesce((select sum(amount_cents) from public.platform_revenue where provider_status = 'confirmed' and reconciled_at is not null), 0),
+    'simulated', exists (select 1 from public.platform_revenue where provider_status = 'simulated')
   );
 end;
 $$;

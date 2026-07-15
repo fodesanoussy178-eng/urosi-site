@@ -74,8 +74,3 @@ export async function confirmCheckin(applicationId: string, token: string): Prom
   if (error) throw error;
   if (!count) throw new Error("Validation impossible : ce pointage n'appartient pas à ta structure.");
 }
-
-export async function completeApplication(applicationId: string): Promise<void> {
-  const { error } = await supabase.from('applications').update({ status: 'completed' }).eq('id', applicationId);
-  if (error) throw error;
-}

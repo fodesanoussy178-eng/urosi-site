@@ -37,7 +37,8 @@ import {
 import { fetchUnreadCounts } from '@/features/messages/messagesService';
 import { fetchWorkerStats, type WorkerStats } from '@/features/stats/statsService';
 import { fetchCommissionRates, type CommissionRates } from '@/features/pricing/pricingService';
-import { PriceSplit, splitPrice } from '@/components/ui/PriceSplit';
+import { PriceSplit } from '@/components/ui/PriceSplit';
+import { splitPrice } from '@/features/pricing/priceSplit';
 import { distanceKm, formatDistance, type LatLng } from '@/lib/geo';
 import { formatDay, groupByDay, scheduleSummary } from '@/lib/slots';
 import { formatEuros, formatHours } from '@/lib/format';
@@ -758,7 +759,7 @@ export function WorkerApp() {
               <div style={{ fontSize: 15, fontWeight: 800, color: T.text, marginBottom: 10 }}>{detail.title}</div>
               {!detail.is_solidaire && rates && (
                 <div style={{ fontSize: 12.5, fontWeight: 800, color: T.green, marginBottom: 10 }}>
-                  Tu recevras : {euros(splitPrice(detail.worker_rate_cents, rates.structurePct, rates.workerPct).netWorkerCents)}
+                  Tu recevras : {euros(splitPrice(detail.worker_rate_cents, rates.structurePct).netWorkerCents)}
                   <button
                     onClick={() => setShowPriceDetail((v) => !v)}
                     style={{ marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: 10.5, color: T.mu, textDecoration: 'underline', fontWeight: 600 }}
@@ -769,7 +770,7 @@ export function WorkerApp() {
               )}
               {!detail.is_solidaire && showPriceDetail && rates && (
                 <>
-                  <PriceSplit values={splitPrice(detail.worker_rate_cents, rates.structurePct, rates.workerPct)} side="worker" />
+                  <PriceSplit values={splitPrice(detail.worker_rate_cents, rates.structurePct)} side="worker" />
                   {detail.pricing_breakdown && detail.pricing_breakdown.adjustments.length > 0 && <PricingDetails breakdown={detail.pricing_breakdown} compact />}
                 </>
               )}

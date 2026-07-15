@@ -93,7 +93,6 @@ export async function previewPricing(input: PricingPreviewInput): Promise<Pricin
 // dur dans les composants).
 export interface CommissionRates {
   structurePct: number;
-  workerPct: number;
 }
 
 let ratesCache: CommissionRates | null = null;
@@ -102,13 +101,12 @@ export async function fetchCommissionRates(): Promise<CommissionRates> {
   if (ratesCache) return ratesCache;
   const { data, error } = await supabase
     .from('platform_settings')
-    .select('commission_pct, commission_worker_pct')
+    .select('commission_pct')
     .eq('id', true)
     .maybeSingle();
-  if (error || !data) return { structurePct: 15, workerPct: 10 };
+  if (error || !data) return { structurePct: 18 };
   ratesCache = {
     structurePct: Number(data.commission_pct),
-    workerPct: Number((data as { commission_worker_pct?: number }).commission_worker_pct ?? 10),
   };
   return ratesCache;
 }

@@ -1,11 +1,9 @@
-// Edge Function `psp` — abstraction du prestataire de paiement (PSP).
+// Edge Function `psp` — abstraction neutre du futur service de paiement.
 //
 // MVP : les mouvements (provisionnement / retrait) sont simules et enregistres
 // dans le wallet interne via les RPC deposit_wallet / withdraw_wallet.
-// Pour brancher Lemonway ou Stripe :
-//  1. Ajouter les secrets (LEMONWAY_API_KEY / STRIPE_SECRET_KEY) au projet.
-//  2. Remplacer `simulateProvider` par l'appel reel (money-in / payout).
-//  3. Ne crediter le wallet interne qu'apres confirmation du PSP (webhook).
+// Une integration externe future devra implementer PaymentProvider et ne
+// confirmer un mouvement qu'apres retour verifie de son API ou webhook.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -16,10 +14,38 @@ interface PspRequest {
   label?: string;
 }
 
-async function simulateProvider(action: string, amountCents: number): Promise<{ ok: boolean; reference: string }> {
-  // Ici viendra l'appel Lemonway (P2P / MoneyIn) ou Stripe (PaymentIntent / Payout).
-  return { ok: amountCents > 0, reference: `sim_${action}_${crypto.randomUUID()}` };
+interface PaymentResult {
+  ok: boolean;
+  reference: string;
+  status: 'simulated' | 'pending' | 'confirmed' | 'failed';
 }
+
+interface PaymentProvider {
+  createPayment(action: PspRequest['action'], amountCents: number): Promise<PaymentResult>;
+  getPaymentStatus(reference: string): Promise<PaymentResult>;
+  refundPayment(reference: string): Promise<PaymentResult>;
+  createUserWallet(userId: string): Promise<{ reference: string }>;
+}
+
+class InternalSimulatedPaymentProvider implements PaymentProvider {
+  async createPayment(action: PspRequest['action'], amountCents: number): Promise<PaymentResult> {
+    return { ok: amountCents > 0, reference: `internal_${action}_${crypto.randomUUID()}`, status: 'simulated' };
+  }
+
+  async getPaymentStatus(reference: string): Promise<PaymentResult> {
+    return { ok: true, reference, status: 'simulated' };
+  }
+
+  async refundPayment(reference: string): Promise<PaymentResult> {
+    return { ok: true, reference, status: 'simulated' };
+  }
+
+  async createUserWallet(userId: string): Promise<{ reference: string }> {
+    return { reference: `internal_wallet_${userId}` };
+  }
+}
+
+const paymentProvider: PaymentProvider = new InternalSimulatedPaymentProvider();
 
 Deno.serve(async (req: Request) => {
   const cors = {
@@ -45,9 +71,9 @@ Deno.serve(async (req: Request) => {
       { global: { headers: { Authorization: req.headers.get("Authorization")! } } },
     );
 
-    const provider = await simulateProvider(body.action, body.amount_cents);
+    const provider = await paymentProvider.createPayment(body.action, body.amount_cents);
     if (!provider.ok) {
-      return new Response(JSON.stringify({ error: "Le prestataire de paiement a refusé l'opération." }), {
+      return new Response(JSON.stringify({ error: "Le traitement interne a refusé l'opération." }), {
         status: 402,
         headers,
       });
@@ -65,7 +91,7 @@ Deno.serve(async (req: Request) => {
     }
 
     return new Response(
-      JSON.stringify({ balance_cents: data, provider_reference: provider.reference }),
+      JSON.stringify({ balance_cents: data, provider_reference: provider.reference, provider_status: provider.status }),
       { headers },
     );
   } catch {

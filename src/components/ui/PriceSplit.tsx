@@ -1,32 +1,12 @@
 import { T } from '@/components/ui/theme';
 import { formatEuros } from '@/lib/format';
+import type { PriceSplitValues } from '@/features/pricing/priceSplit';
 
 function euros(cents: number): string {
   return formatEuros(cents).replace(' EUR', ' €');
 }
 
-export interface PriceSplitValues {
-  brutCents: number;
-  commissionStructureCents: number;
-  commissionWorkerCents: number;
-  netWorkerCents: number;
-  totalStructureCents: number;
-}
-
-// La structure fixe librement le brut ; le systeme calcule tout le reste.
-export function splitPrice(brutCents: number, structurePct: number, workerPct: number): PriceSplitValues {
-  const commissionStructureCents = Math.round((brutCents * structurePct) / 100);
-  const commissionWorkerCents = Math.round((brutCents * workerPct) / 100);
-  return {
-    brutCents,
-    commissionStructureCents,
-    commissionWorkerCents,
-    netWorkerCents: Math.max(brutCents - commissionWorkerCents, 0),
-    totalStructureCents: brutCents + commissionStructureCents,
-  };
-}
-
-// Decomposition automatique du prix : brut, commissions, net worker,
+// Decomposition automatique du prix : remuneration, commission structure,
 // cout total structure. Affichee a la publication et sur le detail mission.
 export function PriceSplit({ values, side }: { values: PriceSplitValues; side: 'structure' | 'worker' }) {
   const row = (label: string, amount: string, color: string, bold = false) => (
@@ -41,10 +21,10 @@ export function PriceSplit({ values, side }: { values: PriceSplitValues; side: '
       <div style={{ fontSize: 9, fontWeight: 800, color: T.cyan, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 5 }}>
         Décomposition automatique
       </div>
-      {row('Montant brut', euros(values.brutCents), T.text)}
+      {row('Rémunération travailleur', euros(values.brutCents), T.text)}
       {side === 'structure' && row(`Commission UROSI structure`, `+${euros(values.commissionStructureCents)}`, T.sub)}
-      {row(`Commission UROSI worker`, `−${euros(values.commissionWorkerCents)}`, T.sub)}
-      {row('Net perçu par le worker', euros(values.netWorkerCents), T.green, true)}
+      {values.commissionWorkerCents > 0 && row(`Commission UROSI travailleur`, `−${euros(values.commissionWorkerCents)}`, T.sub)}
+      {row('Montant perçu par le travailleur', euros(values.netWorkerCents), T.green, true)}
       {side === 'structure' && (
         <div style={{ borderTop: `1px solid ${T.cb}`, marginTop: 4, paddingTop: 4 }}>
           {row('Coût total structure', euros(values.totalStructureCents), T.text, true)}
