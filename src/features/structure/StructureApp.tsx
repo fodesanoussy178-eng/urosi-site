@@ -637,7 +637,7 @@ export function StructureApp() {
             {tab === 'pilotage' && session && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <StatsPanel structureId={structure.id} />
-                <WalletCard profileId={session.user.id} mode="structure" notif={notif} />
+                <WalletCard profileId={session.user.id} mode="structure" />
                 <AideRegles onOpen={setDocKey} />
                 <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '13px 15px' }}>
                   <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 9 }}>Habitués</div>

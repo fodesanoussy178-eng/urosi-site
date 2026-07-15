@@ -123,6 +123,16 @@ describe('DemoExperience founder scan', () => {
     expect(screen.getByText('21 avis')).toBeInTheDocument();
   });
 
+  it('replaces internal demo tools with a compact two-mission notice', async () => {
+    const user = userEvent.setup();
+    renderStructure();
+
+    expect(screen.queryByText('MODE DÉMO')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Peupler le flux' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Deux missions disponibles en mode démo' }));
+    expect(screen.getByText('Vous pouvez créer deux missions en mode démo.')).toBeInTheDocument();
+  });
+
   it('moves the structure statistics to history after three seconds', () => {
     vi.useFakeTimers();
     renderStructure();

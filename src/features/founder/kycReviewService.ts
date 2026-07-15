@@ -39,7 +39,13 @@ export async function fetchKycHistory(profileId: string): Promise<KycHistoryEntr
   return (data ?? []) as KycHistoryEntry[];
 }
 
-export async function createKycDocumentUrl(path: string): Promise<string> {
+export async function createKycDocumentUrl(profileId: string, path: string): Promise<string> {
+  const { error: logError } = await supabase.rpc('log_kyc_document_access', {
+    p_profile_id: profileId,
+    p_document_path: path,
+    p_purpose: 'manual_review',
+  });
+  if (logError) throw logError;
   const { data, error } = await supabase.storage.from('kyc-documents').createSignedUrl(path, 60);
   if (error) throw error;
   return data.signedUrl;

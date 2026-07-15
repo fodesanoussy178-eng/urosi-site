@@ -1,4 +1,4 @@
-# UROSI-T — Branchement du backend Supabase
+# UROSI — Branchement du backend Supabase
 
 > Ce que ce depot contient : migrations SQL (schema, RLS, triggers), client
 > Supabase type, auth, architecture front branchee dessus.
@@ -121,7 +121,8 @@ npm run build # typecheck + build de production
    qu'il peut envoyer un PDF/JPG/PNG/WebP de 10 Mo maximum, puis qu'un compte
    fondateur peut verifier ou refuser le dossier dans `/fondateur/kyc`.
 7. Tant que le statut n'est pas `verified`, un retrait wallet doit etre
-   refuse par la base, meme si la RPC est appelee directement.
+   impossible. Les RPC historiques `deposit_wallet` et `withdraw_wallet` ne
+   sont executables par aucun compte client, meme apres verification KYC.
 
 ## 6. Fonctionnalites branchees dans cette version
 - **Remuneration intelligente** : regles `pay_rules` administrables dans le
@@ -130,14 +131,15 @@ npm run build # typecheck + build de production
   l'apercu live du formulaire — jour de semaine, jours feries francais
   (calcul de Paques inclus), plage horaire, duree, secteur, difficulte,
   urgence, distance, tension offre/demande, bonus fixes.
-- **Paiements + wallet** : a la completion d'une mission,
-  `process_mission_payment` (idempotent) cree le paiement (remuneration +
-  commission plateforme, cf. `platform_settings.commission_pct`), credite le
-  wallet du travailleur et debite celui de la structure. Historique complet
-  dans `payments` / `wallet_transactions`.
-- **Edge Function `psp`** : abstraction neutre du service de paiement
-  (provisionnement / retrait simules). Une implementation externe future
-  devra respecter l'interface de `supabase/functions/psp/index.ts`.
+- **Paiements + wallet** : `process_mission_payment` reste idempotent et
+  reserve au backend. En production, un trigger refuse le provider interne :
+  aucun paiement, revenu ou credit wallet simule n'est cree. Les mouvements
+  distinguent `pending`, `available` et `blocked`; seul `available` alimente
+  le solde affichable.
+- **Edge Function `psp`** : point d'entree inactif qui renvoie `503` jusqu'au
+  branchement d'un vrai prestataire. Le futur webhook devra verifier la
+  signature du PSP, garantir l'idempotence et confirmer le mouvement avant de
+  rendre les fonds disponibles.
 - **Messagerie temps reel** : table `messages` (un fil par candidature
   acceptee), publiee sur `supabase_realtime` (RLS respectee).
 - **Notifications** : table `notifications` + triggers (candidature,
@@ -149,9 +151,9 @@ npm run build # typecheck + build de production
   travailleur ne quitte jamais son navigateur).
 
 ## Ce qui reste a brancher
-- **Service de paiement reel** : remplacer uniquement
-  `InternalSimulatedPaymentProvider` et ne crediter le wallet qu'apres une
-  confirmation externe verifiee.
+- **Service de paiement reel** : integrer un PSP cote serveur et ne crediter
+  le wallet qu'apres une confirmation externe signee et verifiee. Ne jamais
+  exposer sa cle secrete dans une variable `VITE_*`.
 - **Auth SMS** : provider Twilio/MessageBird a configurer dans le dashboard.
 - **Generation automatique des types** : `src/types/database.types.ts` est
   aligne manuellement sur les migrations. Des que le projet est lie en CLI,

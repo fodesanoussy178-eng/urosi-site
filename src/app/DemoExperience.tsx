@@ -715,26 +715,6 @@ function rememberDelayNotice(mission: DemoMission, minutes: number) {
   writeDemoState({ ...state, delayNotices: [notice, ...state.delayNotices.filter((item) => item.missionId !== mission.id)] });
 }
 
-function founderMission(type: 'paid' | 'solid'): DemoMission {
-  const paid = type === 'paid';
-  return {
-    id: `founder-${type}-${Date.now()}`,
-    structureId: paid ? DEMO_STRUCTURE_IDS.pme : DEMO_STRUCTURE_IDS.asso,
-    title: paid ? 'Renfort service partenaire' : 'Distribution solidaire partenaire',
-    structure: paid ? 'Burger Nord' : 'Banque Alimentaire',
-    amount: paid ? 64 : 0,
-    city: 'Lille',
-    when: paid ? 'Demain · 12h-16h' : 'Samedi · 10h-13h',
-    duration: paid ? '4 h' : '3 h',
-    rating: paid ? 4.7 : 4.8,
-    distance: 'démo',
-    solid: !paid,
-    desc: paid
-      ? 'Mission payante créée en démo par la structure. Prix, places et horaires sont libres.'
-      : 'Mission solidaire à 0 €. Elle compte dans le CV vivant sans rémunération.',
-  };
-}
-
 function demoCandidateFor(mission: DemoMission): DemoCandidate {
   return {
     id: `cand-${mission.id}-${Date.now()}`,
@@ -1631,7 +1611,7 @@ function MissionManageSheet({
   );
 }
 
-function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; onBack: () => void; onSwitchWorker: () => void }) {
+function StructureDemo({ founder, onBack }: { founder: boolean; onBack: () => void }) {
   const [kind, setKind] = useState<StructureKind | null>('pme');
   const [tab, setTab] = useState<StructureTab>('missions');
   const [missions, setMissions] = useState<DemoMission[]>(() => structureMissions('pme'));
@@ -1797,21 +1777,6 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
     notif('Mission publiée dans la démo. Un candidat arrive.');
   }
 
-  function generateMission(type: 'paid' | 'solid') {
-    publishIntoDemo(founderMission(type));
-    refreshFromDemoState();
-    setTab('missions');
-    notif(type === 'paid' ? 'Mission payante lancée. Elle apparaît côté utilisateur.' : 'Mission solidaire lancée. Elle apparaît côté utilisateur.');
-  }
-
-  function populateFeed() {
-    publishIntoDemo(founderMission('paid'));
-    publishIntoDemo(founderMission('solid'));
-    refreshFromDemoState();
-    setTab('missions');
-    notif('Le flux contient une nouvelle mission payante et une mission solidaire.');
-  }
-
   return (
     <>
       <TopBar title="Espace structure" badge={seed.name} onBack={onBack} founder={founder} />
@@ -1854,24 +1819,38 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
                 <button onClick={() => dismissDelay(notice.missionId)} style={{ background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 9px', fontSize: 9, fontWeight: 900, cursor: 'pointer' }}>Vu</button>
               </div>
             ))}
-            <Button onClick={() => setShowPub(true)}>Publier une mission</Button>
+            <div style={{ position: 'relative' }}>
+              <Button onClick={() => setShowPub(true)}>Publier une mission</Button>
+              <button
+                type="button"
+                aria-label="Deux missions disponibles en mode démo"
+                onClick={() => notif('Vous pouvez créer deux missions en mode démo.')}
+                style={{
+                  position: 'absolute',
+                  top: -8,
+                  right: -7,
+                  minWidth: 27,
+                  height: 27,
+                  padding: '0 6px',
+                  borderRadius: 14,
+                  border: '2px solid #080a13',
+                  background: '#ef4444',
+                  color: '#fff',
+                  fontSize: 10,
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px #0008',
+                }}
+              >
+                +2
+              </button>
+            </div>
             <div style={{ color: T.mu, fontSize: 9.5, textAlign: 'center' }}>Touche une mission ou utilise •••. Appui long ou swipe gauche disponibles sur mobile.</div>
             {missions.map((m, i) => {
               const allMissionCandidates = candidates.filter((candidate) => candidate.missionId === m.id);
               const completed = demoState.completedMissionIds.includes(m.id);
               return <DemoStructureMissionCard key={m.id} mission={m} index={i} candidateCount={allMissionCandidates.length} completed={completed} onOpen={(mode) => setManagedMission({ mission: m, mode })} onRepublish={() => duplicateMission(m, completed)} />;
             })}
-            <div style={{ border: `1px solid ${T.amberBorder}`, background: T.amberBg, borderRadius: 16, padding: 14, marginTop: 8 }}>
-              <div style={{ color: T.amber, fontSize: 9, fontWeight: 900, letterSpacing: 1.2, marginBottom: 10 }}>MODE DÉMO</div>
-              <div style={{ display: 'grid', gap: 8 }}>
-                <Button tone="dark" onClick={populateFeed}>Peupler le flux</Button>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <Button tone="light" onClick={() => generateMission('paid')}>Générer une mission payante</Button>
-                  <Button tone="green" onClick={() => generateMission('solid')}>Générer une mission solidaire</Button>
-                </div>
-                <Button tone="ghost" onClick={onSwitchWorker}>Basculer côté travailleur →</Button>
-              </div>
-            </div>
           </div>
         )}
         {tab === 'historique' && (
@@ -2310,7 +2289,7 @@ export function DemoExperience() {
         {role === 'worker' ? (
           <WorkerDemo key={`worker-${demoVersion}`} founder={displayedFounder} onBack={returnToDemoChoice} />
         ) : (
-          <StructureDemo key={`structure-${demoVersion}`} founder={displayedFounder} onBack={returnToDemoChoice} onSwitchWorker={() => setRole('worker')} />
+          <StructureDemo key={`structure-${demoVersion}`} founder={displayedFounder} onBack={returnToDemoChoice} />
         )}
       </DemoShell>
       {frozen && <DemoLimitOverlay role={role} embedded={embedded} onFounder={openFounderArea} />}
