@@ -64,6 +64,18 @@ type DemoSharedState = {
   publishedMissions: DemoMission[];
   candidates: DemoCandidate[];
   acceptedMissionIds: string[];
+  startedMissionIds: string[];
+  completedMissionIds: string[];
+  workerUnreadMissionIds: string[];
+  workerUnreadWalletMissionIds: string[];
+  structureUnreadCandidateIds: string[];
+  delayNotices: DemoDelayNotice[];
+};
+
+type DemoDelayNotice = {
+  missionId: string;
+  missionTitle: string;
+  minutes: number;
 };
 
 type DemoMissionDay = {
@@ -282,7 +294,17 @@ function downloadDemoHistory(kind: StructureKind) {
 }
 
 function emptyDemoState(): DemoSharedState {
-  return { publishedMissions: [], candidates: [], acceptedMissionIds: [] };
+  return {
+    publishedMissions: [],
+    candidates: [],
+    acceptedMissionIds: [],
+    startedMissionIds: [],
+    completedMissionIds: [],
+    workerUnreadMissionIds: [],
+    workerUnreadWalletMissionIds: [],
+    structureUnreadCandidateIds: [],
+    delayNotices: [],
+  };
 }
 
 function readDemoState(): DemoSharedState {
@@ -297,6 +319,12 @@ function readDemoState(): DemoSharedState {
         : [],
       candidates: Array.isArray(parsed.candidates) ? parsed.candidates : [],
       acceptedMissionIds: Array.isArray(parsed.acceptedMissionIds) ? parsed.acceptedMissionIds : [],
+      startedMissionIds: Array.isArray(parsed.startedMissionIds) ? parsed.startedMissionIds : [],
+      completedMissionIds: Array.isArray(parsed.completedMissionIds) ? parsed.completedMissionIds : [],
+      workerUnreadMissionIds: Array.isArray(parsed.workerUnreadMissionIds) ? parsed.workerUnreadMissionIds : [],
+      workerUnreadWalletMissionIds: Array.isArray(parsed.workerUnreadWalletMissionIds) ? parsed.workerUnreadWalletMissionIds : [],
+      structureUnreadCandidateIds: Array.isArray(parsed.structureUnreadCandidateIds) ? parsed.structureUnreadCandidateIds : [],
+      delayNotices: Array.isArray(parsed.delayNotices) ? parsed.delayNotices : [],
     };
   } catch {
     return emptyDemoState();
@@ -323,7 +351,7 @@ function uniqueMissions(missions: DemoMission[]) {
 function uniqueCandidates(candidates: DemoCandidate[]) {
   const seen = new Set<string>();
   return candidates.filter((candidate) => {
-    const workerKey = candidate.name.trim().toLocaleLowerCase('fr-FR');
+    const workerKey = `${candidate.missionId}:${candidate.name.trim().toLocaleLowerCase('fr-FR')}`;
     if (seen.has(workerKey)) return false;
     seen.add(workerKey);
     return true;
@@ -368,19 +396,84 @@ function rememberPublishedMission(mission: DemoMission, candidate: DemoCandidate
   });
 }
 
-function rememberAcceptedMission(missionId: string) {
+function rememberAcceptedMission(mission: DemoMission) {
   const state = readDemoState();
-  if (state.acceptedMissionIds.includes(missionId)) return state.acceptedMissionIds;
-  const acceptedMissionIds = [...state.acceptedMissionIds, missionId];
-  writeDemoState({ ...state, acceptedMissionIds });
+  const candidateId = `demo-worker-${mission.id}`;
+  const alreadyApplied = state.acceptedMissionIds.includes(mission.id);
+  const existingCandidate = state.candidates.find((candidate) => candidate.id === candidateId);
+  const alreadyHasCandidate = Boolean(existingCandidate);
+  const acceptedMissionIds = alreadyApplied ? state.acceptedMissionIds : [...state.acceptedMissionIds, mission.id];
+  const candidate: DemoCandidate = {
+    id: candidateId,
+    missionId: mission.id,
+    name: 'Alex Démo',
+    city: 'Lille',
+    note: 4.7,
+    here: 1,
+    status: 'pending',
+    history: [['Renfort fast-food', '12/04'], ['Aide installation', '05/04'], ['Préparation mariage', '28/03']],
+  };
+  writeDemoState({
+    ...state,
+    acceptedMissionIds,
+    candidates: uniqueCandidates([existingCandidate ?? candidate, ...state.candidates]),
+    structureUnreadCandidateIds: alreadyHasCandidate ? state.structureUnreadCandidateIds : Array.from(new Set([...state.structureUnreadCandidateIds, candidate.id])),
+  });
   return acceptedMissionIds;
 }
 
 function forgetAcceptedMission(missionId: string) {
   const state = readDemoState();
   const acceptedMissionIds = state.acceptedMissionIds.filter((id) => id !== missionId);
-  writeDemoState({ ...state, acceptedMissionIds });
+  const candidateId = `demo-worker-${missionId}`;
+  writeDemoState({
+    ...state,
+    acceptedMissionIds,
+    candidates: state.candidates.filter((candidate) => candidate.id !== candidateId),
+    structureUnreadCandidateIds: state.structureUnreadCandidateIds.filter((id) => id !== candidateId),
+    workerUnreadMissionIds: state.workerUnreadMissionIds.filter((id) => id !== missionId),
+    delayNotices: state.delayNotices.filter((notice) => notice.missionId !== missionId),
+  });
   return acceptedMissionIds;
+}
+
+function rememberCandidateDecision(candidate: DemoCandidate, status: CandidateStatus) {
+  const state = readDemoState();
+  const updated = { ...candidate, status };
+  const candidates = uniqueCandidates([updated, ...state.candidates.filter((item) => item.id !== candidate.id)]);
+  writeDemoState({
+    ...state,
+    candidates,
+    workerUnreadMissionIds: status === 'accepted' && candidate.id.startsWith('demo-worker-')
+      ? Array.from(new Set([...state.workerUnreadMissionIds, candidate.missionId]))
+      : state.workerUnreadMissionIds,
+  });
+}
+
+function clearDemoUnread(field: 'workerUnreadMissionIds' | 'workerUnreadWalletMissionIds', ids: string[]) {
+  const state = readDemoState();
+  writeDemoState({ ...state, [field]: state[field].filter((id) => !ids.includes(id)) });
+}
+
+function rememberMissionScan(missionId: string, step: DemoQrStep) {
+  const state = readDemoState();
+  if (step === 'start') {
+    writeDemoState({ ...state, startedMissionIds: Array.from(new Set([...state.startedMissionIds, missionId])) });
+    return;
+  }
+  writeDemoState({
+    ...state,
+    completedMissionIds: Array.from(new Set([...state.completedMissionIds, missionId])),
+    workerUnreadWalletMissionIds: state.completedMissionIds.includes(missionId)
+      ? state.workerUnreadWalletMissionIds
+      : Array.from(new Set([...state.workerUnreadWalletMissionIds, missionId])),
+  });
+}
+
+function rememberDelayNotice(mission: DemoMission, minutes: number) {
+  const state = readDemoState();
+  const notice = { missionId: mission.id, missionTitle: mission.title, minutes };
+  writeDemoState({ ...state, delayNotices: [notice, ...state.delayNotices.filter((item) => item.missionId !== mission.id)] });
 }
 
 function founderMission(type: 'paid' | 'solid'): DemoMission {
@@ -606,6 +699,7 @@ function StructureProfile({ name, onBack }: { name: string; onBack: () => void }
 function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void }) {
   const [tab, setTab] = useState<WorkerTab>('flux');
   const [feed] = useState<DemoMission[]>(() => workerFeedMissions());
+  const [demoState, setDemoState] = useState<DemoSharedState>(() => readDemoState());
   const [accepted, setAccepted] = useState<string[]>(() => readDemoState().acceptedMissionIds);
   const [profileName, setProfileName] = useState<string | null>(null);
   const [wallet, setWallet] = useState(182);
@@ -615,6 +709,17 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
   const tr = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [toast, setToast] = useState<string | null>(null);
 
+  useEffect(() => {
+    function refresh(event: StorageEvent) {
+      if (event.key !== DEMO_SHARED_KEY) return;
+      const next = readDemoState();
+      setDemoState(next);
+      setAccepted(next.acceptedMissionIds);
+    }
+    window.addEventListener('storage', refresh);
+    return () => window.removeEventListener('storage', refresh);
+  }, []);
+
   function notif(m: string) {
     setToast(m);
     clearTimeout(tr.current);
@@ -622,22 +727,24 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
   }
 
   function accept(m: DemoMission) {
-    if (!accepted.includes(m.id)) setAccepted(rememberAcceptedMission(m.id));
+    if (!accepted.includes(m.id)) setAccepted(rememberAcceptedMission(m));
+    setDemoState(readDemoState());
     setTab('moi');
-    notif(m.solid ? 'Mission solidaire ajoutée à tes missions.' : 'Mission acceptée. QR de début prêt.');
+    notif(m.solid ? 'Candidature solidaire envoyée à la structure.' : `Candidature envoyée à ${m.structure}. En attente de son acceptation.`);
   }
 
   function withdraw() {
     if (!Number.isFinite(withdrawAmount)) return;
-    const amount = Math.min(wallet, Math.max(1, Math.floor(withdrawAmount)));
+    const amount = Math.min(availableWallet, Math.max(1, Math.floor(withdrawAmount)));
     if (amount <= 0) return;
     setWallet((value) => value - amount);
-    setWithdrawAmount(Math.max(1, wallet - amount));
+    setWithdrawAmount(Math.max(1, availableWallet - amount));
     notif(`Retrait de ${amount} € demandé.`);
   }
 
   function cancelMission(mission: DemoMission) {
     setAccepted(forgetAcceptedMission(mission.id));
+    setDemoState(readDemoState());
     setMissionAlert(null);
     notif(`Mission « ${mission.title} » annulée. La structure est prévenue.`);
   }
@@ -646,6 +753,25 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
   const completed = DEMO_WORKER_HISTORY.length;
   const founderPublishedCount = feed.filter((m) => m.id.startsWith('founder-') || m.id.startsWith('new-')).length;
   const founderScanUrl = demoQr ? demoFounderScanUrl(demoQr.mission, demoQr.step) : '';
+  const missionUnread = demoState.workerUnreadMissionIds.length;
+  const walletUnread = demoState.workerUnreadWalletMissionIds.length;
+  const completedIncome = demoState.completedMissionIds.reduce((sum, missionId) => sum + (feed.find((mission) => mission.id === missionId)?.amount ?? 0), 0);
+  const availableWallet = Math.max(0, wallet + completedIncome);
+
+  function changeWorkerTab(next: WorkerTab) {
+    setTab(next);
+    if (next === 'moi' && missionUnread > 0) {
+      const acceptedStructure = feed.find((mission) => demoState.workerUnreadMissionIds.includes(mission.id))?.structure ?? 'La structure';
+      notif(`+${missionUnread} · ${acceptedStructure} a accepté ta candidature.`);
+      clearDemoUnread('workerUnreadMissionIds', demoState.workerUnreadMissionIds);
+      setDemoState(readDemoState());
+    }
+    if (next === 'wallet' && walletUnread > 0) {
+      notif(`+${walletUnread} · ${walletUnread} mission${walletUnread > 1 ? 's' : ''} terminée${walletUnread > 1 ? 's' : ''}, paiement ajouté au wallet.`);
+      clearDemoUnread('workerUnreadWalletMissionIds', demoState.workerUnreadWalletMissionIds);
+      setDemoState(readDemoState());
+    }
+  }
 
   if (profileName) return <StructureProfile name={profileName} onBack={() => setProfileName(null)} />;
 
@@ -672,10 +798,18 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
                 <Button onClick={() => setTab('flux')}>Voir le flux →</Button>
               </div>
             ) : (
-              myMissions.map((m) => (
-                <div key={m.id} style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 16, padding: 16 }}>
+              myMissions.map((m) => {
+                const application = demoState.candidates.find((candidate) => candidate.id === `demo-worker-${m.id}`);
+                const confirmed = application?.status === 'accepted';
+                return (
+                <div key={m.id} style={{ background: T.card, border: `1px solid ${confirmed ? T.greenBorder : T.cb}`, borderRadius: 16, padding: 16 }}>
                   <div style={{ color: T.text, fontSize: 15, fontWeight: 900 }}>{m.title}</div>
                   <div style={{ color: T.mu, fontSize: 11, marginTop: 3 }}>{m.structure} · {m.when}</div>
+                  {!confirmed ? (
+                    <div style={{ color: application?.status === 'rejected' ? T.red : T.amber, background: application?.status === 'rejected' ? T.redBg : T.amberBg, border: `1px solid ${application?.status === 'rejected' ? T.redBorder : T.amberBorder}`, borderRadius: 12, padding: 12, marginTop: 12, fontSize: 11, fontWeight: 900 }}>
+                      {application?.status === 'rejected' ? 'Candidature non retenue' : 'Candidature en attente de la structure'}
+                    </div>
+                  ) : (<>
                   <div style={{ background: T.row, border: `1px solid ${T.greenBorder}`, borderRadius: 12, padding: 12, marginTop: 12 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.sub }}>
                       <span>QR début</span>
@@ -692,8 +826,9 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
                     <Button tone="light" onClick={() => setMissionAlert({ mission: m, type: 'delay' })}>Retard</Button>
                     <Button tone="red" onClick={() => setMissionAlert({ mission: m, type: 'cancel' })}>Annuler</Button>
                   </div>
+                  </>)}
                 </div>
-              ))
+              );})
             )}
             <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 16, padding: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 15 }}>
@@ -724,7 +859,7 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
           <div style={{ display: 'grid', gap: 12 }}>
             <div style={{ background: '#032e18', border: '1px solid #0f6b36', borderRadius: 16, padding: 20 }}>
               <div style={{ color: T.green, fontSize: 11, fontWeight: 900 }}>DISPONIBLE</div>
-              <div style={{ color: '#fff', fontSize: 48, fontWeight: 900, letterSpacing: -2 }}>{wallet}<span style={{ color: T.green, fontSize: 22 }}>€</span></div>
+              <div style={{ color: '#fff', fontSize: 48, fontWeight: 900, letterSpacing: -2 }}>{availableWallet}<span style={{ color: T.green, fontSize: 22 }}>€</span></div>
               <div style={{ marginTop: 10 }}>
                 <div style={{ color: T.green, fontSize: 13, fontWeight: 900 }}>En attente · virement J+3<br /><span style={{ fontSize: 27 }}>40 €</span></div>
               </div>
@@ -737,17 +872,17 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
                   aria-label="Montant à retirer"
                   type="number"
                   min={1}
-                  max={wallet}
+                  max={availableWallet}
                   value={withdrawAmount}
                   onChange={(event) => {
                     const nextAmount = Number(event.target.value);
-                    setWithdrawAmount(Number.isFinite(nextAmount) ? Math.min(wallet, Math.max(0, nextAmount)) : 0);
+                    setWithdrawAmount(Number.isFinite(nextAmount) ? Math.min(availableWallet, Math.max(0, nextAmount)) : 0);
                   }}
                   style={{ ...inp, marginBottom: 0 }}
                 />
-                <Button onClick={withdraw} disabled={wallet <= 0 || !Number.isFinite(withdrawAmount) || withdrawAmount <= 0}>Retirer</Button>
+                <Button onClick={withdraw} disabled={availableWallet <= 0 || !Number.isFinite(withdrawAmount) || withdrawAmount <= 0}>Retirer</Button>
               </div>
-              <div style={{ color: T.mu, fontSize: 10, marginTop: 8 }}>Maximum disponible : {wallet} €</div>
+              <div style={{ color: T.mu, fontSize: 10, marginTop: 8 }}>Maximum disponible : {availableWallet} €</div>
             </div>
             <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 16, padding: 16, color: T.sub, fontSize: 12, lineHeight: 1.6 }}>
               L’argent reste disponible. Les virements sont simulés ici, mais dans l’app réelle ils passent par le wallet sécurisé.
@@ -797,6 +932,8 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
                   <button
                     key={minutes}
                     onClick={() => {
+                      rememberDelayNotice(missionAlert.mission, minutes);
+                      setDemoState(readDemoState());
                       notif(`Retard de ${minutes}${minutes === 30 ? ' minutes ou plus' : ' minutes'} transmis à la structure.`);
                       setMissionAlert(null);
                     }}
@@ -818,21 +955,22 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
       <BottomTabs
         tabs={[
           ['flux', 'Flux', '⌁'],
-          ['moi', 'Missions', '🌳'],
-          ['wallet', 'Banque', '🏦'],
+          ['moi', 'Missions', '🌳', missionUnread],
+          ['wallet', 'Banque', '🏦', walletUnread],
         ]}
         current={tab}
-        onChange={(v) => setTab(v as WorkerTab)}
+        onChange={(v) => changeWorkerTab(v as WorkerTab)}
       />
     </>
   );
 }
 
-function BottomTabs({ tabs, current, onChange }: { tabs: [string, string, string?][]; current: string; onChange: (v: string) => void }) {
+function BottomTabs({ tabs, current, onChange }: { tabs: [string, string, string?, number?][]; current: string; onChange: (v: string) => void }) {
   return (
     <nav aria-label="Navigation de la démo" style={{ width: '100%', maxWidth: 430, borderTop: `1px solid ${T.cb}`, padding: '8px 10px 10px', display: 'grid', gridTemplateColumns: `repeat(${tabs.length}, 1fr)`, gap: 5, background: T.bg, position: 'fixed', zIndex: 180, bottom: 0, left: '50%', transform: 'translateX(-50%)', boxShadow: '0 -10px 28px rgba(0,0,0,.16)' }}>
-      {tabs.map(([key, label, icon]) => (
-        <button aria-pressed={current === key} key={key} onClick={() => onChange(key)} style={{ background: current === key ? '#fff' : 'transparent', color: current === key ? '#05060d' : T.mu, border: 'none', borderRadius: 12, minHeight: 48, padding: '6px 3px', cursor: 'pointer', fontSize: tabs.length > 3 ? 10 : 11, fontWeight: 900, display: 'grid', placeItems: 'center', gap: 1 }}>
+      {tabs.map(([key, label, icon, unread]) => (
+        <button aria-pressed={current === key} key={key} onClick={() => onChange(key)} style={{ position: 'relative', background: current === key ? '#fff' : 'transparent', color: current === key ? '#05060d' : T.mu, border: 'none', borderRadius: 12, minHeight: 48, padding: '6px 3px', cursor: 'pointer', fontSize: tabs.length > 3 ? 10 : 11, fontWeight: 900, display: 'grid', placeItems: 'center', gap: 1 }}>
+          {!!unread && unread > 0 && <span aria-label={`${unread} nouvelle${unread > 1 ? 's' : ''} notification${unread > 1 ? 's' : ''}`} style={{ position: 'absolute', top: 3, right: '18%', minWidth: 18, height: 18, padding: '0 5px', borderRadius: 10, display: 'grid', placeItems: 'center', background: '#ef4444', color: '#fff', fontSize: 9, lineHeight: 1, boxShadow: `0 0 0 2px ${T.bg}` }}>+{unread}</span>}
           {icon && <span aria-hidden="true" style={{ fontSize: 15, lineHeight: 1 }}>{icon}</span>}
           <span>{label}</span>
         </button>
@@ -1050,11 +1188,26 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
   const [tab, setTab] = useState<StructureTab>('missions');
   const [missions, setMissions] = useState<DemoMission[]>(() => structureMissions('pme'));
   const [candidates, setCandidates] = useState<DemoCandidate[]>(() => structureCandidates('pme'));
+  const [demoState, setDemoState] = useState<DemoSharedState>(() => readDemoState());
   const [panel, setPanel] = useState<DemoCandidate | null>(null);
   const [showPub, setShowPub] = useState(false);
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => {
+    function refresh(event: StorageEvent) {
+      if (event.key !== DEMO_SHARED_KEY) return;
+      const next = readDemoState();
+      setDemoState(next);
+      if (kind) {
+        setMissions(structureMissions(kind));
+        setCandidates(structureCandidates(kind));
+      }
+    }
+    window.addEventListener('storage', refresh);
+    return () => window.removeEventListener('storage', refresh);
+  }, [kind]);
 
   function notif(m: string) {
     setToast(m);
@@ -1091,17 +1244,39 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
   const seed = structureSeed[kind];
   const pending = candidates.filter((c) => c.status === 'pending');
   const regulars = candidates.filter((c) => c.here >= 2);
+  const visibleCandidateIds = new Set(candidates.map((candidate) => candidate.id));
+  const candidateUnread = demoState.structureUnreadCandidateIds.filter((id) => visibleCandidateIds.has(id)).length;
+  const visibleMissionIds = new Set(missions.map((mission) => mission.id));
+  const delayNotices = demoState.delayNotices.filter((notice) => visibleMissionIds.has(notice.missionId));
 
   function decide(id: string, status: CandidateStatus) {
+    const candidate = candidates.find((item) => item.id === id);
+    if (candidate) rememberCandidateDecision(candidate, status);
     setCandidates((list) => list.map((c) => (c.id === id ? { ...c, status } : c)));
     setPanel((c) => (c && c.id === id ? { ...c, status } : c));
+    setDemoState(readDemoState());
     notif(status === 'accepted' ? 'Candidat accepté. Il voit la mission confirmée.' : 'Candidat refusé sans pénalité.');
+  }
+
+  function changeStructureTab(next: StructureTab) {
+    setTab(next);
+    if (next !== 'candidats' || candidateUnread === 0) return;
+    const state = readDemoState();
+    writeDemoState({ ...state, structureUnreadCandidateIds: state.structureUnreadCandidateIds.filter((id) => !visibleCandidateIds.has(id)) });
+    setDemoState(readDemoState());
+  }
+
+  function dismissDelay(missionId: string) {
+    const state = readDemoState();
+    writeDemoState({ ...state, delayNotices: state.delayNotices.filter((notice) => notice.missionId !== missionId) });
+    setDemoState(readDemoState());
   }
 
   function refreshFromDemoState() {
     if (!kind) return;
     setMissions(structureMissions(kind));
     setCandidates(structureCandidates(kind));
+    setDemoState(readDemoState());
   }
 
   function publishIntoDemo(mission: DemoMission) {
@@ -1151,16 +1326,25 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
         <BottomTabs
           tabs={[
             ['missions', `Missions ${missions.length}`],
-            ['candidats', `Candidats ${pending.length}`],
+            ['candidats', `Candidats ${pending.length}`, undefined, candidateUnread],
             ['habitues', `Habitués ${regulars.length}`],
             ['historique', 'Historique'],
           ]}
           current={tab}
-          onChange={(v) => setTab(v as StructureTab)}
+          onChange={(v) => changeStructureTab(v as StructureTab)}
         />
         <div style={{ height: 12 }} />
         {tab === 'missions' && (
           <div style={{ display: 'grid', gap: 10 }}>
+            {delayNotices.map((notice) => (
+              <div key={notice.missionId} role="status" style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 14, padding: 13, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: T.amber, fontSize: 11, fontWeight: 900 }}>+1 · Retard signalé : {notice.minutes}{notice.minutes === 30 ? '+' : ''} min</div>
+                  <div style={{ color: T.sub, fontSize: 10, marginTop: 3 }}>{notice.missionTitle} · Alex Démo</div>
+                </div>
+                <button onClick={() => dismissDelay(notice.missionId)} style={{ background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 9px', fontSize: 9, fontWeight: 900, cursor: 'pointer' }}>Vu</button>
+              </div>
+            ))}
             <Button onClick={() => setShowPub(true)}>Publier une mission</Button>
             {missions.map((m, i) => {
               const count = candidates.filter((c) => c.missionId === m.id && c.status === 'pending').length;
@@ -1178,7 +1362,7 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12 }}>
                     <span style={{ color: T.green, background: T.greenBg, borderRadius: 10, padding: '2px 8px', fontSize: 9, fontWeight: 900 }}>Active</span>
                     {count > 0 ? (
-                      <button onClick={() => setTab('candidats')} style={{ color: T.cyan, background: '#22d3ee15', border: 'none', borderRadius: 10, padding: '3px 9px', fontSize: 10, fontWeight: 900, cursor: 'pointer' }}>
+                      <button onClick={() => changeStructureTab('candidats')} style={{ color: T.cyan, background: '#22d3ee15', border: 'none', borderRadius: 10, padding: '3px 9px', fontSize: 10, fontWeight: 900, cursor: 'pointer' }}>
                         {count} candidat{count > 1 ? 's' : ''} →
                       </button>
                     ) : (
@@ -1337,6 +1521,7 @@ function DemoFounderScanPage({ missionId, title, structure, step }: { missionId:
   const activationKey = `urosi_demo_mission_${step}_v1:${missionId}`;
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [authorized, setAuthorized] = useState(() => hasDemoFounderAccess());
   const [activated, setActivated] = useState(() => {
     try {
       return localStorage.getItem(activationKey) === '1';
@@ -1345,17 +1530,25 @@ function DemoFounderScanPage({ missionId, title, structure, step }: { missionId:
     }
   });
 
+  useEffect(() => {
+    if (activated) rememberMissionScan(missionId, step);
+  }, [activated, missionId, step]);
+
   function confirmMission() {
-    if (!isDemoFounderCode(code)) {
+    if (!authorized && !isDemoFounderCode(code)) {
       setError('Code fondateur invalide.');
       return;
     }
-    rememberDemoFounderAccess();
+    if (!authorized) {
+      rememberDemoFounderAccess();
+      setAuthorized(true);
+    }
     try {
       localStorage.setItem(activationKey, '1');
     } catch {
       // La confirmation reste visible pour la session courante.
     }
+    rememberMissionScan(missionId, step);
     setActivated(true);
     setError(null);
   }
@@ -1377,16 +1570,20 @@ function DemoFounderScanPage({ missionId, title, structure, step }: { missionId:
             </>
           ) : (
             <>
-              <input
-                aria-label="Code fondateur de démonstration"
-                value={code}
-                onChange={(event) => { setCode(event.target.value.toUpperCase()); setError(null); }}
-                onKeyDown={(event) => event.key === 'Enter' && confirmMission()}
-                placeholder="Code fondateur"
-                autoCapitalize="characters"
-                autoComplete="off"
-                style={{ ...inp, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1.3, marginBottom: 9 }}
-              />
+              {authorized ? (
+                <div style={{ color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 11, padding: 10, marginBottom: 9, fontSize: 10.5, fontWeight: 900 }}>Accès fondateur déjà validé · aucun mot de passe à ressaisir</div>
+              ) : (
+                <input
+                  aria-label="Code fondateur de démonstration"
+                  value={code}
+                  onChange={(event) => { setCode(event.target.value.toUpperCase()); setError(null); }}
+                  onKeyDown={(event) => event.key === 'Enter' && confirmMission()}
+                  placeholder="Code fondateur"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  style={{ ...inp, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1.3, marginBottom: 9 }}
+                />
+              )}
               {error && <div role="alert" style={{ color: T.red, fontSize: 11, marginBottom: 9 }}>{error}</div>}
               <Button onClick={confirmMission}>{isStart ? 'Activer' : 'Terminer'} la mission · simulation</Button>
             </>
