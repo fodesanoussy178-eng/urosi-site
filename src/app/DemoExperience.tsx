@@ -18,7 +18,24 @@ const DEMO_STRUCTURE_IDS = {
   pme: 'demo-structure-burger-nord',
   asso: 'demo-structure-banque-alimentaire',
 } as const;
-const DEMO_WORKER_HISTORY = ['Renfort fast-food · 40 €', 'Aide installation · 55 €', 'Préparation mariage · 70 €'] as const;
+const DEMO_WORKER_HISTORY = [
+  'Renfort service midi · 64 €',
+  'Inventaire magasin · 42 €',
+  'Montage festival · 91 €',
+  'Préparation commandes · 61 €',
+  'Accueil au stade · 112 €',
+  'Installation forum étudiant · 44 €',
+  'Assistant tournage · 95 €',
+  'Accueil spectacle · 52 €',
+  'Classement bibliothèque · 39 €',
+  'Accueil au musée · 78 €',
+  'Livraison interne · 57 €',
+  'Renfort association · Solidaire',
+  'Aide photographe · 46 €',
+  'Mise en place événement · 73 €',
+  'Accueil hospitalier · 48 €',
+] as const;
+const DEMO_WORKER_SKILLS = ['Restauration', 'Événementiel', 'Logistique'] as const;
 
 const DEMO_SHORTCUTS = [
   { label: 'Matin', start: '08:00', end: '12:00' },
@@ -98,28 +115,28 @@ const workerMissions: DemoMission[] = [
     structureId: DEMO_STRUCTURE_IDS.pme,
     title: 'Renfort service midi',
     structure: 'Burger Nord',
-    amount: 37,
+    amount: 64,
     city: 'Lille',
     when: 'Aujourd’hui · 8h30-11h30',
     duration: '3 h',
-    rating: 4.7,
+    rating: 4.8,
     reviews: 26,
     distance: '600 m',
     desc: 'Rush du midi, aide comptoir, salle propre et équipe déjà briefée.',
   },
   {
     id: 'm2',
-    structureId: 'demo-structure-maison-event',
-    title: 'Runner événement',
-    structure: 'Maison Event',
-    amount: 54,
+    structureId: 'demo-structure-decathlon-lille',
+    title: '📦 Inventaire magasin',
+    structure: 'Décathlon Lille',
+    amount: 42,
     city: 'Lille',
     when: 'Vendredi · 12h-15h',
     duration: '3 h',
-    rating: 4.9,
+    rating: 4.3,
     reviews: 41,
     distance: '1,2 km',
-    desc: 'Coordination légère, service plateau, renfort sur installation.',
+    desc: 'Comptage des rayons, contrôle des références et rangement léger.',
   },
   {
     id: 'm3',
@@ -138,31 +155,101 @@ const workerMissions: DemoMission[] = [
   },
   {
     id: 'm4',
-    structureId: 'demo-structure-traiteur-halluin',
-    title: 'Aide installation',
-    structure: 'Traiteur Halluin',
-    amount: 81,
-    city: 'Halluin',
-    when: 'Samedi · 14h-18h',
+    structureId: 'demo-structure-festival-lille',
+    title: '🎪 Montage espace festival',
+    structure: 'Festival de Lille',
+    amount: 91,
+    city: 'Lille',
+    when: 'Samedi · 14h-19h',
     duration: '4 h',
-    rating: 4.6,
-    reviews: 12,
-    distance: '4 km',
-    desc: 'Montage de salle, mise en place, rangement léger.',
+    rating: 4.9,
+    reviews: 63,
+    distance: '1,8 km',
+    desc: 'Installation des espaces, signalétique et accueil des exposants.',
   },
   {
     id: 'm5',
-    structureId: 'demo-structure-cinema-lille',
-    title: 'Accueil soirée cinéma',
-    structure: 'Cinéma Lille Centre',
-    amount: 96,
+    structureId: 'demo-structure-mairie-lille',
+    title: '📚 Classement bibliothèque',
+    structure: 'Mairie de Lille',
+    amount: 75,
     city: 'Lille',
-    when: 'Dimanche · 19h-22h',
-    duration: '3 h',
+    when: 'Lundi · 9h-14h',
+    duration: '5 h',
     rating: 4.5,
-    reviews: 33,
-    distance: '2,1 km',
-    desc: 'Accueil du public, orientation en salle et aide à la fermeture.',
+    reviews: 34,
+    distance: '900 m',
+    desc: 'Retour des ouvrages, classement et orientation des visiteurs.',
+  },
+  {
+    id: 'm6',
+    structureId: 'demo-structure-stade-lille',
+    title: '🏟 Accueil tribunes',
+    structure: 'Stade Pierre-Mauroy',
+    amount: 112,
+    city: 'Villeneuve-d’Ascq',
+    when: 'Samedi · 17h-23h',
+    duration: '6 h',
+    rating: 4.6,
+    reviews: 87,
+    distance: '5,4 km',
+    desc: 'Orientation du public, contrôle des accès et assistance en tribune.',
+  },
+  {
+    id: 'm7',
+    structureId: 'demo-structure-loginord',
+    title: '📦 Préparation commandes',
+    structure: 'LogiNord',
+    amount: 61,
+    city: 'Lesquin',
+    when: 'Mardi · 6h-10h',
+    duration: '4 h',
+    rating: 4.4,
+    reviews: 29,
+    distance: '7,2 km',
+    desc: 'Préparation, étiquetage et mise en zone des commandes internes.',
+  },
+  {
+    id: 'm8',
+    structureId: 'demo-structure-universite-lille',
+    title: '🎓 Installation forum étudiant',
+    structure: 'Université de Lille',
+    amount: 44,
+    city: 'Lille',
+    when: 'Mercredi · 8h-11h',
+    duration: '3 h',
+    rating: 4.7,
+    reviews: 52,
+    distance: '2,8 km',
+    desc: 'Installation des stands, affichage et accueil des intervenants.',
+  },
+  {
+    id: 'm9',
+    structureId: 'demo-structure-studio-roubaix',
+    title: '🎥 Assistant tournage',
+    structure: 'Studio Roubaix',
+    amount: 95,
+    city: 'Roubaix',
+    when: 'Jeudi · 13h-18h',
+    duration: '5 h',
+    rating: 5,
+    reviews: 16,
+    distance: '8,1 km',
+    desc: 'Aide logistique, installation légère et coordination des arrivées.',
+  },
+  {
+    id: 'm10',
+    structureId: 'demo-structure-theatre-nord',
+    title: '🎭 Accueil spectacle',
+    structure: 'Théâtre du Nord',
+    amount: 52,
+    city: 'Lille',
+    when: 'Vendredi · 18h-22h',
+    duration: '4 h',
+    rating: 4.2,
+    reviews: 38,
+    distance: '1,1 km',
+    desc: 'Accueil, placement du public et accompagnement à la sortie.',
   },
 ];
 
@@ -183,9 +270,9 @@ const structureSeed: Record<
     type: 'PME · Restauration rapide',
     verified: '✓ Vérifié (démo)',
     stats: [
-      ['215', 'missions'],
-      ['98 %', 'présence'],
-      ['6 min', 'réponse'],
+      ['12', 'missions publiées'],
+      ['94 %', 'acceptées'],
+      ['★ 4,8', '21 avis'],
     ],
     missions: [
       workerMissions[0]!,
@@ -238,9 +325,9 @@ const structureSeed: Record<
     type: 'Association loi 1901 · ESS',
     verified: '✓ Vérifié (démo)',
     stats: [
-      ['74', 'missions'],
-      ['97 %', 'présence'],
-      ['10 min', 'réponse'],
+      ['9', 'missions publiées'],
+      ['97 %', 'acceptées'],
+      ['★ 5,0', '15 avis'],
     ],
     missions: [workerMissions[2]!],
     candidates: [
@@ -395,6 +482,16 @@ function uniqueCandidates(candidates: DemoCandidate[]) {
   });
 }
 
+function uniqueCandidatePeople(candidates: DemoCandidate[]) {
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    const workerKey = candidate.name.trim().toLocaleLowerCase('fr-FR');
+    if (seen.has(workerKey)) return false;
+    seen.add(workerKey);
+    return true;
+  });
+}
+
 function structureIdForName(name: string): string {
   if (name === structureSeed.pme.name) return DEMO_STRUCTURE_IDS.pme;
   if (name === structureSeed.asso.name) return DEMO_STRUCTURE_IDS.asso;
@@ -443,10 +540,10 @@ function cancelledStructureMissions(kind: StructureKind) {
 function structureCandidates(kind: StructureKind) {
   const state = readDemoState();
   const visibleMissionIds = new Set(structureMissions(kind).map((mission) => mission.id));
-  return uniqueCandidates([
+  return uniqueCandidatePeople(uniqueCandidates([
     ...state.candidates.filter((candidate) => visibleMissionIds.has(candidate.missionId)),
     ...structureSeed[kind].candidates.filter((candidate) => visibleMissionIds.has(candidate.missionId)),
-  ]);
+  ]));
 }
 
 function rememberPublishedMission(mission: DemoMission, candidate: DemoCandidate) {
@@ -975,12 +1072,18 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
                   <div style={{ color: T.mu, fontSize: 11 }}>Lille · CV vivant · compte fictif</div>
                 </div>
               </div>
+              <div style={{ color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 12, padding: '10px 12px', fontSize: 11, fontWeight: 900, marginBottom: 10 }}>
+                Disponible demain
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
                 <div style={{ background: T.row, borderRadius: 12, padding: 12, textAlign: 'center' }}><strong style={{ color: T.text, fontSize: 22 }}>{completed}</strong><div style={{ color: T.mu, fontSize: 9 }}>Missions prouvées</div></div>
-                <div style={{ background: T.row, borderRadius: 12, padding: 12, textAlign: 'center' }}><strong style={{ color: T.text, fontSize: 22 }}>★ 4.7</strong><div style={{ color: T.mu, fontSize: 9 }}>Note moyenne</div></div>
+                <div style={{ background: T.row, borderRadius: 12, padding: 12, textAlign: 'center' }}><strong style={{ color: T.text, fontSize: 22 }}>★ 4,7</strong><div style={{ color: T.mu, fontSize: 9 }}>Note moyenne</div></div>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+                {DEMO_WORKER_SKILLS.map((skill) => <span key={skill} style={{ color: T.cyan, background: '#22d3ee12', border: `1px solid ${T.cb}`, borderRadius: 999, padding: '5px 8px', fontSize: 9.5, fontWeight: 900 }}>{skill}</span>)}
               </div>
               <div style={{ color: T.mu, fontSize: 9, fontWeight: 900, textTransform: 'uppercase', marginBottom: 8 }}>Historique vérifié</div>
-              {DEMO_WORKER_HISTORY.map((h) => {
+              {DEMO_WORKER_HISTORY.slice(0, 5).map((h) => {
                 const [title, amount] = h.split(' · ');
                 return (
                   <div key={h} style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${T.cb}`, padding: '9px 0', color: T.text, fontSize: 12, fontWeight: 800 }}>
@@ -989,6 +1092,7 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
                   </div>
                 );
               })}
+              <div style={{ borderTop: `1px solid ${T.cb}`, paddingTop: 10, color: T.cyan, fontSize: 10, fontWeight: 900 }}>+ {completed - 5} autres missions vérifiées</div>
             </div>
           </div>
         )}
@@ -1023,6 +1127,29 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
             </div>
             <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 16, padding: 16, color: T.sub, fontSize: 12, lineHeight: 1.6 }}>
               L’argent reste disponible. Les virements sont simulés ici, mais dans l’app réelle ils passent par le wallet sécurisé.
+            </div>
+            <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 16, padding: 16 }}>
+              <div style={{ color: T.text, fontSize: 13, fontWeight: 900, marginBottom: 10 }}>Compte sécurisé</div>
+              {['IBAN vérifié', 'Carte d’identité vérifiée', 'Compte vérifié'].map((label) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, borderTop: `1px solid ${T.cb}`, padding: '10px 0', color: T.sub, fontSize: 11, fontWeight: 800 }}>
+                  <span aria-hidden="true" style={{ color: T.green, fontWeight: 900 }}>✓</span>{label}
+                </div>
+              ))}
+            </div>
+            <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 16, padding: 16 }}>
+              <div style={{ color: T.text, fontSize: 13, fontWeight: 900 }}>Historique des virements</div>
+              <div style={{ color: T.mu, fontSize: 9.5, margin: '3px 0 8px' }}>Les montants et dates sont fictifs dans la démo.</div>
+              {[
+                ['Prochain versement · J+3', '+ 40 €', T.green],
+                ['Retrait effectué · 11 juillet', '− 50 €', T.text],
+                ['Festival de Lille · 9 juillet', '+ 91 €', T.green],
+                ['Inventaire magasin · 6 juillet', '+ 42 €', T.green],
+              ].map(([label, amount, color]) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, borderTop: `1px solid ${T.cb}`, padding: '10px 0', fontSize: 10.5 }}>
+                  <span style={{ color: T.sub }}>{label}</span>
+                  <strong style={{ color, whiteSpace: 'nowrap' }}>{amount}</strong>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -1663,6 +1790,14 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
           </div>
           <button onClick={() => setKind(null)} style={{ background: T.row, color: T.mu, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 10px', fontSize: 10, fontWeight: 800, cursor: 'pointer' }}>Changer</button>
         </div>
+        <div aria-label="Statistiques de la structure" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 7, marginBottom: 12 }}>
+          {seed.stats.map(([value, label]) => (
+            <div key={label} style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 13, padding: '11px 7px', textAlign: 'center' }}>
+              <div style={{ color: label === '21 avis' || label === '15 avis' ? T.amber : T.text, fontSize: value.startsWith('★') ? 15 : 19, fontWeight: 900, lineHeight: 1.1 }}>{value}</div>
+              <div style={{ color: T.mu, fontSize: 8.5, marginTop: 5, lineHeight: 1.2 }}>{label}</div>
+            </div>
+          ))}
+        </div>
         <BottomTabs
           tabs={[
             ['missions', `Missions ${missions.length}`],
@@ -1756,7 +1891,7 @@ function StructureDemo({ founder, onBack, onSwitchWorker }: { founder: boolean; 
             <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 16, padding: 15 }}>
               <div style={{ color: T.text, fontSize: 13, fontWeight: 900 }}>Avis anonymes</div>
               <div style={{ color: T.mu, fontSize: 9, margin: '3px 0 9px' }}>Publication le lundi par lots de 3 avis · sinon report · aucun auteur affiché</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}><Stars n={4.7} size={13} /><strong>4,7</strong><span style={{ color: T.mu, fontSize: 10 }}>(21 avis)</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}><Stars n={kind === 'pme' ? 4.8 : 5} size={13} /><strong>{kind === 'pme' ? '4,8' : '5,0'}</strong><span style={{ color: T.mu, fontSize: 10 }}>({kind === 'pme' ? 21 : 15} avis)</span></div>
               <div style={{ color: T.sub, fontSize: 10.5, borderTop: `1px solid ${T.cb}`, marginTop: 9, paddingTop: 9 }}>★★★★★ · « Équipe accueillante et consignes claires. »</div>
             </div>
           </div>
