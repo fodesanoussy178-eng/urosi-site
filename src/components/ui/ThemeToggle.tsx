@@ -17,17 +17,17 @@ export function ThemeToggle() {
         setMode(nextMode);
       }}
       style={{
-        width: 32,
-        height: 32,
-        flex: '0 0 32px',
+        width: 42,
+        height: 42,
+        flex: '0 0 42px',
         display: 'grid',
         placeItems: 'center',
-        borderRadius: 10,
+        borderRadius: 13,
         border: `1px solid ${T.cb}`,
         background: T.row,
         color: T.text,
         cursor: 'pointer',
-        fontSize: 16,
+        fontSize: 18,
         lineHeight: 1,
       }}
     >
