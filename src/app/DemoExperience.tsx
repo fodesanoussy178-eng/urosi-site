@@ -416,6 +416,19 @@ function demoCandidateFor(mission: DemoMission): DemoCandidate {
   };
 }
 
+type DemoQrStep = 'start' | 'end';
+
+function demoFounderScanUrl(mission: DemoMission, step: DemoQrStep): string {
+  const query = new URLSearchParams({
+    scan: 'founder',
+    step,
+    mission: mission.id,
+    title: mission.title,
+    structure: mission.structure,
+  });
+  return `${window.location.origin}/demo?${query.toString()}`;
+}
+
 function readNumber(key: string) {
   try {
     return Number(localStorage.getItem(key) || '0') || 0;
@@ -598,7 +611,7 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
   const [wallet, setWallet] = useState(182);
   const [withdrawAmount, setWithdrawAmount] = useState(50);
   const [missionAlert, setMissionAlert] = useState<{ mission: DemoMission; type: 'delay' | 'cancel' } | null>(null);
-  const [demoQrMission, setDemoQrMission] = useState<DemoMission | null>(null);
+  const [demoQr, setDemoQr] = useState<{ mission: DemoMission; step: DemoQrStep } | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -632,6 +645,7 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
   const myMissions = feed.filter((m) => accepted.includes(m.id));
   const completed = DEMO_WORKER_HISTORY.length;
   const founderPublishedCount = feed.filter((m) => m.id.startsWith('founder-') || m.id.startsWith('new-')).length;
+  const founderScanUrl = demoQr ? demoFounderScanUrl(demoQr.mission, demoQr.step) : '';
 
   if (profileName) return <StructureProfile name={profileName} onBack={() => setProfileName(null)} />;
 
@@ -669,11 +683,12 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.sub, marginTop: 8 }}>
                       <span>QR fin</span>
-                      <strong style={{ color: T.mu }}>Après le début</strong>
+                      <strong style={{ color: T.cyan }}>Disponible en démo</strong>
                     </div>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 10 }}>
-                    <Button tone="green" onClick={() => setDemoQrMission(m)}>QR début</Button>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginTop: 10 }}>
+                    <Button tone="green" onClick={() => setDemoQr({ mission: m, step: 'start' })}>QR début</Button>
+                    <Button onClick={() => setDemoQr({ mission: m, step: 'end' })}>QR fin</Button>
                     <Button tone="light" onClick={() => setMissionAlert({ mission: m, type: 'delay' })}>Retard</Button>
                     <Button tone="red" onClick={() => setMissionAlert({ mission: m, type: 'cancel' })}>Annuler</Button>
                   </div>
@@ -740,27 +755,30 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
           </div>
         )}
       </div>
-      {demoQrMission && (
+      {demoQr && (
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="QR fictif de début de mission"
+          aria-label={`QR fictif de ${demoQr.step === 'start' ? 'début' : 'fin'} de mission`}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 195, padding: 18 }}
-          onClick={() => setDemoQrMission(null)}
+          onClick={() => setDemoQr(null)}
         >
           <div style={{ width: '100%', maxWidth: 350, background: T.card, border: `1px solid ${T.cb}`, borderRadius: 22, padding: 22, textAlign: 'center' }} onClick={(event) => event.stopPropagation()}>
-            <div style={{ color: T.text, fontSize: 18, fontWeight: 900 }}>QR de début · Démo</div>
+            <div style={{ color: T.text, fontSize: 18, fontWeight: 900 }}>QR de {demoQr.step === 'start' ? 'début' : 'fin'} · Démo</div>
             <div style={{ color: T.sub, fontSize: 11, lineHeight: 1.5, margin: '6px 0 16px' }}>
-              {demoQrMission.title}<br />{demoQrMission.structure}
+              {demoQr.mission.title}<br />{demoQr.mission.structure}
             </div>
             <div style={{ display: 'inline-flex', background: '#fff', padding: 10, borderRadius: 12 }}>
-              <QRBadge value={`UROSI-DEMO|FAUX-POINTAGE|${demoQrMission.id}|START`} size={190} />
+              <QRBadge value={founderScanUrl} size={190} />
             </div>
             <div style={{ color: T.amber, background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 10, padding: 10, fontSize: 10.5, lineHeight: 1.45, margin: '16px 0 12px' }}>
-              QR fictif : il simule le scan et ne valide aucune présence réelle.
+              Scanne avec ton téléphone, saisis le code fondateur puis {demoQr.step === 'start' ? 'active' : 'termine'} cette mission en simulation.
             </div>
             <div style={{ color: T.mu, fontSize: 10, marginBottom: 14 }}>Valable 10 minutes dans la simulation</div>
-            <Button tone="light" onClick={() => setDemoQrMission(null)}>Fermer</Button>
+            <a href={founderScanUrl} target="_blank" rel="noreferrer" style={{ display: 'block', color: T.cyan, border: `1px solid ${T.cb}`, borderRadius: 11, padding: '11px 14px', marginBottom: 9, textDecoration: 'none', fontSize: 12, fontWeight: 900 }}>
+              Tester sans scanner ↗
+            </a>
+            <Button tone="light" onClick={() => setDemoQr(null)}>Fermer</Button>
           </div>
         </div>
       )}
@@ -1314,6 +1332,74 @@ function CandidateCard({
   );
 }
 
+function DemoFounderScanPage({ missionId, title, structure, step }: { missionId: string; title: string; structure: string; step: DemoQrStep }) {
+  const isStart = step === 'start';
+  const activationKey = `urosi_demo_mission_${step}_v1:${missionId}`;
+  const [code, setCode] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [activated, setActivated] = useState(() => {
+    try {
+      return localStorage.getItem(activationKey) === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  function confirmMission() {
+    if (!isDemoFounderCode(code)) {
+      setError('Code fondateur invalide.');
+      return;
+    }
+    rememberDemoFounderAccess();
+    try {
+      localStorage.setItem(activationKey, '1');
+    } catch {
+      // La confirmation reste visible pour la session courante.
+    }
+    setActivated(true);
+    setError(null);
+  }
+
+  return (
+    <DemoShell>
+      <div style={{ minHeight: 'calc(100vh - 44px)', padding: '24px 18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '100%', background: T.card, border: `1px solid ${activated ? T.greenBorder : T.cb}`, borderRadius: 20, padding: 22, textAlign: 'center' }}>
+          <Logo sz={42} />
+          <div style={{ color: T.amber, fontSize: 9, fontWeight: 900, letterSpacing: 1.1, marginTop: 14 }}>{isStart ? 'ACTIVATION' : 'CLÔTURE'} FONDATEUR · SIMULATION</div>
+          <div style={{ color: T.text, fontSize: 19, fontWeight: 900, marginTop: 7 }}>{activated ? (isStart ? 'Mission activée' : 'Mission terminée') : (isStart ? 'Activer cette mission' : 'Terminer cette mission')}</div>
+          <div style={{ color: T.sub, fontSize: 12, lineHeight: 1.55, margin: '7px 0 16px' }}>
+            {title || 'Mission de démonstration'}<br />{structure || 'Structure fictive'}
+          </div>
+          {activated ? (
+            <>
+              <div style={{ color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 13, padding: 14, fontSize: 12, fontWeight: 900, marginBottom: 14 }}>✓ {isStart ? 'Activation' : 'Fin de mission'} simulée confirmée</div>
+              <Link to="/demo?role=structure" style={{ display: 'block', background: '#f8fafc', color: '#080b12', borderRadius: 12, padding: '13px 16px', textDecoration: 'none', fontSize: 13, fontWeight: 900 }}>Ouvrir la démo structure</Link>
+            </>
+          ) : (
+            <>
+              <input
+                aria-label="Code fondateur de démonstration"
+                value={code}
+                onChange={(event) => { setCode(event.target.value.toUpperCase()); setError(null); }}
+                onKeyDown={(event) => event.key === 'Enter' && confirmMission()}
+                placeholder="Code fondateur"
+                autoCapitalize="characters"
+                autoComplete="off"
+                style={{ ...inp, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1.3, marginBottom: 9 }}
+              />
+              {error && <div role="alert" style={{ color: T.red, fontSize: 11, marginBottom: 9 }}>{error}</div>}
+              <Button onClick={confirmMission}>{isStart ? 'Activer' : 'Terminer'} la mission · simulation</Button>
+            </>
+          )}
+          <div style={{ color: T.mu, fontSize: 10, lineHeight: 1.5, marginTop: 14 }}>
+            Test local à ce téléphone : aucune mission Supabase n’est modifiée et l’ordinateur ne se met pas à jour.
+          </div>
+        </div>
+      </div>
+    </DemoShell>
+  );
+}
+
 function DemoLimitOverlay({ role, embedded, onFounder }: { role: DemoRole; embedded: boolean; onFounder: () => void }) {
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState('');
@@ -1364,6 +1450,11 @@ export function DemoExperience() {
   const [params] = useSearchParams();
   const embedded = params.get('embed') === '1';
   const initialRole = params.get('role') === 'structure' ? 'structure' : params.get('role') === 'worker' ? 'worker' : null;
+  const founderScan = params.get('scan') === 'founder';
+  const scannedStep: DemoQrStep = params.get('step') === 'end' ? 'end' : 'start';
+  const scannedMissionId = params.get('mission') || 'mission-demo';
+  const scannedMissionTitle = params.get('title') || 'Mission de démonstration';
+  const scannedStructure = params.get('structure') || 'Structure fictive';
   const [role, setRole] = useState<DemoRole | null>(initialRole);
   const [used, setUsed] = useState(() => readNumber(DEMO_KEY));
   const [demoVersion, setDemoVersion] = useState(0);
@@ -1437,6 +1528,10 @@ export function DemoExperience() {
       return;
     }
     navigate(destination, { replace: true });
+  }
+
+  if (founderScan) {
+    return <DemoFounderScanPage missionId={scannedMissionId} title={scannedMissionTitle} structure={scannedStructure} step={scannedStep} />;
   }
 
   if (!role) {
