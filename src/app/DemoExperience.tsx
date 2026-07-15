@@ -10,7 +10,7 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { hasFounderAccess } from '@/features/auth/authService';
 import { hasDemoFounderAccess, hasRememberedFounderAccess, isDemoFounderCode, isFounderEmail, rememberDemoFounderAccess } from '@/lib/founder';
 
-const DEMO_SECONDS = 30;
+const DEMO_SECONDS = 60;
 const DEMO_KEY = 'urosi_internal_demo_seconds_v1';
 const DEMO_SHARED_KEY = 'urosi_founder_demo_shared_v1';
 const DEMO_SERVICE_FEE_RATE = 0.18;
@@ -43,6 +43,7 @@ type DemoMission = {
   when: string;
   duration: string;
   rating: number;
+  reviews?: number;
   distance: string;
   solid?: boolean;
   desc: string;
@@ -77,12 +78,13 @@ const workerMissions: DemoMission[] = [
     structureId: DEMO_STRUCTURE_IDS.pme,
     title: 'Renfort service midi',
     structure: 'Burger Nord',
-    amount: 42,
+    amount: 37,
     city: 'Lille',
-    when: 'Aujourd’hui · 12h-15h',
+    when: 'Aujourd’hui · 8h30-11h30',
     duration: '3 h',
     rating: 4.7,
-    distance: '0,3 km',
+    reviews: 26,
+    distance: '600 m',
     desc: 'Rush du midi, aide comptoir, salle propre et équipe déjà briefée.',
   },
   {
@@ -90,12 +92,13 @@ const workerMissions: DemoMission[] = [
     structureId: 'demo-structure-maison-event',
     title: 'Runner événement',
     structure: 'Maison Event',
-    amount: 88,
+    amount: 54,
     city: 'Lille',
-    when: 'Vendredi · 18h-23h',
-    duration: '5 h',
+    when: 'Vendredi · 12h-15h',
+    duration: '3 h',
     rating: 4.9,
-    distance: '1,4 km',
+    reviews: 41,
+    distance: '1,2 km',
     desc: 'Coordination légère, service plateau, renfort sur installation.',
   },
   {
@@ -108,7 +111,8 @@ const workerMissions: DemoMission[] = [
     when: 'Samedi · 10h-13h',
     duration: '3 h',
     rating: 4.8,
-    distance: '1,2 km',
+    reviews: 18,
+    distance: '2,1 km',
     solid: true,
     desc: 'Mission solidaire. Elle ne rémunère pas, mais enrichit le CV vivant.',
   },
@@ -117,13 +121,28 @@ const workerMissions: DemoMission[] = [
     structureId: 'demo-structure-traiteur-halluin',
     title: 'Aide installation',
     structure: 'Traiteur Halluin',
-    amount: 55,
+    amount: 81,
     city: 'Halluin',
-    when: 'Samedi · 16h-20h',
+    when: 'Samedi · 14h-18h',
     duration: '4 h',
     rating: 4.6,
-    distance: '2,2 km',
+    reviews: 12,
+    distance: '4 km',
     desc: 'Montage de salle, mise en place, rangement léger.',
+  },
+  {
+    id: 'm5',
+    structureId: 'demo-structure-cinema-lille',
+    title: 'Accueil soirée cinéma',
+    structure: 'Cinéma Lille Centre',
+    amount: 96,
+    city: 'Lille',
+    when: 'Dimanche · 19h-22h',
+    duration: '3 h',
+    rating: 4.5,
+    reviews: 33,
+    distance: '2,1 km',
+    desc: 'Accueil du public, orientation en salle et aide à la fermeture.',
   },
 ];
 
@@ -515,8 +534,10 @@ function MissionCard({ mission, onAccept, onStructure }: { mission: DemoMission;
       </button>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginTop: 5 }}>
         <span style={{ color: T.green, background: T.greenBg, borderRadius: 12, padding: '2px 7px', fontSize: 8.5, fontWeight: 900 }}>✓ Vérifié (démo)</span>
-        <Stars n={mission.rating} size={12} />
-        <span style={{ color: T.mu, fontSize: 10, fontWeight: 800 }}>{mission.rating.toFixed(1).replace('.', ',')}</span>
+        <Stars n={mission.rating} size={12} animateOnce />
+        <span style={{ color: T.mu, fontSize: 10, fontWeight: 800 }}>
+          {mission.rating.toFixed(1).replace('.', ',')}{mission.reviews ? ` · ${mission.reviews} avis` : ''}
+        </span>
       </div>
       <div style={{ color: T.mu, fontSize: 10.5, lineHeight: 1.5, marginTop: 7 }}>
         {mission.city} · {mission.when} · {mission.duration} · {mission.distance}
@@ -1476,7 +1497,7 @@ export function DemoExperience() {
 
   return (
     <>
-      {!founder && (
+      {!founder && !embedded && (
         <div style={{ position: 'fixed', top: 18, right: 18, zIndex: 450, background: left > 8 ? T.amberBg : T.redBg, color: left > 8 ? T.amber : T.red, border: `1px solid ${left > 8 ? T.amberBorder : T.redBorder}`, borderRadius: 18, padding: '7px 13px', fontFamily: FONT, fontSize: 12, fontWeight: 900 }}>
           Aperçu démo · {left}s
         </div>

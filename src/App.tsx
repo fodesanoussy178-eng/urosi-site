@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/features/auth/AuthContext';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { isSupabaseConfigured } from '@/lib/supabase';
@@ -35,6 +35,11 @@ function StaticHome() {
 
 function AppShell() {
   const { session, profile, loading } = useAuth();
+  const location = useLocation();
+
+  // La démo est volontairement autonome : elle doit rester consultable sans
+  // variables Supabase et ne déclenche aucune écriture dans les tables réelles.
+  if (location.pathname === '/demo') return <DemoExperience />;
 
   if (!isSupabaseConfigured) {
     return <Centered text="Backend non configuré : vérifie VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY." />;

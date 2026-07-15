@@ -66,6 +66,39 @@ textarea {
   font-family: inherit;
 }
 
+.urosi-star {
+  display: inline-block;
+}
+
+.urosi-stars--animate .urosi-star {
+  opacity: 0;
+  transform: translateY(3px);
+  animation: urosi-star-in 240ms ease-out forwards;
+}
+
+@keyframes urosi-star-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .urosi-stars--animate .urosi-star {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .auth-demo-shell {
   min-height: 100vh;
   background:
