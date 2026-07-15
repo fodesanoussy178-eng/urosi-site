@@ -1,5 +1,5 @@
 // Logo UROSI du prototype v0.5, reproduit a l'identique.
-export function Logo({ sz = 52 }: { sz?: number }) {
+export function Logo({ sz = 52, showWord = true }: { sz?: number; showWord?: boolean }) {
   const a = '#67e8f9';
   const b = '#22d3ee';
   return (
@@ -22,7 +22,7 @@ export function Logo({ sz = 52 }: { sz?: number }) {
         <ellipse cx="29" cy="17" rx="6.5" ry="4" fill={b} opacity=".85" transform="rotate(-35 29 17)" />
         <ellipse cx="71" cy="17" rx="6.5" ry="4" fill={b} opacity=".85" transform="rotate(35 71 17)" />
       </svg>
-      <span style={{ fontSize: Math.round(sz * 0.22), fontWeight: 900, color: '#f1f5f9', letterSpacing: -0.3 }}>UROSI</span>
+      {showWord && <span style={{ fontSize: Math.round(sz * 0.22), fontWeight: 900, color: '#f1f5f9', letterSpacing: -0.3 }}>UROSI</span>}
     </div>
   );
 }

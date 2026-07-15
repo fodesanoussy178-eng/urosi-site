@@ -471,39 +471,20 @@ function Button({
   );
 }
 
-function TopBar({
-  title,
-  badge,
-  onBack,
-  founder,
-}: {
+function TopBar({ onBack }: {
   title: string;
   badge?: string;
   onBack?: () => void;
   founder?: boolean;
 }) {
   return (
-    <div style={{ padding: '22px 20px 13px', borderBottom: `1px solid ${T.cb}`, display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: 34, height: 34, borderRadius: 10, background: T.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900 }}>U</div>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 900, color: T.text }}>{title}</div>
-          <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-            {badge && <span style={{ fontSize: 9, fontWeight: 900, color: T.cyan, background: '#22d3ee15', borderRadius: 12, padding: '2px 8px' }}>{badge}</span>}
-            <span style={{ fontSize: 9, fontWeight: 900, color: T.amber, background: T.amberBg, borderRadius: 12, padding: '2px 8px' }}>DÉMO</span>
-          </div>
-        </div>
-      </div>
-      <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
-        <ThemeToggle />
-        {founder && <span style={{ fontSize: 10, color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 14, padding: '5px 10px', fontWeight: 900 }}>Accès fondateur</span>}
-        {onBack && (
-          <button onClick={onBack} style={{ background: T.row, color: T.sub, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
-            ← Choix démo
-          </button>
-        )}
-      </div>
-    </div>
+    <header style={{ height: 44, padding: '5px 12px', borderBottom: `1px solid ${T.cb}`, background: T.bg, display: 'grid', gridTemplateColumns: '40px 1fr 40px', alignItems: 'center', position: 'sticky', top: 0, zIndex: 170 }}>
+      {onBack ? (
+        <button aria-label="Revenir au choix de la démo" onClick={onBack} style={{ width: 38, height: 38, background: 'transparent', color: T.sub, border: 'none', borderRadius: 12, fontSize: 22, cursor: 'pointer' }}>‹</button>
+      ) : <span />}
+      <div style={{ display: 'grid', placeItems: 'center' }}><Logo sz={22} showWord={false} /></div>
+      <div style={{ display: 'grid', placeItems: 'center' }}><ThemeToggle /></div>
+    </header>
   );
 }
 
@@ -831,7 +812,7 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
 
 function BottomTabs({ tabs, current, onChange }: { tabs: [string, string, string?][]; current: string; onChange: (v: string) => void }) {
   return (
-    <nav aria-label="Navigation de la démo" style={{ width: '100%', maxWidth: 430, borderTop: `1px solid ${T.cb}`, padding: '8px 12px 12px', display: 'grid', gridTemplateColumns: `repeat(${tabs.length}, 1fr)`, gap: 7, background: T.bg, position: 'fixed', zIndex: 180, bottom: 0, left: '50%', transform: 'translateX(-50%)', boxShadow: '0 -10px 28px rgba(0,0,0,.16)' }}>
+    <nav aria-label="Navigation de la démo" style={{ width: '100%', maxWidth: 430, borderTop: `1px solid ${T.cb}`, padding: '8px 10px 10px', display: 'grid', gridTemplateColumns: `repeat(${tabs.length}, 1fr)`, gap: 5, background: T.bg, position: 'fixed', zIndex: 180, bottom: 0, left: '50%', transform: 'translateX(-50%)', boxShadow: '0 -10px 28px rgba(0,0,0,.16)' }}>
       {tabs.map(([key, label, icon]) => (
         <button aria-pressed={current === key} key={key} onClick={() => onChange(key)} style={{ background: current === key ? '#fff' : 'transparent', color: current === key ? '#05060d' : T.mu, border: 'none', borderRadius: 12, minHeight: 48, padding: '6px 3px', cursor: 'pointer', fontSize: tabs.length > 3 ? 10 : 11, fontWeight: 900, display: 'grid', placeItems: 'center', gap: 1 }}>
           {icon && <span aria-hidden="true" style={{ fontSize: 15, lineHeight: 1 }}>{icon}</span>}

@@ -396,7 +396,7 @@ export function WorkerApp() {
 
         {toast && <div style={{ margin: '8px 12px 0', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 11px', fontSize: 11, color: T.sub }}>{toast}</div>}
 
-        <div style={{ padding: '10px 12px', flex: 1 }}>
+        <div style={{ padding: '10px 12px 84px', flex: 1 }}>
           {/* ── FLUX ── */}
           {tab === 'flux' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
@@ -675,25 +675,25 @@ export function WorkerApp() {
         </div>
 
         {/* Bottom nav */}
-        <div style={{ borderTop: `1px solid ${T.cb}`, padding: '6px 10px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, position: 'sticky', bottom: 0, background: T.bg }}>
+        <nav aria-label="Navigation principale" style={{ width: '100%', maxWidth: 430, borderTop: `1px solid ${T.cb}`, padding: '7px 10px 12px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, position: 'fixed', zIndex: 40, bottom: 0, left: '50%', transform: 'translateX(-50%)', background: T.bg, boxShadow: '0 -10px 28px rgba(0,0,0,.16)' }}>
           {(
             [
-              ['flux', '🗂', 'Flux'],
-              ['moi', '👤', 'Missions'],
-              ['profil', '⚙️', 'Profil'],
+              ['flux', '⌁', 'Flux'],
+              ['moi', '🌳', 'Missions'],
+              ['profil', '🏦', 'Wallet'],
             ] as [Tab, string, string][]
           ).map(([k, ic, l]) => (
             <button key={k} onClick={() => setTab(k)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '6px 0', borderRadius: 8, border: 'none', cursor: 'pointer', background: tab === k ? '#fff' : 'transparent', color: tab === k ? '#000' : T.mu, position: 'relative' }}>
               <span style={{ fontSize: 14 }}>{ic}</span>
               <span style={{ fontSize: 10, fontWeight: 700 }}>{l}</span>
-              {k === 'moi' && (acceptedApps.length > 0 || unreadTotal > 0) && (
-                <span style={{ position: 'absolute', top: 4, right: 14, minWidth: 6, height: unreadTotal > 0 ? 14 : 6, borderRadius: 8, background: unreadTotal > 0 ? '#dc2626' : T.cyan, color: '#fff', fontSize: 8.5, fontWeight: 900, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: unreadTotal > 0 ? '0 4px' : 0 }}>
-                  {unreadTotal > 0 ? unreadTotal : ''}
+              {k === 'moi' && unreadTotal > 0 && (
+                <span style={{ position: 'absolute', top: 4, right: 14, minWidth: 14, height: 14, borderRadius: 8, background: '#dc2626', color: '#fff', fontSize: 8.5, fontWeight: 900, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>
+                  {unreadTotal > 9 ? '9+' : unreadTotal}
                 </span>
               )}
             </button>
           ))}
-        </div>
+        </nav>
 
         {/* Détail mission */}
         {detail && (
