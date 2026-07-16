@@ -158,6 +158,26 @@ describe('DemoExperience founder scan', () => {
     expect(screen.getByText(/5,0 · 16 avis/)).toBeInTheDocument();
   });
 
+  it('exposes stable targets for the step-by-step landing tutorial', () => {
+    const { container } = renderWorker();
+
+    expect(container.querySelector('[data-demo-tour="mission-card"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-demo-tour="mission-action"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-demo-tab="moi"]')).toHaveTextContent('Missions');
+  });
+
+  it('keeps the guided landing tutorial readable after the free preview expires', () => {
+    localStorage.setItem('urosi_internal_demo_seconds_v1', '60');
+    const { container } = render(
+      <MemoryRouter initialEntries={['/demo?role=worker&embed=1&tour=1']}>
+        <DemoExperience />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText('Fin de l’aperçu gratuit')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-demo-tour="mission-card"]')).toBeInTheDocument();
+  });
+
   it('hides the structure photo gallery completely when no photo is available', async () => {
     const user = userEvent.setup();
     renderWorker();
