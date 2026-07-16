@@ -123,6 +123,31 @@ describe('DemoExperience founder scan', () => {
     expect(screen.getByText('21 avis')).toBeInTheDocument();
   });
 
+  it('offers a QR and dynamic PIN simulation from the structure demo', async () => {
+    const user = userEvent.setup();
+    renderStructure();
+
+    await user.click(screen.getByRole('button', { name: 'Tester le QR + PIN' }));
+
+    expect(screen.getByRole('dialog', { name: 'Simulation QR et PIN' })).toBeInTheDocument();
+    expect(screen.getByText('482731')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Tester côté travailleur sans scanner ↗' })).toHaveAttribute('href', expect.stringContaining('scan=worker-pin'));
+  });
+
+  it('validates the simulated worker arrival with the displayed PIN', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/demo?scan=worker-pin&step=start&mission=pm1&title=Renfort+service+midi&structure=Burger+Nord']}>
+        <DemoExperience />
+      </MemoryRouter>,
+    );
+
+    await user.type(screen.getByLabelText('PIN temporaire de simulation'), '482731');
+    await user.click(screen.getByRole('button', { name: 'Démarrer maintenant' }));
+
+    expect(screen.getByText('✓ Arrivée horodatée dans la simulation')).toBeInTheDocument();
+  });
+
   it('replaces internal demo tools with a compact two-mission notice', async () => {
     const user = userEvent.setup();
     renderStructure();
