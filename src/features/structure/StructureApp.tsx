@@ -409,7 +409,7 @@ export function StructureApp() {
                   {structure.name.charAt(0).toUpperCase()}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{structure.name}</div>
+                  <div style={{ fontSize: 13, lineHeight: 1.2, fontWeight: 800, color: T.text, overflowWrap: 'anywhere' }}>{structure.name}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
                     {structure.is_ess && <span style={{ fontSize: 8, fontWeight: 700, color: T.green, background: T.greenBg, borderRadius: 8, padding: '1px 6px' }}>🤝 Association · ESS</span>}
                     <span style={{ fontSize: 8, fontWeight: 700, color: verificationBadge(structure).color, background: verificationBadge(structure).bg, borderRadius: 8, padding: '1px 6px' }}>{verificationBadge(structure).label}</span>

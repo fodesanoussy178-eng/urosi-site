@@ -174,7 +174,7 @@ describe('DemoExperience founder scan', () => {
 
     await user.click(screen.getByRole('button', { name: 'Burger Nord ›' }));
 
-    expect(screen.getByLabelText('En-tête du profil structure')).toHaveStyle({ height: '76px' });
+    expect(screen.getByLabelText('En-tête du profil structure')).toHaveStyle({ height: '58px' });
     expect(screen.getByText('12')).toBeInTheDocument();
     expect(screen.getByText('missions réalisées')).toBeInTheDocument();
     expect(screen.getByText('94 %')).toBeInTheDocument();
@@ -198,6 +198,22 @@ describe('DemoExperience founder scan', () => {
     expect(screen.getAllByText('Avis anonyme vérifié')).toHaveLength(2);
     await user.click(screen.getByRole('button', { name: 'Voir 5 avis sur 21' }));
     expect(screen.getAllByText('Avis anonyme vérifié')).toHaveLength(5);
+  });
+
+  it('shows a long local test structure name without truncating it', () => {
+    localStorage.setItem('urosi_founder_local_lab_accounts_v1', JSON.stringify([{
+      id: 'test-structure-long-name',
+      name: 'Association Solidaire Métropole Européenne de Lille',
+      role: 'structure',
+      createdAt: new Date().toISOString(),
+    }]));
+    render(
+      <MemoryRouter initialEntries={['/demo?role=structure&labAccount=test-structure-long-name']}>
+        <DemoExperience />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Association Solidaire Métropole Européenne de Lille')).toBeInTheDocument();
   });
 
   it('makes the living CV and bank status immediately readable', async () => {
