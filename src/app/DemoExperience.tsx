@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Logo } from '@/components/ui/Logo';
 import { Stars } from '@/components/ui/Stars';
@@ -2346,6 +2346,51 @@ function DemoLimitOverlay({ role, embedded, onFounder }: { role: DemoRole; embed
   );
 }
 
+// Compteur d'utilisation de l'aperçu : incrémente les secondes consommées
+// dans localStorage SANS état React, pour ne pas re-rendre tout l'arbre de la
+// démo chaque seconde. Seuls les petits badges ci-dessous se re-rendent.
+function DemoUsageTicker({ running, onExpire }: { running: boolean; onExpire: () => void }) {
+  useEffect(() => {
+    if (!running) return undefined;
+    const id = window.setInterval(() => {
+      const next = readNumber(DEMO_KEY) + 1;
+      try {
+        localStorage.setItem(DEMO_KEY, String(next));
+      } catch {
+        // ignore
+      }
+      if (next >= DEMO_SECONDS) onExpire();
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [running, onExpire]);
+  return null;
+}
+
+function useDemoSecondsLeft(): number {
+  const [left, setLeft] = useState(() => Math.max(0, DEMO_SECONDS - readNumber(DEMO_KEY)));
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setLeft(Math.max(0, DEMO_SECONDS - readNumber(DEMO_KEY)));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  return left;
+}
+
+function DemoChoiceTimeLeft() {
+  const left = useDemoSecondsLeft();
+  return <div style={{ color: T.mu, fontSize: 11 }}>Aperçu gratuit : {left}s restantes</div>;
+}
+
+function DemoPreviewBadge() {
+  const left = useDemoSecondsLeft();
+  return (
+    <div style={{ position: 'fixed', top: 18, right: 18, zIndex: 450, background: left > 8 ? T.amberBg : T.redBg, color: left > 8 ? T.amber : T.red, border: `1px solid ${left > 8 ? T.amberBorder : T.redBorder}`, borderRadius: 18, padding: '7px 13px', fontFamily: FONT, fontSize: 12, fontWeight: 900 }}>
+      Aperçu démo · {left}s
+    </div>
+  );
+}
+
 export function DemoExperience() {
   const { session } = useAuth();
   const navigate = useNavigate();
@@ -2361,13 +2406,13 @@ export function DemoExperience() {
   const scannedStructure = params.get('structure') || 'Structure fictive';
   const labAccount = findLocalLabAccount(params.get('labAccount'));
   const [role, setRole] = useState<DemoRole | null>(initialRole);
-  const [used, setUsed] = useState(() => readNumber(DEMO_KEY));
+  const [expired, setExpired] = useState(() => readNumber(DEMO_KEY) >= DEMO_SECONDS);
   const [demoVersion, setDemoVersion] = useState(0);
   const [founderByCode, setFounderByCode] = useState(() => hasDemoFounderAccess() || hasRememberedFounderAccess(session?.user.id));
   const founder = founderByCode;
   const displayedFounder = embedded ? false : founder;
-  const frozen = Boolean(role && !founder && !guidedTour && used >= DEMO_SECONDS);
-  const left = Math.max(0, DEMO_SECONDS - used);
+  const frozen = Boolean(role && !founder && !guidedTour && expired);
+  const handleExpire = useCallback(() => setExpired(true), []);
 
   useEffect(() => {
     let alive = true;
@@ -2394,22 +2439,6 @@ export function DemoExperience() {
     };
   }, [embedded, session]);
 
-  useEffect(() => {
-    if (!role || founder || frozen || guidedTour) return undefined;
-    const id = window.setInterval(() => {
-      setUsed((previous) => {
-        const next = previous + 1;
-        try {
-          localStorage.setItem(DEMO_KEY, String(next));
-        } catch {
-          // ignore
-        }
-        return next;
-      });
-    }, 1000);
-    return () => window.clearInterval(id);
-  }, [role, founder, frozen, guidedTour]);
-
   function resetDemo() {
     try {
       localStorage.removeItem(DEMO_KEY);
@@ -2417,7 +2446,7 @@ export function DemoExperience() {
     } catch {
       // ignore
     }
-    setUsed(0);
+    setExpired(false);
     setDemoVersion((value) => value + 1);
   }
 
@@ -2459,7 +2488,7 @@ export function DemoExperience() {
             <Link to="/acces" style={{ textDecoration: 'none', display: 'block', marginBottom: 16 }}><Button tone="ghost">Créer un compte</Button></Link>
             {founder ? (
               <button onClick={resetDemo} style={{ background: 'none', color: T.green, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 900 }}>Accès fondateur actif · réinitialiser</button>
-            ) : <div style={{ color: T.mu, fontSize: 11 }}>Aperçu gratuit : {left}s restantes</div>}
+            ) : <DemoChoiceTimeLeft />}
           </div>
         </div>
       </DemoShell>
@@ -2468,11 +2497,8 @@ export function DemoExperience() {
 
   return (
     <>
-      {!founder && !embedded && (
-        <div style={{ position: 'fixed', top: 18, right: 18, zIndex: 450, background: left > 8 ? T.amberBg : T.redBg, color: left > 8 ? T.amber : T.red, border: `1px solid ${left > 8 ? T.amberBorder : T.redBorder}`, borderRadius: 18, padding: '7px 13px', fontFamily: FONT, fontSize: 12, fontWeight: 900 }}>
-          Aperçu démo · {left}s
-        </div>
-      )}
+      <DemoUsageTicker running={Boolean(role) && !founder && !expired && !guidedTour} onExpire={handleExpire} />
+      {!founder && !embedded && <DemoPreviewBadge />}
       {!embedded && founder && (
         <button onClick={resetDemo} style={{ position: 'fixed', top: 18, right: 18, zIndex: 450, background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 18, padding: '7px 13px', fontFamily: FONT, fontSize: 12, fontWeight: 900, cursor: 'pointer' }}>
           Accès fondateur

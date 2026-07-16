@@ -180,11 +180,20 @@ export function WorkerApp() {
   }, [session]);
 
   // Flux en direct : toute mission publiée/clôturée rafraîchit la liste.
+  // Les événements arrivent parfois en rafale (plusieurs structures actives) :
+  // un court debounce évite de relancer toutes les requêtes à chaque événement.
   useEffect(() => {
+    let reloadTimer: ReturnType<typeof setTimeout> | undefined;
     const channel = subscribeToMissionFeed(() => {
-      load();
+      clearTimeout(reloadTimer);
+      reloadTimer = setTimeout(() => {
+        load();
+      }, 800);
     });
-    return () => unsubscribeMissionFeed(channel);
+    return () => {
+      clearTimeout(reloadTimer);
+      unsubscribeMissionFeed(channel);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
