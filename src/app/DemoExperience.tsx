@@ -837,7 +837,7 @@ function DemoShell({ children, embedded = false }: { children: ReactNode; embedd
 
 function MissionCard({ mission, onAccept, onStructure }: { mission: DemoMission; onAccept?: () => void; onStructure?: () => void }) {
   return (
-    <div style={{ background: T.card, border: `1px solid ${mission.solid ? T.greenBorder : T.cb}`, borderRadius: 16, padding: 17 }}>
+    <div data-demo-tour="mission-card" style={{ background: T.card, border: `1px solid ${mission.solid ? T.greenBorder : T.cb}`, borderRadius: 16, padding: 17 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
         {mission.solid ? (
           <>
@@ -863,7 +863,7 @@ function MissionCard({ mission, onAccept, onStructure }: { mission: DemoMission;
         {mission.city} · {mission.when} · {mission.duration} · {mission.distance}
       </div>
       {mission.solid && <div style={{ color: T.green, fontSize: 11, fontWeight: 800, marginTop: 7 }}>Compte dans ton CV vivant · sans rémunération</div>}
-      <div style={{ marginTop: 13 }}>
+      <div data-demo-tour="mission-action" style={{ marginTop: 13 }}>
         <Button onClick={onAccept} tone={mission.solid ? 'green' : 'dark'}>
           {mission.solid ? 'Participer' : 'Accepter'}
         </Button>
@@ -1310,7 +1310,7 @@ function BottomTabs({ tabs, current, onChange }: { tabs: [string, string, string
   return (
     <nav aria-label="Navigation de la démo" style={{ width: '100%', maxWidth: 430, borderTop: `1px solid ${T.cb}`, padding: '8px 10px 10px', display: 'grid', gridTemplateColumns: `repeat(${tabs.length}, 1fr)`, gap: 5, background: T.bg, position: 'fixed', zIndex: 180, bottom: 0, left: '50%', transform: 'translateX(-50%)', boxShadow: '0 -10px 28px rgba(0,0,0,.16)' }}>
       {tabs.map(([key, label, icon, unread]) => (
-        <button aria-pressed={current === key} key={key} onClick={() => onChange(key)} style={{ position: 'relative', background: current === key ? '#fff' : 'transparent', color: current === key ? '#05060d' : T.mu, border: 'none', borderRadius: 12, minHeight: 48, padding: '6px 3px', cursor: 'pointer', fontSize: tabs.length > 3 ? 10 : 11, fontWeight: 900, display: 'grid', placeItems: 'center', gap: 1 }}>
+        <button data-demo-tab={key} aria-pressed={current === key} key={key} onClick={() => onChange(key)} style={{ position: 'relative', background: current === key ? '#fff' : 'transparent', color: current === key ? '#05060d' : T.mu, border: 'none', borderRadius: 12, minHeight: 48, padding: '6px 3px', cursor: 'pointer', fontSize: tabs.length > 3 ? 10 : 11, fontWeight: 900, display: 'grid', placeItems: 'center', gap: 1 }}>
           {!!unread && unread > 0 && <span aria-label={`${unread} nouvelle${unread > 1 ? 's' : ''} notification${unread > 1 ? 's' : ''}`} style={{ position: 'absolute', top: 3, right: '18%', minWidth: 18, height: 18, padding: '0 5px', borderRadius: 10, display: 'grid', placeItems: 'center', background: '#ef4444', color: '#fff', fontSize: 9, lineHeight: 1, boxShadow: `0 0 0 2px ${T.bg}` }}>+{unread}</span>}
           {icon && <span aria-hidden="true" style={{ fontSize: 15, lineHeight: 1 }}>{icon}</span>}
           <span>{label}</span>
@@ -2260,6 +2260,7 @@ export function DemoExperience() {
   const [params] = useSearchParams();
   const embedded = params.get('embed') === '1';
   const initialRole = params.get('role') === 'structure' ? 'structure' : params.get('role') === 'worker' ? 'worker' : null;
+  const guidedTour = embedded && params.get('tour') === '1';
   const founderScan = params.get('scan') === 'founder';
   const scannedStep: DemoQrStep = params.get('step') === 'end' ? 'end' : 'start';
   const scannedMissionId = params.get('mission') || 'mission-demo';
@@ -2272,7 +2273,7 @@ export function DemoExperience() {
   const [founderByCode, setFounderByCode] = useState(() => hasDemoFounderAccess() || hasRememberedFounderAccess(session?.user.id));
   const founder = isFounderEmail(session?.user.email) || founderByCode;
   const displayedFounder = embedded ? false : founder;
-  const frozen = Boolean(role && !founder && used >= DEMO_SECONDS);
+  const frozen = Boolean(role && !founder && !guidedTour && used >= DEMO_SECONDS);
   const left = Math.max(0, DEMO_SECONDS - used);
 
   useEffect(() => {
@@ -2301,7 +2302,7 @@ export function DemoExperience() {
   }, [embedded, session]);
 
   useEffect(() => {
-    if (!role || founder || frozen) return undefined;
+    if (!role || founder || frozen || guidedTour) return undefined;
     const id = window.setInterval(() => {
       setUsed((previous) => {
         const next = previous + 1;
@@ -2314,7 +2315,7 @@ export function DemoExperience() {
       });
     }, 1000);
     return () => window.clearInterval(id);
-  }, [role, founder, frozen]);
+  }, [role, founder, frozen, guidedTour]);
 
   function resetDemo() {
     try {

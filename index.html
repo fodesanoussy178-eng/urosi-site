@@ -105,6 +105,7 @@
 
       /* ── Téléphone démo ── */
       .phone-zone { position: relative; isolation: isolate; display: flex; flex-direction: column; align-items: center; justify-self: end; padding: 0; }
+      .phone-zone.tour-active { z-index: 2147482999; }
       .phone-zone::before {
         content: ''; position: absolute; z-index: -1; width: 125%; aspect-ratio: 1; top: 42%; left: 50%; transform: translate(-50%, -50%);
         border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(8,145,178,.13), rgba(8,145,178,.045) 43%, transparent 70%);
@@ -257,14 +258,52 @@
       .phone-hint { font-size: 11px; color: var(--mu); margin-top: 12px; text-align: center; }
       .phone-hint b { color: var(--sub); }
 
+      /* ── Tutoriel guidé de la démo ── */
+      .demo-tour {
+        position: fixed; inset: 0; z-index: 2147483000; width: 100vw; height: 100dvh;
+        display: none; overflow: hidden; overscroll-behavior: none; touch-action: none; box-sizing: border-box;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      }
+      .demo-tour.is-open { display: block; }
+      .demo-tour-shade { position: fixed; background: rgba(2, 5, 12, .82); transition: all .18s ease; }
+      .demo-tour-spotlight {
+        position: fixed; border: 2px solid rgba(34, 211, 238, .95); border-radius: 18px;
+        box-shadow: 0 0 0 4px rgba(34, 211, 238, .14), 0 10px 35px rgba(0, 0, 0, .35);
+        pointer-events: none; transition: all .18s ease;
+      }
+      .demo-tour-card {
+        position: fixed; width: min(340px, calc(100vw - 32px)); max-width: 340px; box-sizing: border-box;
+        padding: 15px; border-radius: 16px; border: 1px solid rgba(34, 211, 238, .35);
+        background: #101827; color: #f8fafc; box-shadow: 0 18px 60px rgba(0, 0, 0, .48);
+        text-align: left; opacity: 0; transform: translateY(6px); transition: opacity .16s ease, transform .16s ease;
+      }
+      .demo-tour.is-ready .demo-tour-card { opacity: 1; transform: none; }
+      .demo-tour-head { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
+      .demo-tour-number {
+        width: 24px; height: 24px; flex: 0 0 24px; border-radius: 50%; display: grid; place-items: center;
+        background: linear-gradient(135deg, #0891b2, #16a34a); color: #fff; font-size: 11px; font-weight: 900;
+      }
+      .demo-tour-title { margin: 0; font-size: 15px; line-height: 1.25; font-weight: 900; }
+      .demo-tour-copy { margin: 0; color: #cbd5e1; font-size: 12px; line-height: 1.5; }
+      .demo-tour-footer { display: flex; align-items: center; gap: 8px; margin-top: 13px; }
+      .demo-tour-progress { margin-right: auto; color: #94a3b8; font-size: 10px; font-weight: 800; }
+      .demo-tour-button {
+        min-height: 40px; padding: 0 13px; border-radius: 10px; border: 1px solid #334155;
+        background: transparent; color: #cbd5e1; font: inherit; font-size: 11px; font-weight: 900; cursor: pointer;
+      }
+      .demo-tour-button.primary { border-color: #0891b2; background: #0891b2; color: #fff; }
+      .demo-tour-button:focus-visible { outline: 3px solid rgba(34, 211, 238, .45); outline-offset: 2px; }
+      .tour-intro { max-width: 520px; margin: 18px auto 0; text-align: center; }
+      .tour-intro p { color: var(--sub); font-size: 13px; line-height: 1.55; margin-bottom: 15px; }
+      .tour-intro .btn { border: 0; cursor: pointer; }
+      .phone-tour-link { border: 0; padding: 0; background: none; color: var(--cyan); font: inherit; font-weight: 900; cursor: pointer; }
+
+      @media (prefers-reduced-motion: reduce) {
+        .demo-tour-shade, .demo-tour-spotlight, .demo-tour-card { transition: none; }
+      }
+
       section { padding: 54px 0; }
       .sec-title { font-size: 34px; font-weight: 900; letter-spacing: 0; margin-bottom: 8px; text-align: center; }
-      .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 26px; }
-      .step { background: rgba(255,255,255,.7); border: 1px solid var(--cb); border-radius: 8px; padding: 22px 18px; text-align: center; transition: transform .2s; }
-      .step:hover { transform: translateY(-3px); }
-      .step .n { width: 30px; height: 30px; border-radius: 50%; background: var(--grad); color: #fff; font-weight: 900; font-size: 13px; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; }
-      .step h3 { font-size: 14px; font-weight: 800; margin-bottom: 5px; }
-      .step p { font-size: 12px; color: var(--sub); }
 
       details { background: rgba(255,255,255,.7); border: 1px solid var(--cb); border-radius: 8px; margin-bottom: 9px; overflow: hidden; }
       summary { cursor: pointer; padding: 15px 17px; font-size: 13.5px; font-weight: 800; list-style: none; display: flex; justify-content: space-between; align-items: center; }
@@ -572,17 +611,36 @@
         <button class="preview-role on" type="button" data-preview-role="worker" aria-pressed="true">Travailleur</button>
         <button class="preview-role" type="button" data-preview-role="structure" aria-pressed="false">Structure</button>
       </div>
-      <div class="phone-hint"><b>Fais défiler l’écran dans le téléphone</b> · <a href="/demo" style="color:var(--cyan)">ouvrir la démo complète →</a></div>
+      <div class="phone-hint"><b>Fais défiler l’écran dans le téléphone</b> · <button class="phone-tour-link" type="button" data-demo-tour-start>Comment ça marche ?</button></div>
+
+      <div id="demoTour" class="demo-tour" role="dialog" aria-modal="true" aria-labelledby="demoTourTitle" aria-describedby="demoTourCopy" aria-hidden="true">
+        <div class="demo-tour-shade" data-tour-shade="top"></div>
+        <div class="demo-tour-shade" data-tour-shade="right"></div>
+        <div class="demo-tour-shade" data-tour-shade="bottom"></div>
+        <div class="demo-tour-shade" data-tour-shade="left"></div>
+        <div id="demoTourSpotlight" class="demo-tour-spotlight" aria-hidden="true"></div>
+        <div id="demoTourCard" class="demo-tour-card" tabindex="-1">
+          <div class="demo-tour-head">
+            <span id="demoTourNumber" class="demo-tour-number">1</span>
+            <h3 id="demoTourTitle" class="demo-tour-title"></h3>
+          </div>
+          <p id="demoTourCopy" class="demo-tour-copy"></p>
+          <div class="demo-tour-footer">
+            <span id="demoTourProgress" class="demo-tour-progress">1 sur 3</span>
+            <button id="demoTourSkip" class="demo-tour-button" type="button">Passer</button>
+            <button id="demoTourNext" class="demo-tour-button primary" type="button">Suivant</button>
+          </div>
+        </div>
+      </div>
         </div>
       </main>
 
-    <!-- ── 3 étapes ── -->
+    <!-- ── Tutoriel guidé ── -->
     <section class="wrap reveal">
       <div class="sec-title">Comment ça marche</div>
-      <div class="steps">
-        <div class="step"><div class="n">1</div><h3>Tu choisis une expérience</h3><p>Payée ou solidaire, près de toi, visible avant de postuler.</p></div>
-        <div class="step"><div class="n">2</div><h3>La présence est validée</h3><p>Début et fin de mission sont confirmés simplement.</p></div>
-        <div class="step"><div class="n">3</div><h3>Ton CV vivant avance</h3><p>Chaque mission ajoute une preuve claire à ton profil.</p></div>
+      <div class="tour-intro">
+        <p>Découvre le parcours dans la vraie interface, une étape à la fois.</p>
+        <button class="btn btn-dark" type="button" data-demo-tour-start>Voir le parcours en 3 étapes</button>
       </div>
     </section>
 
@@ -709,6 +767,7 @@
           document.body.classList.remove('demo-fullscreen-open');
           window.scrollTo(0, pageScrollY);
           syncFullscreenControl();
+          window.requestAnimationFrame(positionTour);
           if (!fromBrowserBack && fallbackHistoryEntry) history.back();
           fallbackHistoryEntry = false;
         }
@@ -732,9 +791,15 @@
               return;
             }
             if (typeof demoZone.requestFullscreen === 'function') {
-              demoZone.requestFullscreen().catch(enterFallbackFullscreen);
+              demoZone.requestFullscreen()
+                .then(function () { window.setTimeout(function () { startTour({ currentTarget: fullscreenButton }); }, 80); })
+                .catch(function () {
+                  enterFallbackFullscreen();
+                  window.setTimeout(function () { startTour({ currentTarget: fullscreenButton }); }, 80);
+                });
             } else {
               enterFallbackFullscreen();
+              window.setTimeout(function () { startTour({ currentTarget: fullscreenButton }); }, 80);
             }
           });
 
@@ -746,6 +811,281 @@
             if (fallbackFullscreen) leaveFallbackFullscreen(true);
           });
           syncFullscreenControl();
+        }
+
+        // ── Tutoriel mobile : une cible et une seule explication à la fois.
+        var tourRoot = document.getElementById('demoTour');
+        var tourCard = document.getElementById('demoTourCard');
+        var tourSpotlight = document.getElementById('demoTourSpotlight');
+        var tourTitle = document.getElementById('demoTourTitle');
+        var tourCopy = document.getElementById('demoTourCopy');
+        var tourNumber = document.getElementById('demoTourNumber');
+        var tourProgress = document.getElementById('demoTourProgress');
+        var tourSkip = document.getElementById('demoTourSkip');
+        var tourNext = document.getElementById('demoTourNext');
+        var tourShades = {};
+        document.querySelectorAll('[data-tour-shade]').forEach(function (shade) { tourShades[shade.dataset.tourShade] = shade; });
+        var tourSteps = [
+          {
+            selector: '[data-demo-tour="mission-card"]',
+            title: 'Tu choisis une expérience',
+            copy: 'Payée ou solidaire, près de toi, avec les informations visibles avant de postuler.'
+          },
+          {
+            selector: '[data-demo-tour="mission-action"]',
+            title: 'Ta présence est validée',
+            copy: 'Le début et la fin de la mission sont confirmés simplement.'
+          },
+          {
+            selector: '[data-demo-tab="moi"]',
+            title: 'Ton CV vivant avance',
+            copy: 'Chaque mission terminée ajoute une preuve claire à ton profil.'
+          }
+        ];
+        var tourIndex = 0;
+        var tourOpen = false;
+        var tourTarget = null;
+        var tourPositionFrame = 0;
+        var tourStartFocus = null;
+        var pageOverflow = null;
+        var frameOverflow = null;
+
+        function waitForPreviewLoad() {
+          return new Promise(function (resolve) {
+            if (!preview) { resolve(); return; }
+            var timeout = window.setTimeout(resolve, 1800);
+            preview.addEventListener('load', function loaded() {
+              window.clearTimeout(timeout);
+              resolve();
+            }, { once: true });
+          });
+        }
+
+        function previewDocument() {
+          try { return preview && preview.contentDocument; } catch (error) { return null; }
+        }
+
+        function lockPage() {
+          if (!pageOverflow) {
+            pageOverflow = {
+              html: document.documentElement.style.overflow,
+              body: document.body.style.overflow
+            };
+          }
+          document.documentElement.style.overflow = 'hidden';
+          document.body.style.overflow = 'hidden';
+          lockFrame();
+        }
+
+        function lockFrame() {
+          var frameDoc = previewDocument();
+          if (!frameDoc || !frameDoc.body) return;
+          if (!frameOverflow) {
+            frameOverflow = {
+              html: frameDoc.documentElement.style.overflow,
+              body: frameDoc.body.style.overflow
+            };
+          }
+          frameDoc.documentElement.style.overflow = 'hidden';
+          frameDoc.body.style.overflow = 'hidden';
+        }
+
+        function unlockFrame() {
+          var frameDoc = previewDocument();
+          if (!frameDoc || !frameDoc.body || !frameOverflow) return;
+          frameDoc.documentElement.style.overflow = frameOverflow.html;
+          frameDoc.body.style.overflow = frameOverflow.body;
+        }
+
+        function restoreScroll() {
+          if (pageOverflow) {
+            document.documentElement.style.overflow = pageOverflow.html;
+            document.body.style.overflow = pageOverflow.body;
+          }
+          unlockFrame();
+          pageOverflow = null;
+          frameOverflow = null;
+        }
+
+        function setBox(element, left, top, width, height) {
+          if (!element) return;
+          element.style.left = Math.max(0, left) + 'px';
+          element.style.top = Math.max(0, top) + 'px';
+          element.style.width = Math.max(0, width) + 'px';
+          element.style.height = Math.max(0, height) + 'px';
+        }
+
+        function targetViewportRect(target) {
+          if (!preview || !target) return null;
+          var frameRect = preview.getBoundingClientRect();
+          var targetRect = target.getBoundingClientRect();
+          return {
+            left: frameRect.left + targetRect.left,
+            top: frameRect.top + targetRect.top,
+            right: frameRect.left + targetRect.right,
+            bottom: frameRect.top + targetRect.bottom,
+            width: targetRect.width,
+            height: targetRect.height
+          };
+        }
+
+        function positionTour() {
+          if (!tourOpen || !tourTarget || !tourRoot || !tourCard || !tourSpotlight) return;
+          window.cancelAnimationFrame(tourPositionFrame);
+          tourPositionFrame = window.requestAnimationFrame(function () {
+            var rect = targetViewportRect(tourTarget);
+            if (!rect) return;
+            var viewport = window.visualViewport;
+            var viewLeft = viewport ? viewport.offsetLeft : 0;
+            var viewTop = viewport ? viewport.offsetTop : 0;
+            var viewWidth = viewport ? viewport.width : window.innerWidth;
+            var viewHeight = viewport ? viewport.height : window.innerHeight;
+            var viewRight = viewLeft + viewWidth;
+            var viewBottom = viewTop + viewHeight;
+            var gap = 12;
+            var margin = 16;
+            var tourStyle = window.getComputedStyle(tourRoot);
+            var safeTop = Math.max(margin, parseFloat(tourStyle.paddingTop) || 0);
+            var safeRight = Math.max(margin, parseFloat(tourStyle.paddingRight) || 0);
+            var safeBottom = Math.max(margin, parseFloat(tourStyle.paddingBottom) || 0);
+            var safeLeft = Math.max(margin, parseFloat(tourStyle.paddingLeft) || 0);
+            var pad = 6;
+            var left = Math.max(viewLeft + safeLeft, rect.left - pad);
+            var top = Math.max(viewTop + safeTop, rect.top - pad);
+            var right = Math.min(viewRight - safeRight, rect.right + pad);
+            var bottom = Math.min(viewBottom - safeBottom, rect.bottom + pad);
+            var width = Math.max(0, right - left);
+            var height = Math.max(0, bottom - top);
+
+            setBox(tourShades.top, viewLeft, viewTop, viewWidth, top - viewTop);
+            setBox(tourShades.bottom, viewLeft, bottom, viewWidth, viewBottom - bottom);
+            setBox(tourShades.left, viewLeft, top, left - viewLeft, height);
+            setBox(tourShades.right, right, top, viewRight - right, height);
+            setBox(tourSpotlight, left, top, width, height);
+
+            var cardWidth = Math.min(340, viewWidth - safeLeft - safeRight);
+            tourCard.style.width = cardWidth + 'px';
+            var cardHeight = tourCard.offsetHeight;
+            var belowTop = bottom + gap;
+            var aboveTop = top - gap - cardHeight;
+            var roomBelow = viewBottom - safeBottom - belowTop;
+            var roomAbove = aboveTop - (viewTop + safeTop);
+            var cardTop = roomBelow >= cardHeight || roomBelow >= roomAbove ? belowTop : aboveTop;
+            cardTop = Math.max(viewTop + safeTop, Math.min(cardTop, viewBottom - safeBottom - cardHeight));
+            var cardLeft = left + (width / 2) - (cardWidth / 2);
+            cardLeft = Math.max(viewLeft + safeLeft, Math.min(cardLeft, viewRight - safeRight - cardWidth));
+            tourCard.style.left = cardLeft + 'px';
+            tourCard.style.top = cardTop + 'px';
+            tourRoot.classList.add('is-ready');
+          });
+        }
+
+        function frameTarget(selector) {
+          var frameDoc = previewDocument();
+          return frameDoc ? frameDoc.querySelector(selector) : null;
+        }
+
+        function showTourStep(index) {
+          if (!tourOpen || !tourRoot) return Promise.resolve();
+          tourIndex = Math.max(0, Math.min(index, tourSteps.length - 1));
+          var step = tourSteps[tourIndex];
+          tourRoot.classList.remove('is-ready');
+          if (tourTitle) tourTitle.textContent = step.title;
+          if (tourCopy) tourCopy.textContent = step.copy;
+          if (tourNumber) tourNumber.textContent = String(tourIndex + 1);
+          if (tourProgress) tourProgress.textContent = (tourIndex + 1) + ' sur ' + tourSteps.length;
+          if (tourNext) tourNext.textContent = tourIndex === tourSteps.length - 1 ? 'Terminer' : 'Suivant';
+
+          unlockFrame();
+          tourTarget = frameTarget(step.selector);
+          if (!tourTarget) {
+            lockFrame();
+            positionTour();
+            return Promise.resolve();
+          }
+          var frameDoc = previewDocument();
+          var frameHeight = preview ? preview.clientHeight : 0;
+          var innerRect = tourTarget.getBoundingClientRect();
+          var targetVisible = innerRect.top >= 12 && innerRect.bottom <= frameHeight - 12;
+          if (!targetVisible) tourTarget.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center', inline: 'nearest' });
+          return new Promise(function (resolve) {
+            window.setTimeout(function () {
+              lockFrame();
+              positionTour();
+              if (frameDoc) frameDoc.addEventListener('scroll', positionTour, { passive: true, capture: true });
+              resolve();
+            }, targetVisible || reduceMotion ? 20 : 360);
+          });
+        }
+
+        function stopTour() {
+          if (!tourOpen || !tourRoot) return;
+          tourOpen = false;
+          tourTarget = null;
+          tourRoot.classList.remove('is-open', 'is-ready');
+          tourRoot.setAttribute('aria-hidden', 'true');
+          if (demoZone) demoZone.classList.remove('tour-active');
+          restoreScroll();
+          if (preview && (preview.getAttribute('src') || '').indexOf('tour=1') !== -1) {
+            preview.classList.add('is-switching');
+            preview.src = '/demo?role=worker&embed=1';
+          }
+          if (tourStartFocus && typeof tourStartFocus.focus === 'function') tourStartFocus.focus();
+          tourStartFocus = null;
+        }
+
+        function ensureWorkerPreview() {
+          if (!preview) return Promise.resolve();
+          var currentSrc = preview.getAttribute('src') || '';
+          if (currentSrc.indexOf('role=worker') !== -1 && currentSrc.indexOf('tour=1') !== -1) return Promise.resolve();
+          preview.classList.add('is-switching');
+          document.querySelectorAll('[data-preview-role]').forEach(function (item) {
+            var active = item.dataset.previewRole === 'worker';
+            item.classList.toggle('on', active);
+            item.setAttribute('aria-pressed', active ? 'true' : 'false');
+          });
+          preview.src = '/demo?role=worker&embed=1&tour=1';
+          preview.title = 'Aperçu défilable de l’espace Travailleur UROSI';
+          return waitForPreviewLoad();
+        }
+
+        function startTour(event) {
+          if (!tourRoot || !preview || tourOpen) return;
+          tourStartFocus = event && event.currentTarget ? event.currentTarget : document.activeElement;
+          ensureWorkerPreview().then(function () {
+            var frameDoc = previewDocument();
+            var fluxTab = frameDoc && frameDoc.querySelector('[data-demo-tab="flux"]');
+            if (fluxTab && fluxTab.getAttribute('aria-pressed') !== 'true') fluxTab.click();
+            if (!fullscreenActive() && demoZone) demoZone.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+            window.setTimeout(function () {
+              tourOpen = true;
+              if (demoZone) demoZone.classList.add('tour-active');
+              tourRoot.classList.add('is-open');
+              tourRoot.setAttribute('aria-hidden', 'false');
+              lockPage();
+              showTourStep(0).then(function () { if (tourCard) tourCard.focus({ preventScroll: true }); });
+            }, reduceMotion ? 20 : 320);
+          });
+        }
+
+        if (tourRoot && preview) {
+          document.querySelectorAll('[data-demo-tour-start]').forEach(function (button) { button.addEventListener('click', startTour); });
+          if (tourSkip) tourSkip.addEventListener('click', stopTour);
+          if (tourNext) tourNext.addEventListener('click', function () {
+            if (tourIndex >= tourSteps.length - 1) stopTour();
+            else showTourStep(tourIndex + 1);
+          });
+          tourRoot.addEventListener('wheel', function (event) { event.preventDefault(); }, { passive: false });
+          tourRoot.addEventListener('touchmove', function (event) { event.preventDefault(); }, { passive: false });
+          document.addEventListener('keydown', function (event) { if (tourOpen && event.key === 'Escape') stopTour(); });
+          window.addEventListener('resize', positionTour, { passive: true });
+          window.addEventListener('orientationchange', function () { window.setTimeout(positionTour, 120); }, { passive: true });
+          window.addEventListener('scroll', positionTour, { passive: true });
+          document.addEventListener('fullscreenchange', function () { window.requestAnimationFrame(positionTour); });
+          if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', positionTour, { passive: true });
+            window.visualViewport.addEventListener('scroll', positionTour, { passive: true });
+          }
         }
 
         if (preview) {
