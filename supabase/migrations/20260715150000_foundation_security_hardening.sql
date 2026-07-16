@@ -62,6 +62,8 @@ revoke execute on function public.wallet_apply_transaction()
   from public, anon, authenticated;
 
 drop trigger if exists wallet_transactions_apply on public.wallet_transactions;
+-- Lecture : after (insert) or (update of amount_cents, fund_status) or
+-- (delete) — la liste de colonnes ne s'applique qu'a l'UPDATE.
 create trigger wallet_transactions_apply
   after insert or update of amount_cents, fund_status or delete
   on public.wallet_transactions

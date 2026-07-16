@@ -9,7 +9,7 @@ import { T, FONT, inp } from '@/components/ui/theme';
 import { useAuth } from '@/features/auth/AuthContext';
 import { hasFounderAccess } from '@/features/auth/authService';
 import { findLocalLabAccount } from '@/features/founder/localLabAccounts';
-import { hasDemoFounderAccess, hasRememberedFounderAccess, isDemoFounderCode, isFounderEmail, rememberDemoFounderAccess } from '@/lib/founder';
+import { hasDemoFounderAccess, hasRememberedFounderAccess, isDemoFounderCode, rememberDemoFounderAccess } from '@/lib/founder';
 
 const DEMO_SECONDS = 60;
 const DEMO_KEY = 'urosi_internal_demo_seconds_v1';
@@ -2364,7 +2364,7 @@ export function DemoExperience() {
   const [used, setUsed] = useState(() => readNumber(DEMO_KEY));
   const [demoVersion, setDemoVersion] = useState(0);
   const [founderByCode, setFounderByCode] = useState(() => hasDemoFounderAccess() || hasRememberedFounderAccess(session?.user.id));
-  const founder = isFounderEmail(session?.user.email) || founderByCode;
+  const founder = founderByCode;
   const displayedFounder = embedded ? false : founder;
   const frozen = Boolean(role && !founder && !guidedTour && used >= DEMO_SECONDS);
   const left = Math.max(0, DEMO_SECONDS - used);
@@ -2378,7 +2378,7 @@ export function DemoExperience() {
       setFounderByCode(hasDemoFounderAccess());
       return undefined;
     }
-    if (hasDemoFounderAccess() || isFounderEmail(session.user.email) || hasRememberedFounderAccess(session.user.id)) {
+    if (hasDemoFounderAccess() || hasRememberedFounderAccess(session.user.id)) {
       setFounderByCode(true);
       return undefined;
     }

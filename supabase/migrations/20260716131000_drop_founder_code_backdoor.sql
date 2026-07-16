@@ -1,0 +1,14 @@
+-- Audit 2026-07-16 (M1) : la fonction claim_founder_access (0018) accordait
+-- l'acces fondateur a tout compte authentifie presentant un code partage.
+-- Elle est deja supprimee par 20260714134755_harden_worker_kyc.sql, et son
+-- absence a ete verifiee en prod et en staging le 16/07/2026
+-- (select to_regprocedure('public.claim_founder_access(text)') renvoie NULL).
+--
+-- Cette migration rend la suppression idempotente et explicite : toute base
+-- qui rejouerait l'historique complet termine garantie sans cette fonction,
+-- meme si une variante a ete recree manuellement entre-temps.
+--
+-- Rappel : l'acces fondateur ne passe QUE par public.has_founder_access()
+-- (app_metadata is_founder OU table founder_access alimentee en
+-- service_role), cf. 20260714134755.
+drop function if exists public.claim_founder_access(text);
