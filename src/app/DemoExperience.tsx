@@ -893,30 +893,57 @@ function StructurePlacePhotos({ photos }: { photos: StructurePlacePhoto[] }) {
   );
 }
 
+const STRUCTURE_REVIEW_SAMPLES = [
+  ['Mission bien organisée', 'Les horaires et les consignes étaient clairs dès le départ.'],
+  ['Accueil professionnel', "L'équipe m'a intégré rapidement et le responsable était disponible."],
+  ['Cadre fiable', 'La mission correspondait exactement à ce qui était annoncé.'],
+  ['Communication simple', "J'ai reçu toutes les informations utiles avant mon arrivée."],
+  ['Bonne expérience', 'Le déroulement était fluide du début à la fin.'],
+] as const;
+
+function StructureReviewList({ initialCount, total }: { initialCount: 2 | 3; total: number }) {
+  const [expanded, setExpanded] = useState(false);
+  const visibleReviews = STRUCTURE_REVIEW_SAMPLES.slice(0, expanded ? 5 : initialCount);
+
+  return (
+    <>
+      <div style={{ display: 'grid', gap: 9 }}>
+        {visibleReviews.map(([title, body]) => (
+          <article key={title} style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 13, padding: 13 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+              <strong style={{ color: T.text, fontSize: 11 }}>{title}</strong>
+              <Stars n={5} size={10} />
+            </div>
+            <p style={{ color: T.sub, fontSize: 11, lineHeight: 1.5, margin: '7px 0 8px' }}>{body}</p>
+            <span style={{ color: T.mu, fontSize: 9, fontWeight: 800 }}>Avis anonyme vérifié</span>
+          </article>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={() => setExpanded((value) => !value)}
+        style={{ width: '100%', marginTop: 10, padding: '11px 12px', borderRadius: 11, border: `1px solid ${T.cb}`, background: 'transparent', color: T.text, fontSize: 11, fontWeight: 900, cursor: 'pointer' }}
+      >
+        {expanded ? 'Réduire les avis' : `Voir 5 avis sur ${total}`}
+      </button>
+    </>
+  );
+}
+
 function StructureProfile({ name, onBack }: { name: string; onBack: () => void }) {
   const isAsso = name.includes('Alimentaire');
   const profile = isAsso ? structureSeed.asso : structureSeed.pme;
-  const [expandedReviews, setExpandedReviews] = useState(false);
   // Temporairement vide. La galerie se réaffichera automatiquement dès que
   // les photos téléversées par la structure seront fournies ici.
   const placePhotos: StructurePlacePhoto[] = [];
-  const reviews = [
-    ['Mission bien organisée', 'Les horaires et les consignes étaient clairs dès le départ.'],
-    ['Accueil professionnel', "L'équipe m'a intégré rapidement et le responsable était disponible."],
-    ['Cadre fiable', 'La mission correspondait exactement à ce qui était annoncé.'],
-    ['Communication simple', "J'ai reçu toutes les informations utiles avant mon arrivée."],
-    ['Bonne expérience', 'Le déroulement était fluide du début à la fin.'],
-  ];
-  const visibleReviews = reviews.slice(0, expandedReviews ? 5 : 3);
   return (
     <div style={{ minHeight: '100%', background: T.bg }}>
-      <div style={{ height: 175, background: `linear-gradient(155deg, ${isAsso ? '#14532d' : '#172554'}, #05060d)`, position: 'relative', display: 'flex', alignItems: 'flex-end', padding: 20 }}>
-        <button onClick={onBack} style={{ position: 'absolute', top: 16, left: 16, width: 38, height: 38, borderRadius: 19, background: 'rgba(0,0,0,.45)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 20 }}>‹</button>
-        <div style={{ color: '#ffffff16', fontSize: 17, fontWeight: 900, letterSpacing: 3 }}>{profile.name.toUpperCase()}</div>
+      <div aria-label="En-tête du profil structure" style={{ height: 76, background: `linear-gradient(155deg, ${isAsso ? '#14532d' : '#172554'}, #05060d)`, position: 'relative' }}>
+        <button aria-label="Retour aux missions" onClick={onBack} style={{ position: 'absolute', top: 12, left: 14, width: 38, height: 38, borderRadius: 19, background: 'rgba(0,0,0,.45)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 20 }}>‹</button>
       </div>
-      <div style={{ padding: '0 20px 24px', marginTop: -30 }}>
+      <div style={{ padding: '0 20px 24px', marginTop: -18 }}>
         <div style={{ display: 'flex', gap: 14, alignItems: 'flex-end', marginBottom: 16 }}>
-          <div style={{ width: 66, height: 66, borderRadius: 17, background: isAsso ? '#14532d' : '#075985', border: '2px solid rgba(255,255,255,.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 20 }}>{initials(profile.name)}</div>
+          <div style={{ width: 54, height: 54, borderRadius: 15, background: isAsso ? '#14532d' : '#075985', border: '2px solid rgba(255,255,255,.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 18 }}>{initials(profile.name)}</div>
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ fontSize: 20, fontWeight: 900 }}>{profile.name}</div>
@@ -929,9 +956,15 @@ function StructureProfile({ name, onBack }: { name: string; onBack: () => void }
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: T.card, border: `1px solid ${T.greenBorder}`, borderRadius: 14, padding: '12px 14px', marginBottom: 18 }}>
-          <span aria-hidden="true" style={{ color: T.green, fontSize: 17 }}>✓</span>
-          <span style={{ color: T.text, fontSize: 12, fontWeight: 900 }}>94 % des missions réalisées</span>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, background: T.card, border: `1px solid ${T.greenBorder}`, borderRadius: 14, padding: '12px 14px', marginBottom: 18 }}>
+          <div style={{ borderRight: `1px solid ${T.cb}`, paddingRight: 10 }}>
+            <div style={{ color: T.text, fontSize: 16, fontWeight: 900 }}>12</div>
+            <div style={{ color: T.sub, fontSize: 9.5, marginTop: 2 }}>missions réalisées</div>
+          </div>
+          <div style={{ paddingLeft: 12 }}>
+            <div style={{ color: T.green, fontSize: 16, fontWeight: 900 }}>94 %</div>
+            <div style={{ color: T.sub, fontSize: 9.5, marginTop: 2 }}>des missions réalisées</div>
+          </div>
         </div>
         <div style={{ color: T.sub, fontSize: 12, marginBottom: 10 }}>📍 Rue Nationale, 59000 Lille</div>
         <div style={{ color: T.sub, fontSize: 12, marginBottom: 18 }}>Ⓜ Métro Gambetta · 300 m</div>
@@ -952,25 +985,7 @@ function StructureProfile({ name, onBack }: { name: string; onBack: () => void }
         </details>
         <section aria-label="Avis sur la structure" style={{ marginTop: 20 }}>
           <div style={{ color: T.text, fontSize: 14, fontWeight: 900, marginBottom: 10 }}>Avis</div>
-          <div style={{ display: 'grid', gap: 9 }}>
-            {visibleReviews.map(([title, body]) => (
-              <article key={title} style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 13, padding: 13 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
-                  <strong style={{ color: T.text, fontSize: 11 }}>{title}</strong>
-                  <Stars n={5} size={10} />
-                </div>
-                <p style={{ color: T.sub, fontSize: 11, lineHeight: 1.5, margin: '7px 0 8px' }}>{body}</p>
-                <span style={{ color: T.mu, fontSize: 9, fontWeight: 800 }}>Avis anonyme vérifié</span>
-              </article>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => setExpandedReviews((value) => !value)}
-            style={{ width: '100%', marginTop: 10, padding: '11px 12px', borderRadius: 11, border: `1px solid ${T.cb}`, background: 'transparent', color: T.text, fontSize: 11, fontWeight: 900, cursor: 'pointer' }}
-          >
-            {expandedReviews ? 'Réduire les avis' : 'Voir 5 avis sur 10'}
-          </button>
+          <StructureReviewList initialCount={isAsso ? 3 : 2} total={10} />
         </section>
         <div style={{ marginTop: 18 }}>
           <Button onClick={onBack}>Voir les missions disponibles</Button>
@@ -1674,6 +1689,7 @@ function StructureDemo({ founder, onBack }: { founder: boolean; onBack: () => vo
   const [managedMission, setManagedMission] = useState<{ mission: DemoMission; mode?: MissionManageMode } | null>(null);
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [showStatsIntro, setShowStatsIntro] = useState(true);
+  const [showStructureReviews, setShowStructureReviews] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -1842,6 +1858,16 @@ function StructureDemo({ founder, onBack }: { founder: boolean; onBack: () => vo
               <span style={{ color: T.green, background: T.greenBg, borderRadius: 11, padding: '2px 7px', fontSize: 9, fontWeight: 900 }}>{seed.verified}</span>
               <span style={{ color: kind === 'asso' ? T.green : T.cyan, background: kind === 'asso' ? T.greenBg : '#22d3ee15', borderRadius: 11, padding: '2px 7px', fontSize: 9, fontWeight: 900 }}>{seed.type}</span>
             </div>
+            <button
+              type="button"
+              aria-label="Voir les avis reçus"
+              onClick={() => setShowStructureReviews(true)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 7, padding: 0, border: 0, background: 'transparent', color: T.text, cursor: 'pointer', fontSize: 10, fontWeight: 900 }}
+            >
+              <Stars n={kind === 'pme' ? 4.8 : 5} size={10} />
+              <span>{kind === 'pme' ? '4,8' : '5,0'}</span>
+              <span style={{ color: T.mu, fontWeight: 700 }}>· {kind === 'pme' ? 21 : 15} avis ›</span>
+            </button>
           </div>
           <button onClick={() => setKind(null)} style={{ background: T.row, color: T.mu, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 10px', fontSize: 10, fontWeight: 800, cursor: 'pointer' }}>Changer</button>
         </div>
@@ -1989,6 +2015,20 @@ function StructureDemo({ founder, onBack }: { founder: boolean; onBack: () => vo
           </div>
         )}
       </div>
+      {showStructureReviews && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 195 }} onClick={() => setShowStructureReviews(false)}>
+          <section aria-label="Avis reçus par la structure" style={{ width: '100%', maxWidth: 430, maxHeight: '82vh', overflowY: 'auto', background: T.bg, borderRadius: '24px 24px 0 0', padding: '18px 18px 26px' }} onClick={(event) => event.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+              <div>
+                <div style={{ color: T.text, fontSize: 16, fontWeight: 900 }}>Avis reçus</div>
+                <div style={{ color: T.mu, fontSize: 9.5, marginTop: 3 }}>Anonymes · publiés par lots pour protéger les travailleurs</div>
+              </div>
+              <button aria-label="Fermer les avis" onClick={() => setShowStructureReviews(false)} style={{ width: 38, height: 38, borderRadius: 19, border: `1px solid ${T.cb}`, background: T.card, color: T.text, fontSize: 18, cursor: 'pointer' }}>×</button>
+            </div>
+            <StructureReviewList initialCount={kind === 'pme' ? 2 : 3} total={kind === 'pme' ? 21 : 15} />
+          </section>
+        </div>
+      )}
       {panel && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 190 }} onClick={() => setPanel(null)}>
           <div style={{ width: '100%', maxWidth: 430, background: T.card, borderRadius: '24px 24px 0 0', padding: '20px 18px 28px' }} onClick={(e) => e.stopPropagation()}>

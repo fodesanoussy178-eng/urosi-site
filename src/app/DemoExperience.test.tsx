@@ -174,13 +174,29 @@ describe('DemoExperience founder scan', () => {
 
     await user.click(screen.getByRole('button', { name: 'Burger Nord ›' }));
 
-    expect(screen.getByText('94 % des missions réalisées')).toBeInTheDocument();
+    expect(screen.getByLabelText('En-tête du profil structure')).toHaveStyle({ height: '76px' });
+    expect(screen.getByText('12')).toBeInTheDocument();
+    expect(screen.getByText('missions réalisées')).toBeInTheDocument();
+    expect(screen.getByText('94 %')).toBeInTheDocument();
+    expect(screen.getByText('des missions réalisées')).toBeInTheDocument();
     expect(screen.getByText('(10 avis)')).toBeInTheDocument();
     expect(screen.queryByText('missions publiées')).not.toBeInTheDocument();
-    expect(screen.getAllByText('Avis anonyme vérifié')).toHaveLength(3);
+    expect(screen.getAllByText('Avis anonyme vérifié')).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'Voir les missions disponibles' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Voir 5 avis sur 10' }));
+    expect(screen.getAllByText('Avis anonyme vérifié')).toHaveLength(5);
+  });
+
+  it('opens the anonymized reviews from the structure space', async () => {
+    const user = userEvent.setup();
+    renderStructure();
+
+    await user.click(screen.getByRole('button', { name: 'Voir les avis reçus' }));
+
+    expect(screen.getByRole('region', { name: 'Avis reçus par la structure' })).toBeInTheDocument();
+    expect(screen.getAllByText('Avis anonyme vérifié')).toHaveLength(2);
+    await user.click(screen.getByRole('button', { name: 'Voir 5 avis sur 21' }));
     expect(screen.getAllByText('Avis anonyme vérifié')).toHaveLength(5);
   });
 
