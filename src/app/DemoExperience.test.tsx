@@ -158,6 +158,16 @@ describe('DemoExperience founder scan', () => {
     expect(screen.getByText(/5,0 · 16 avis/)).toBeInTheDocument();
   });
 
+  it('hides the structure photo gallery completely when no photo is available', async () => {
+    const user = userEvent.setup();
+    renderWorker();
+
+    await user.click(screen.getByRole('button', { name: 'Burger Nord ›' }));
+    expect(screen.queryByText('Photos du lieu')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Voir toutes les photos/)).not.toBeInTheDocument();
+    expect(screen.getByText('À propos')).toBeInTheDocument();
+  });
+
   it('makes the living CV and bank status immediately readable', async () => {
     const user = userEvent.setup();
     renderWorker();

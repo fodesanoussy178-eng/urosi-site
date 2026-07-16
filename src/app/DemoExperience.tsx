@@ -871,9 +871,34 @@ function MissionCard({ mission, onAccept, onStructure }: { mission: DemoMission;
   );
 }
 
+type StructurePlacePhoto = {
+  id: string;
+  url: string;
+  alt: string;
+};
+
+function StructurePlacePhotos({ photos }: { photos: StructurePlacePhoto[] }) {
+  if (photos.length === 0) return null;
+
+  return (
+    <section style={{ borderTop: `1px solid ${T.cb}`, paddingTop: 14, marginTop: 14 }} aria-label="Photos du lieu">
+      <div style={{ color: T.text, fontSize: 14, fontWeight: 900, marginBottom: 8 }}>Photos du lieu</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: photos.length > 4 ? 10 : 0 }}>
+        {photos.slice(0, 4).map((photo) => (
+          <img key={photo.id} src={photo.url} alt={photo.alt} loading="lazy" style={{ width: '100%', aspectRatio: '1.15', objectFit: 'cover', borderRadius: 10 }} />
+        ))}
+      </div>
+      {photos.length > 4 && <button type="button" style={{ padding: 0, border: 0, background: 'none', color: T.cyan, fontSize: 11, fontWeight: 900, cursor: 'pointer' }}>Voir toutes les photos ({photos.length})</button>}
+    </section>
+  );
+}
+
 function StructureProfile({ name, onBack }: { name: string; onBack: () => void }) {
   const isAsso = name.includes('Alimentaire');
   const profile = isAsso ? structureSeed.asso : structureSeed.pme;
+  // Temporairement vide. La galerie se réaffichera automatiquement dès que
+  // les photos téléversées par la structure seront fournies ici.
+  const placePhotos: StructurePlacePhoto[] = [];
   return (
     <div style={{ minHeight: '100%', background: T.bg }}>
       <div style={{ height: 175, background: `linear-gradient(155deg, ${isAsso ? '#14532d' : '#172554'}, #05060d)`, position: 'relative', display: 'flex', alignItems: 'flex-end', padding: 20 }}>
@@ -908,16 +933,8 @@ function StructureProfile({ name, onBack }: { name: string; onBack: () => void }
         {['Rue Nationale, 59000 Lille', 'Métro Gambetta (300 m)', isAsso ? 'Créneaux solidaires en semaine' : 'Ouvert 11h-23h'].map((line) => (
           <div key={line} style={{ color: T.sub, fontSize: 12, marginBottom: 10 }}>{line}</div>
         ))}
-        <div style={{ borderTop: `1px solid ${T.cb}`, paddingTop: 14, marginTop: 14 }}>
-          <div style={{ color: T.text, fontSize: 14, fontWeight: 900, marginBottom: 8 }}>Photos du lieu</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 10 }}>
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} style={{ aspectRatio: '1.15', borderRadius: 10, background: `linear-gradient(155deg, ${isAsso ? '#14532d' : '#172554'}, #111827)` }} />
-            ))}
-          </div>
-          <div style={{ color: T.cyan, fontSize: 11, fontWeight: 900 }}>Voir toutes les photos (8)</div>
-        </div>
-        <div style={{ marginTop: 20 }}>
+        <StructurePlacePhotos photos={placePhotos} />
+        <div style={{ marginTop: 14 }}>
           <div style={{ color: T.text, fontSize: 14, fontWeight: 900, marginBottom: 6 }}>À propos</div>
           <div style={{ color: T.sub, fontSize: 12, lineHeight: 1.6 }}>
             {isAsso ? "Association d'aide alimentaire. Missions bénévoles pour préparer et distribuer des colis aux familles." : 'Fast-food indépendant à Lille. Missions courtes, équipe jeune et process clair.'}
