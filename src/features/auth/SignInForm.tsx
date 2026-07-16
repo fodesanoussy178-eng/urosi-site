@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Fld } from '@/components/ui/Fld';
 import { T, inp } from '@/components/ui/theme';
 import { isDemoFounderCode, rememberDemoFounderAccess } from '@/lib/founder';
@@ -7,6 +7,7 @@ import { isUnconfirmedEmailError, requestPasswordReset, resendConfirmationEmail,
 
 export function SignInForm() {
   const nav = useNavigate();
+  const location = useLocation();
   const [params] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -46,7 +47,10 @@ export function SignInForm() {
       setBusy(false);
       return;
     }
-    nav(wantsFounderDemo || founderDestination ? '/fondateur' : '/app', { replace: true });
+    const requested = params.get('next');
+    const safeRequested = requested?.startsWith('/') && !requested.startsWith('//') ? requested : null;
+    const attendanceDestination = location.pathname.startsWith('/valider/') ? location.pathname : null;
+    nav(wantsFounderDemo || founderDestination ? '/fondateur' : safeRequested ?? attendanceDestination ?? '/app', { replace: true });
     setBusy(false);
   }
 

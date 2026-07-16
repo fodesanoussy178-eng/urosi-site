@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth/AuthContext';
 import { signOut } from '@/features/auth/authService';
 import { submitWorkerKyc, updateProfile, uploadIdentityDocument, type Profile } from '@/features/profile/profileService';
 import { T, FONT, inp } from '@/components/ui/theme';
 import { Fld } from '@/components/ui/Fld';
-import { QRBadge } from '@/components/ui/QRBadge';
 import { Stars } from '@/components/ui/Stars';
 import { DocModal, AideRegles, type DocKey } from '@/components/ui/DocModal';
 import { NotificationBell } from '@/components/ui/NotificationBell';
@@ -28,10 +28,8 @@ import { rate, fetchStructureRatings, fetchWorkerReceivedRatings, type Structure
 import { notifyDelay } from '@/features/missions/feedbackService';
 import {
   attendanceEventLabel,
-  createAttendanceQR,
   fetchAttendanceEvents,
   reportMissionIssue,
-  requestRemoteAttendance,
   type AttendanceEvent,
 } from '@/features/missions/attendanceService';
 import { fetchUnreadCounts } from '@/features/messages/messagesService';
@@ -107,6 +105,7 @@ function normalizeIban(value: string): string {
 }
 
 export function WorkerApp() {
+  const navigate = useNavigate();
   const { session, profile, refreshProfile } = useAuth();
   const [tab, setTab] = useState<Tab>('flux');
   const [flux, setFlux] = useState<MissionWithStructure[]>([]);
@@ -133,7 +132,6 @@ export function WorkerApp() {
   const [signal, setSignal] = useState<ApplicationWithMission | null>(null);
   const [sigMotif, setSigMotif] = useState<string | null>(null);
   const [sigNote, setSigNote] = useState('');
-  const [qrFor, setQrFor] = useState<{ app: ApplicationWithMission; type: 'start' | 'end'; token: string; expiresAt: string } | null>(null);
   const [docKey, setDocKey] = useState<DocKey | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout>>();
@@ -315,31 +313,13 @@ export function WorkerApp() {
     }
   }
 
-  async function afficherQr(app: ApplicationWithMission, type: 'start' | 'end') {
+  function ouvrirPointage(app: ApplicationWithMission) {
     if (!isKycReady(profile)) {
       setKycFor(app);
       notif('Ajoute ton IBAN et ta pièce pour débloquer le pointage.');
       return;
     }
-    try {
-      const created = await createAttendanceQR(app.id, type);
-      setQrFor({ app, type, token: created.token, expiresAt: created.expires_at });
-      await load();
-    } catch (e) {
-      notif(e instanceof Error ? e.message : 'QR impossible à générer.');
-    }
-  }
-
-  async function demanderValidationDistance() {
-    if (!qrFor) return;
-    try {
-      await requestRemoteAttendance(qrFor.app.id, qrFor.type, 'QR impossible à scanner');
-      setQrFor(null);
-      await load();
-      notif('Demande envoyée à la structure.');
-    } catch (e) {
-      notif(e instanceof Error ? e.message : 'Demande impossible.');
-    }
+    navigate('/valider');
   }
 
   // Carte volontairement épurée : titre, structure + étoiles, ville, date,
@@ -484,12 +464,12 @@ export function WorkerApp() {
                         <div>
                           <div style={{ fontSize: 11, fontWeight: 900, color: startDone ? T.green : T.text }}>Début de mission</div>
                           <div style={{ fontSize: 9.5, color: T.mu, marginTop: 2 }}>
-                            {startDone ? `Confirmé à ${new Date(a.actual_start_at || a.checked_in_at || '').toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : 'QR temporaire, valable 10 min'}
+                            {startDone ? `Confirmé à ${new Date(a.actual_start_at || a.checked_in_at || '').toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : 'Scanne le QR de la structure puis saisis le PIN'}
                           </div>
                         </div>
                         {!startDone && (
-                          <button onClick={() => afficherQr(a, 'start')} style={{ background: '#fff', color: '#000', border: 'none', borderRadius: 8, padding: '8px 10px', fontSize: 11, fontWeight: 900, cursor: 'pointer' }}>
-                            {kycIsReady ? 'Afficher mon QR' : 'Ajouter IBAN + pièce'}
+                          <button onClick={() => ouvrirPointage(a)} style={{ background: '#fff', color: '#000', border: 'none', borderRadius: 8, padding: '8px 10px', fontSize: 11, fontWeight: 900, cursor: 'pointer' }}>
+                            {kycIsReady ? 'Démarrer' : 'Ajouter IBAN + pièce'}
                           </button>
                         )}
                       </div>
@@ -505,8 +485,8 @@ export function WorkerApp() {
                           </div>
                         </div>
                         {startDone && !endDone && (
-                          <button onClick={() => afficherQr(a, 'end')} style={{ background: T.grad, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 10px', fontSize: 11, fontWeight: 900, cursor: 'pointer' }}>
-                            QR de fin
+                          <button onClick={() => ouvrirPointage(a)} style={{ background: T.grad, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 10px', fontSize: 11, fontWeight: 900, cursor: 'pointer' }}>
+                            Terminer
                           </button>
                         )}
                       </div>
@@ -557,10 +537,10 @@ export function WorkerApp() {
                       </div>
                     ) : (
                       <button
-                        onClick={() => afficherQr(a, startDone ? 'end' : 'start')}
+                        onClick={() => ouvrirPointage(a)}
                         style={{ width: '100%', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 9, padding: '11px 0', fontSize: 13, fontWeight: 900, cursor: 'pointer', marginBottom: 6 }}
                       >
-                        {kycIsReady ? (startDone ? 'Afficher mon QR de fin' : 'Afficher mon QR de début') : 'Ajouter IBAN + pièce pour pointer'}
+                        {kycIsReady ? (startDone ? 'Terminer la mission' : 'Démarrer la mission') : 'Ajouter IBAN + pièce pour pointer'}
                       </button>
                     )}
                     <button onClick={() => setSignal(a)} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#f59e0b', textDecoration: 'underline' }}>
@@ -906,29 +886,6 @@ export function WorkerApp() {
                   </button>
                 </div>
               )}
-            </div>
-          </div>
-        )}
-
-        {/* QR debut / fin */}
-        {qrFor && (
-          <div style={{ ...SHEET, background: 'rgba(0,0,0,.92)' }} onClick={() => setQrFor(null)}>
-            <div style={{ ...SHEET_BODY, textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-              <div style={{ fontSize: 15, fontWeight: 900, color: T.text, marginBottom: 4 }}>
-                {qrFor.type === 'start' ? 'QR de début de mission' : 'QR de fin de mission'}
-              </div>
-              <div style={{ fontSize: 10.5, color: T.sub, lineHeight: 1.5, marginBottom: 13 }}>
-                Fais scanner ce QR avec l’appareil photo du responsable. Il expire à {new Date(qrFor.expiresAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}.
-              </div>
-              <div style={{ display: 'inline-flex', background: '#fff', borderRadius: 14, padding: 12, marginBottom: 12 }}>
-                <QRBadge value={`${window.location.origin}/scan/${qrFor.token}`} size={190} />
-              </div>
-              <button onClick={demanderValidationDistance} style={{ width: '100%', background: '#1d4ed815', color: '#93c5fd', border: '1px solid #1e40af', borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer', marginBottom: 7 }}>
-                Problème de scan · demander une validation à distance
-              </button>
-              <button onClick={() => { setSignal(qrFor.app); setQrFor(null); }} style={{ width: '100%', background: T.row, color: T.sub, border: `1px solid ${T.cb}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                Aucun responsable présent / autre problème
-              </button>
             </div>
           </div>
         )}

@@ -14,6 +14,8 @@ import { WorkerApp } from '@/features/worker/WorkerApp';
 import { StructureApp } from '@/features/structure/StructureApp';
 import { CheckinPage } from '@/features/missions/CheckinPage';
 import { ScanPage } from '@/features/missions/ScanPage';
+import { WorkerAttendancePage } from '@/features/missions/WorkerAttendancePage';
+import { ValidatorApp } from '@/features/missions/ValidatorApp';
 import { FounderAdminPage } from '@/features/founder/FounderAdminPage';
 
 function Centered({ text }: { text: string }) {
@@ -65,6 +67,9 @@ function AppShell() {
         <Route path="/reinitialisation" element={<ResetPasswordPage />} />
         <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
         <Route path="/scan/:token" element={<ScanPage />} />
+        <Route path="/valider" element={<WorkerAttendancePage />} />
+        <Route path="/valider/:qrCode" element={<WorkerAttendancePage />} />
+        <Route path="/validation" element={<Navigate to="/connexion?next=/validation" replace />} />
         <Route path="*" element={<Navigate to="/connexion" replace />} />
       </Routes>
     );
@@ -85,6 +90,9 @@ function AppShell() {
       <Route path="/reinitialisation" element={<ResetPasswordPage />} />
       <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
       <Route path="/scan/:token" element={<ScanPage />} />
+      <Route path="/valider" element={<WorkerAttendancePage />} />
+      <Route path="/valider/:qrCode" element={<WorkerAttendancePage />} />
+      <Route path="/validation" element={<ValidatorApp />} />
       <Route path="*" element={<Navigate to="/app" replace />} />
     </Routes>
   );

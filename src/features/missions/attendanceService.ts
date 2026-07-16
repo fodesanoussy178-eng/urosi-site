@@ -153,6 +153,7 @@ export function attendanceEventLabel(event: Pick<AttendanceEvent, 'event_type' |
   };
   const methodLabels: Record<AttendanceMethod, string> = {
     qr: 'QR',
+    manual: 'secours manuel',
     remote: 'distance',
     paper: 'papier',
     support: 'Support UROSI',
