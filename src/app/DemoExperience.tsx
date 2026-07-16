@@ -8,6 +8,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { T, FONT, inp } from '@/components/ui/theme';
 import { useAuth } from '@/features/auth/AuthContext';
 import { hasFounderAccess } from '@/features/auth/authService';
+import { findLocalLabAccount } from '@/features/founder/localLabAccounts';
 import { hasDemoFounderAccess, hasRememberedFounderAccess, isDemoFounderCode, isFounderEmail, rememberDemoFounderAccess } from '@/lib/founder';
 
 const DEMO_SECONDS = 60;
@@ -938,15 +939,15 @@ function StructureProfile({ name, onBack }: { name: string; onBack: () => void }
   const placePhotos: StructurePlacePhoto[] = [];
   return (
     <div style={{ minHeight: '100%', background: T.bg }}>
-      <div aria-label="En-tête du profil structure" style={{ height: 76, background: `linear-gradient(155deg, ${isAsso ? '#14532d' : '#172554'}, #05060d)`, position: 'relative' }}>
+      <div aria-label="En-tête du profil structure" style={{ height: 58, background: `linear-gradient(155deg, ${isAsso ? '#14532d' : '#172554'}, #05060d)`, position: 'relative' }}>
         <button aria-label="Retour aux missions" onClick={onBack} style={{ position: 'absolute', top: 12, left: 14, width: 38, height: 38, borderRadius: 19, background: 'rgba(0,0,0,.45)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 20 }}>‹</button>
       </div>
-      <div style={{ padding: '0 20px 24px', marginTop: -18 }}>
-        <div style={{ display: 'flex', gap: 14, alignItems: 'flex-end', marginBottom: 16 }}>
-          <div style={{ width: 54, height: 54, borderRadius: 15, background: isAsso ? '#14532d' : '#075985', border: '2px solid rgba(255,255,255,.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 18 }}>{initials(profile.name)}</div>
-          <div style={{ flex: 1 }}>
+      <div style={{ padding: '12px 20px 24px' }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ width: 50, height: 50, flexShrink: 0, borderRadius: 14, background: isAsso ? '#14532d' : '#075985', border: '2px solid rgba(255,255,255,.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 17 }}>{initials(profile.name)}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <div style={{ fontSize: 20, fontWeight: 900 }}>{profile.name}</div>
+              <div style={{ fontSize: 19, lineHeight: 1.15, fontWeight: 900, overflowWrap: 'anywhere' }}>{profile.name}</div>
               <span style={{ color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 12, padding: '2px 8px', fontSize: 9, fontWeight: 900 }}>{profile.verified}</span>
             </div>
             <div style={{ display: 'flex', gap: 7, alignItems: 'center', marginTop: 5 }}>
@@ -995,7 +996,7 @@ function StructureProfile({ name, onBack }: { name: string; onBack: () => void }
   );
 }
 
-function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void }) {
+function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack: () => void; accountName?: string }) {
   const [tab, setTab] = useState<WorkerTab>('flux');
   const [feed, setFeed] = useState<DemoMission[]>(() => workerFeedMissions());
   const [demoState, setDemoState] = useState<DemoSharedState>(() => readDemoState());
@@ -1135,7 +1136,7 @@ function WorkerDemo({ founder, onBack }: { founder: boolean; onBack: () => void 
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 15 }}>
                 <div style={{ width: 52, height: 52, borderRadius: 15, background: 'linear-gradient(135deg,#f97316,#dc2626)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 21, fontWeight: 900 }}>A</div>
                 <div>
-                  <div style={{ color: T.text, fontSize: 16, fontWeight: 900 }}>Alex Démo</div>
+                  <div style={{ color: T.text, fontSize: 16, fontWeight: 900, overflowWrap: 'anywhere' }}>{accountName ?? 'Alex Démo'}</div>
                   <div style={{ color: T.mu, fontSize: 11 }}>Lille · CV vivant · compte fictif</div>
                 </div>
               </div>
@@ -1678,7 +1679,7 @@ function MissionManageSheet({
   );
 }
 
-function StructureDemo({ founder, onBack }: { founder: boolean; onBack: () => void }) {
+function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onBack: () => void; accountName?: string }) {
   const [kind, setKind] = useState<StructureKind | null>('pme');
   const [tab, setTab] = useState<StructureTab>('missions');
   const [missions, setMissions] = useState<DemoMission[]>(() => structureMissions('pme'));
@@ -1748,6 +1749,7 @@ function StructureDemo({ founder, onBack }: { founder: boolean; onBack: () => vo
   }
 
   const seed = structureSeed[kind];
+  const displayedStructureName = accountName ?? seed.name;
   const pending = candidates.filter((c) => c.status === 'pending');
   const regulars = candidates.filter((c) => c.here >= 2);
   const visibleCandidateIds = new Set(candidates.map((candidate) => candidate.id));
@@ -1847,13 +1849,13 @@ function StructureDemo({ founder, onBack }: { founder: boolean; onBack: () => vo
 
   return (
     <>
-      <TopBar title="Espace structure" badge={seed.name} onBack={onBack} founder={founder} />
+      <TopBar title="Espace structure" badge={displayedStructureName} onBack={onBack} founder={founder} />
       {toast && <div style={{ margin: '10px 14px 0', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 10, padding: '8px 12px', color: T.sub, fontSize: 11 }}>{toast}</div>}
       <div style={{ padding: 16, paddingBottom: 92, minHeight: 620 }}>
         <div style={{ background: T.card, border: `1px solid ${T.greenBorder}`, borderRadius: 16, padding: 14, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 46, height: 46, borderRadius: 14, background: kind === 'asso' ? '#14532d' : '#075985', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900 }}>{initials(seed.name)}</div>
+          <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: 14, background: kind === 'asso' ? '#14532d' : '#075985', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900 }}>{initials(displayedStructureName)}</div>
           <div style={{ flex: 1 }}>
-            <div style={{ color: T.text, fontSize: 16, fontWeight: 900 }}>{seed.name}</div>
+            <div style={{ color: T.text, fontSize: 16, lineHeight: 1.2, fontWeight: 900, overflowWrap: 'anywhere' }}>{displayedStructureName}</div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
               <span style={{ color: T.green, background: T.greenBg, borderRadius: 11, padding: '2px 7px', fontSize: 9, fontWeight: 900 }}>{seed.verified}</span>
               <span style={{ color: kind === 'asso' ? T.green : T.cyan, background: kind === 'asso' ? T.greenBg : '#22d3ee15', borderRadius: 11, padding: '2px 7px', fontSize: 9, fontWeight: 900 }}>{seed.type}</span>
@@ -2263,6 +2265,7 @@ export function DemoExperience() {
   const scannedMissionId = params.get('mission') || 'mission-demo';
   const scannedMissionTitle = params.get('title') || 'Mission de démonstration';
   const scannedStructure = params.get('structure') || 'Structure fictive';
+  const labAccount = findLocalLabAccount(params.get('labAccount'));
   const [role, setRole] = useState<DemoRole | null>(initialRole);
   const [used, setUsed] = useState(() => readNumber(DEMO_KEY));
   const [demoVersion, setDemoVersion] = useState(0);
@@ -2379,9 +2382,9 @@ export function DemoExperience() {
       )}
       <DemoShell embedded={embedded}>
         {role === 'worker' ? (
-          <WorkerDemo key={`worker-${demoVersion}`} founder={displayedFounder} onBack={returnToDemoChoice} />
+          <WorkerDemo key={`worker-${demoVersion}`} founder={displayedFounder} onBack={returnToDemoChoice} accountName={labAccount?.role === 'worker' ? labAccount.name : undefined} />
         ) : (
-          <StructureDemo key={`structure-${demoVersion}`} founder={displayedFounder} onBack={returnToDemoChoice} />
+          <StructureDemo key={`structure-${demoVersion}`} founder={displayedFounder} onBack={returnToDemoChoice} accountName={labAccount?.role === 'structure' ? labAccount.name : undefined} />
         )}
       </DemoShell>
       {frozen && <DemoLimitOverlay role={role} embedded={embedded} onFounder={openFounderArea} />}

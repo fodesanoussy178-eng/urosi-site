@@ -833,8 +833,8 @@ export function WorkerApp() {
         {structSheet && (
           <div style={SHEET} onClick={() => setStructSheet(null)}>
             <div style={{ ...SHEET_BODY, maxHeight: '80vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
-              <div style={{ display: 'flex', gap: 11, alignItems: 'center', marginBottom: 13 }}>
-                <div style={{ width: 48, height: 48, borderRadius: 13, background: 'hsl(200 30% 18%)', border: '2px solid hsl(200 30% 30%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 14 }}>
+              <div style={{ display: 'flex', gap: 11, alignItems: 'flex-start', marginBottom: 13 }}>
+                <div style={{ width: 48, height: 48, flexShrink: 0, borderRadius: 13, background: 'hsl(200 30% 18%)', border: '2px solid hsl(200 30% 30%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 14 }}>
                   {(structSheet.structure?.name ?? 'S')
                     .split(' ')
                     .map((w) => w[0])
@@ -842,8 +842,8 @@ export function WorkerApp() {
                     .slice(0, 2)
                     .toUpperCase()}
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 16, fontWeight: 900, color: T.text }}>{structSheet.structure?.name ?? 'Structure'}</div>
+                <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
+                  <div style={{ fontSize: 16, lineHeight: 1.2, fontWeight: 900, color: T.text, overflowWrap: 'anywhere' }}>{structSheet.structure?.name ?? 'Structure'}</div>
                   {(() => {
                     const sr = structRatings.get(structSheet.structure_id);
                     return sr ? (
@@ -857,7 +857,7 @@ export function WorkerApp() {
                     );
                   })()}
                 </div>
-                <button onClick={() => setStructSheet(null)} style={{ background: T.row, border: 'none', borderRadius: 6, width: 24, height: 24, cursor: 'pointer', color: T.sub, fontSize: 13 }}>×</button>
+                <button aria-label="Fermer le profil structure" onClick={() => setStructSheet(null)} style={{ background: T.row, border: 'none', borderRadius: 6, width: 28, height: 28, flexShrink: 0, cursor: 'pointer', color: T.sub, fontSize: 13 }}>×</button>
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
                 {structSheet.structure?.is_ess && <span style={{ fontSize: 10, fontWeight: 800, color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 20, padding: '3px 10px' }}>🤝 Association · ESS</span>}
