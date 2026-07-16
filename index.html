@@ -801,14 +801,14 @@
             }
             if (typeof demoZone.requestFullscreen === 'function') {
               demoZone.requestFullscreen()
-                .then(function () { window.setTimeout(function () { startTour({ currentTarget: fullscreenButton }); }, 80); })
+                .then(function () { window.setTimeout(reflowTour, 80); })
                 .catch(function () {
                   enterFallbackFullscreen();
-                  window.setTimeout(function () { startTour({ currentTarget: fullscreenButton }); }, 80);
+                  window.setTimeout(reflowTour, 80);
                 });
             } else {
               enterFallbackFullscreen();
-              window.setTimeout(function () { startTour({ currentTarget: fullscreenButton }); }, 80);
+              window.setTimeout(reflowTour, 80);
             }
           });
 
@@ -1143,6 +1143,9 @@
         function startTour(event) {
           if (!tourRoot || !preview || tourOpen) return;
           tourStartFocus = event && event.currentTarget ? event.currentTarget : document.activeElement;
+          // Sur iPhone, le parcours explicite occupe la démo entière. Le bouton
+          // d'agrandissement, lui, n'ouvre plus automatiquement le tutoriel.
+          if (window.matchMedia('(max-width: 520px)').matches && !fullscreenActive()) enterFallbackFullscreen();
           ensureWorkerPreview().then(function () {
             var frameDoc = previewDocument();
             var fluxTab = frameDoc && frameDoc.querySelector('[data-demo-tab="flux"]');

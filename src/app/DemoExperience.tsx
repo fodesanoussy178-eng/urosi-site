@@ -730,10 +730,22 @@ function demoCandidateFor(mission: DemoMission): DemoCandidate {
 }
 
 type DemoQrStep = 'start' | 'end';
+const DEMO_VALIDATION_PIN = '482731';
 
 function demoFounderScanUrl(mission: DemoMission, step: DemoQrStep): string {
   const query = new URLSearchParams({
     scan: 'founder',
+    step,
+    mission: mission.id,
+    title: mission.title,
+    structure: mission.structure,
+  });
+  return `${window.location.origin}/demo?${query.toString()}`;
+}
+
+function demoWorkerValidationUrl(mission: DemoMission, step: DemoQrStep): string {
+  const query = new URLSearchParams({
+    scan: 'worker-pin',
     step,
     mission: mission.id,
     title: mission.title,
@@ -1679,6 +1691,39 @@ function MissionManageSheet({
   );
 }
 
+function DemoQrPinModal({ mission, onClose }: { mission: DemoMission; onClose: () => void }) {
+  const [step, setStep] = useState<DemoQrStep>('start');
+  const [seconds, setSeconds] = useState(120);
+  const validationUrl = demoWorkerValidationUrl(mission, step);
+
+  useEffect(() => {
+    setSeconds(120);
+    const timer = window.setInterval(() => setSeconds((value) => Math.max(0, value - 1)), 1000);
+    return () => window.clearInterval(timer);
+  }, [step]);
+
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Simulation QR et PIN" style={{ position: 'fixed', inset: 0, zIndex: 230, background: 'rgba(0,0,0,.78)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
+      <div style={{ width: '100%', maxWidth: 370, maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 20, padding: 18, textAlign: 'center' }} onClick={(event) => event.stopPropagation()}>
+        <div style={{ color: T.amber, fontSize: 9, fontWeight: 900, letterSpacing: 1 }}>SIMULATION · AUCUNE DONNÉE RÉELLE</div>
+        <div style={{ color: T.text, fontSize: 18, fontWeight: 900, margin: '6px 0 3px' }}>QR + PIN de la mission</div>
+        <div style={{ color: T.sub, fontSize: 11, marginBottom: 12 }}>{mission.title} · {mission.structure}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7, marginBottom: 12 }}>
+          <Button tone={step === 'start' ? 'green' : 'light'} onClick={() => setStep('start')}>Arrivée</Button>
+          <Button tone={step === 'end' ? 'green' : 'light'} onClick={() => setStep('end')}>Départ</Button>
+        </div>
+        <div style={{ display: 'inline-flex', padding: 9, borderRadius: 12, background: '#fff' }}><QRBadge value={validationUrl} size={178} /></div>
+        <div style={{ color: T.green, fontSize: 9.5, fontWeight: 900, marginTop: 12 }}>PIN TEMPORAIRE {step === 'start' ? 'ARRIVÉE' : 'DÉPART'}</div>
+        <div style={{ color: T.text, fontSize: 34, fontWeight: 900, letterSpacing: 7, margin: '3px 0' }}>{DEMO_VALIDATION_PIN}</div>
+        <div style={{ color: seconds ? T.sub : T.red, fontSize: 10 }}>{seconds ? `Expire dans ${seconds} s` : 'PIN expiré · change Arrivée/Départ pour renouveler'}</div>
+        <a href={validationUrl} target="_blank" rel="noreferrer" style={{ display: 'block', marginTop: 13, padding: '12px 14px', borderRadius: 11, background: T.row, border: `1px solid ${T.cb}`, color: T.cyan, textDecoration: 'none', fontSize: 11.5, fontWeight: 900 }}>Tester côté travailleur sans scanner ↗</a>
+        <div style={{ color: T.mu, fontSize: 9.5, lineHeight: 1.45, margin: '10px 0 12px' }}>Sur un autre téléphone, scanne ce QR puis saisis le PIN affiché ici.</div>
+        <Button tone="light" onClick={onClose}>Fermer</Button>
+      </div>
+    </div>
+  );
+}
+
 function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onBack: () => void; accountName?: string }) {
   const [kind, setKind] = useState<StructureKind | null>('pme');
   const [tab, setTab] = useState<StructureTab>('missions');
@@ -1691,6 +1736,7 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [showStatsIntro, setShowStatsIntro] = useState(true);
   const [showStructureReviews, setShowStructureReviews] = useState(false);
+  const [qrMission, setQrMission] = useState<DemoMission | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -1925,6 +1971,7 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
                 +2
               </button>
             </div>
+            {missions[0] && <Button tone="green" onClick={() => setQrMission(missions[0] ?? null)}>Tester le QR + PIN</Button>}
             <div style={{ color: T.mu, fontSize: 9.5, textAlign: 'center' }}>Touche une mission ou utilise •••. Appui long ou swipe gauche disponibles sur mobile.</div>
             {missions.map((m, i) => {
               const allMissionCandidates = candidates.filter((candidate) => candidate.missionId === m.id);
@@ -1993,6 +2040,7 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
             </div>
           </div>
         )}
+        {qrMission && <DemoQrPinModal mission={qrMission} onClose={() => setQrMission(null)} />}
         {tab === 'candidats' && (
           <div style={{ display: 'grid', gap: 10 }}>
             <div style={{ color: T.sub, fontSize: 11, lineHeight: 1.5 }}>Tape un candidat pour voir son CV vivant, puis accepte ou refuse.</div>
@@ -2210,6 +2258,50 @@ function DemoFounderScanPage({ missionId, title, structure, step }: { missionId:
   );
 }
 
+function DemoWorkerPinPage({ missionId, title, structure, step }: { missionId: string; title: string; structure: string; step: DemoQrStep }) {
+  const [pin, setPin] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const isStart = step === 'start';
+
+  function validate() {
+    if (pin !== DEMO_VALIDATION_PIN) {
+      setError('PIN incorrect. Recopie les 6 chiffres affichés côté structure.');
+      return;
+    }
+    rememberMissionScan(missionId, step);
+    setDone(true);
+    setError(null);
+  }
+
+  return (
+    <DemoShell>
+      <div style={{ minHeight: 'calc(100dvh - 44px)', padding: '24px 18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '100%', background: T.card, border: `1px solid ${done ? T.greenBorder : T.cb}`, borderRadius: 20, padding: 22, textAlign: 'center' }}>
+          <Logo sz={42} />
+          <div style={{ color: T.cyan, fontSize: 9, fontWeight: 900, letterSpacing: 1.1, marginTop: 14 }}>QR RECONNU · SIMULATION</div>
+          <div style={{ color: T.text, fontSize: 19, fontWeight: 900, marginTop: 7 }}>{done ? (isStart ? 'Mission démarrée' : 'Mission terminée') : (isStart ? 'Démarrer la mission' : 'Terminer la mission')}</div>
+          <div style={{ color: T.sub, fontSize: 12, lineHeight: 1.55, margin: '7px 0 16px' }}>{title}<br />{structure}</div>
+          {done ? (
+            <>
+              <div style={{ color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 13, padding: 14, fontSize: 12, fontWeight: 900, marginBottom: 14 }}>✓ {isStart ? 'Arrivée horodatée' : 'Départ horodaté'} dans la simulation</div>
+              <Link to="/demo?role=worker" style={{ display: 'block', background: '#f8fafc', color: '#080b12', borderRadius: 12, padding: '13px 16px', textDecoration: 'none', fontSize: 13, fontWeight: 900 }}>Retour à la démo travailleur</Link>
+            </>
+          ) : (
+            <>
+              <label htmlFor="demo-validation-pin" style={{ display: 'block', color: T.sub, fontSize: 10, fontWeight: 800, marginBottom: 7 }}>PIN temporaire lu sur l’écran de la structure</label>
+              <input id="demo-validation-pin" aria-label="PIN temporaire de simulation" value={pin} onChange={(event) => { setPin(event.target.value.replace(/\D/g, '').slice(0, 6)); setError(null); }} onKeyDown={(event) => event.key === 'Enter' && validate()} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={6} autoFocus style={{ ...inp, textAlign: 'center', fontSize: 28, fontWeight: 900, letterSpacing: 8, padding: '14px 8px' }} />
+              {error && <div role="alert" style={{ color: T.red, fontSize: 11, margin: '8px 0' }}>{error}</div>}
+              <Button onClick={validate} disabled={pin.length !== 6}>{isStart ? 'Démarrer maintenant' : 'Terminer maintenant'}</Button>
+            </>
+          )}
+          <div style={{ color: T.mu, fontSize: 9.5, lineHeight: 1.45, marginTop: 13 }}>Test fictif : aucune ligne Supabase ni aucun paiement réel n’est modifié.</div>
+        </div>
+      </div>
+    </DemoShell>
+  );
+}
+
 function DemoLimitOverlay({ role, embedded, onFounder }: { role: DemoRole; embedded: boolean; onFounder: () => void }) {
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState('');
@@ -2262,6 +2354,7 @@ export function DemoExperience() {
   const initialRole = params.get('role') === 'structure' ? 'structure' : params.get('role') === 'worker' ? 'worker' : null;
   const guidedTour = embedded && params.get('tour') === '1';
   const founderScan = params.get('scan') === 'founder';
+  const workerPinScan = params.get('scan') === 'worker-pin';
   const scannedStep: DemoQrStep = params.get('step') === 'end' ? 'end' : 'start';
   const scannedMissionId = params.get('mission') || 'mission-demo';
   const scannedMissionTitle = params.get('title') || 'Mission de démonstration';
@@ -2344,6 +2437,10 @@ export function DemoExperience() {
 
   if (founderScan) {
     return <DemoFounderScanPage missionId={scannedMissionId} title={scannedMissionTitle} structure={scannedStructure} step={scannedStep} />;
+  }
+
+  if (workerPinScan) {
+    return <DemoWorkerPinPage missionId={scannedMissionId} title={scannedMissionTitle} structure={scannedStructure} step={scannedStep} />;
   }
 
   if (!role) {
