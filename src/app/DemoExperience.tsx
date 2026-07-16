@@ -12,7 +12,7 @@ import { findLocalLabAccount } from '@/features/founder/localLabAccounts';
 import { hasDemoFounderAccess, hasRememberedFounderAccess, isDemoFounderCode, isFounderEmail, rememberDemoFounderAccess } from '@/lib/founder';
 
 const DEMO_SECONDS = 60;
-const DEMO_OPEN_ACCESS_UNTIL = Date.parse('2026-07-16T20:00:00+02:00');
+const DEMO_OPEN_ACCESS_UNTIL = Date.parse('2026-07-17T20:00:00+02:00');
 const DEMO_KEY = 'urosi_internal_demo_seconds_v1';
 const DEMO_SHARED_KEY = 'urosi_founder_demo_shared_v1';
 const DEMO_SERVICE_FEE_RATE = 0.18;
