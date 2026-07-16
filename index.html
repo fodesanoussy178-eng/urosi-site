@@ -264,16 +264,21 @@
         display: none; overflow: hidden; overscroll-behavior: none; touch-action: none; box-sizing: border-box;
         padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
       }
+      .demo-tour::before {
+        content: ''; position: fixed; inset: 0; background: rgba(2, 5, 12, .9);
+        opacity: 1; visibility: visible; transition: opacity .12s ease, visibility .12s ease;
+      }
+      .demo-tour.is-ready::before { opacity: 0; visibility: hidden; }
       .demo-tour.is-open { display: block; }
-      .demo-tour-shade { position: fixed; background: rgba(2, 5, 12, .82); transition: all .18s ease; }
+      .demo-tour-shade { position: fixed; background: rgba(2, 5, 12, .9); transition: all .18s ease; }
       .demo-tour-spotlight {
         position: fixed; border: 2px solid rgba(34, 211, 238, .95); border-radius: 18px;
         box-shadow: 0 0 0 4px rgba(34, 211, 238, .14), 0 10px 35px rgba(0, 0, 0, .35);
         pointer-events: none; transition: all .18s ease;
       }
       .demo-tour-card {
-        position: fixed; width: min(340px, calc(100vw - 32px)); max-width: 340px; box-sizing: border-box;
-        padding: 15px; border-radius: 16px; border: 1px solid rgba(34, 211, 238, .35);
+        position: fixed; width: min(320px, calc(100vw - 32px)); max-width: 340px; max-height: 45dvh; box-sizing: border-box;
+        display: flex; flex-direction: column; overflow: hidden; padding: 13px; border-radius: 15px; border: 1px solid rgba(34, 211, 238, .35);
         background: #101827; color: #f8fafc; box-shadow: 0 18px 60px rgba(0, 0, 0, .48);
         text-align: left; opacity: 0; transform: translateY(6px); transition: opacity .16s ease, transform .16s ease;
       }
@@ -283,12 +288,12 @@
         width: 24px; height: 24px; flex: 0 0 24px; border-radius: 50%; display: grid; place-items: center;
         background: linear-gradient(135deg, #0891b2, #16a34a); color: #fff; font-size: 11px; font-weight: 900;
       }
-      .demo-tour-title { margin: 0; font-size: 15px; line-height: 1.25; font-weight: 900; }
-      .demo-tour-copy { margin: 0; color: #cbd5e1; font-size: 12px; line-height: 1.5; }
-      .demo-tour-footer { display: flex; align-items: center; gap: 8px; margin-top: 13px; }
+      .demo-tour-title { margin: 0; font-size: 14px; line-height: 1.25; font-weight: 900; }
+      .demo-tour-copy { min-height: 0; overflow-y: auto; margin: 0; color: #cbd5e1; font-size: 11.5px; line-height: 1.45; }
+      .demo-tour-footer { flex: 0 0 auto; display: flex; align-items: center; gap: 7px; margin-top: 11px; }
       .demo-tour-progress { margin-right: auto; color: #94a3b8; font-size: 10px; font-weight: 800; }
       .demo-tour-button {
-        min-height: 40px; padding: 0 13px; border-radius: 10px; border: 1px solid #334155;
+        min-height: 36px; padding: 0 10px; border-radius: 9px; border: 1px solid #334155;
         background: transparent; color: #cbd5e1; font: inherit; font-size: 11px; font-weight: 900; cursor: pointer;
       }
       .demo-tour-button.primary { border-color: #0891b2; background: #0891b2; color: #fff; }
@@ -297,6 +302,10 @@
       .tour-intro p { color: var(--sub); font-size: 13px; line-height: 1.55; margin-bottom: 15px; }
       .tour-intro .btn { border: 0; cursor: pointer; }
       .phone-tour-link { border: 0; padding: 0; background: none; color: var(--cyan); font: inherit; font-weight: 900; cursor: pointer; }
+
+      @media (min-width: 421px) {
+        .demo-tour-card { width: min(330px, calc(100vw - 32px)); }
+      }
 
       @media (prefers-reduced-motion: reduce) {
         .demo-tour-shade, .demo-tour-spotlight, .demo-tour-card { transition: none; }
@@ -846,6 +855,8 @@
         var tourOpen = false;
         var tourTarget = null;
         var tourPositionFrame = 0;
+        var tourNudgeAttempts = 0;
+        var tourNudgeTimer = 0;
         var tourStartFocus = null;
         var pageOverflow = null;
         var frameOverflow = null;
@@ -929,55 +940,133 @@
           };
         }
 
+        function tourViewport() {
+          var viewport = window.visualViewport;
+          var rootStyle = window.getComputedStyle(tourRoot);
+          var viewLeft = viewport ? viewport.offsetLeft : 0;
+          var viewTop = viewport ? viewport.offsetTop : 0;
+          var viewWidth = viewport ? viewport.width : window.innerWidth;
+          var viewHeight = viewport ? viewport.height : window.innerHeight;
+          var margin = 16;
+          return {
+            left: viewLeft + Math.max(margin, parseFloat(rootStyle.paddingLeft) || 0),
+            top: viewTop + Math.max(margin, parseFloat(rootStyle.paddingTop) || 0),
+            right: viewLeft + viewWidth - Math.max(margin, parseFloat(rootStyle.paddingRight) || 0),
+            bottom: viewTop + viewHeight - Math.max(margin, parseFloat(rootStyle.paddingBottom) || 0),
+            viewLeft: viewLeft,
+            viewTop: viewTop,
+            viewWidth: viewWidth,
+            viewHeight: viewHeight
+          };
+        }
+
+        function rectFits(rect, bounds) {
+          return rect.left >= bounds.left && rect.top >= bounds.top && rect.right <= bounds.right && rect.bottom <= bounds.bottom;
+        }
+
+        function overlaps(a, b) {
+          return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+        }
+
+        function centered(value, size, min, max) {
+          return Math.max(min, Math.min(value - size / 2, max - size));
+        }
+
+        function makePlacement(name, left, top, width, height) {
+          return { name: name, left: left, top: top, width: width, height: height, right: left + width, bottom: top + height };
+        }
+
+        function bestTourPlacement(target, cardWidth, cardHeight, bounds) {
+          var gap = 12;
+          var centerX = target.left + target.width / 2;
+          var centerY = target.top + target.height / 2;
+          var candidates = [
+            makePlacement('below', centered(centerX, cardWidth, bounds.left, bounds.right), target.bottom + gap, cardWidth, cardHeight),
+            makePlacement('above', centered(centerX, cardWidth, bounds.left, bounds.right), target.top - gap - cardHeight, cardWidth, cardHeight),
+            makePlacement('left', target.left - gap - cardWidth, centered(centerY, cardHeight, bounds.top, bounds.bottom), cardWidth, cardHeight),
+            makePlacement('right', target.right + gap, centered(centerY, cardHeight, bounds.top, bounds.bottom), cardWidth, cardHeight)
+          ];
+          return candidates.find(function (candidate) {
+            return rectFits(candidate, bounds) && !overlaps(candidate, target);
+          }) || null;
+        }
+
+        function nudgeTourTarget(rect, cardHeight, bounds) {
+          if (!tourTarget || tourNudgeAttempts >= 2) return false;
+          var frameDoc = previewDocument();
+          var scroller = frameDoc && (frameDoc.scrollingElement || frameDoc.documentElement);
+          if (!scroller) return false;
+          var gap = 12;
+          var targetHeight = rect.height;
+          var availableHeight = bounds.bottom - bounds.top;
+          var desiredTop;
+
+          if (targetHeight + gap + cardHeight <= availableHeight) {
+            // Premier essai : espace dessous. Second essai : espace dessus.
+            desiredTop = tourNudgeAttempts === 0 ? bounds.top : bounds.bottom - targetHeight;
+          } else if (!rectFits(rect, bounds)) {
+            desiredTop = bounds.top + Math.max(0, (availableHeight - targetHeight) / 2);
+          } else {
+            return false;
+          }
+
+          var delta = rect.top - desiredTop;
+          if (Math.abs(delta) < 2) return false;
+          tourNudgeAttempts += 1;
+          unlockFrame();
+          scroller.scrollBy({ top: delta, behavior: reduceMotion ? 'auto' : 'smooth' });
+          window.clearTimeout(tourNudgeTimer);
+          tourNudgeTimer = window.setTimeout(function () {
+            lockFrame();
+            positionTour();
+          }, reduceMotion ? 20 : 280);
+          return true;
+        }
+
         function positionTour() {
           if (!tourOpen || !tourTarget || !tourRoot || !tourCard || !tourSpotlight) return;
           window.cancelAnimationFrame(tourPositionFrame);
           tourPositionFrame = window.requestAnimationFrame(function () {
             var rect = targetViewportRect(tourTarget);
             if (!rect) return;
-            var viewport = window.visualViewport;
-            var viewLeft = viewport ? viewport.offsetLeft : 0;
-            var viewTop = viewport ? viewport.offsetTop : 0;
-            var viewWidth = viewport ? viewport.width : window.innerWidth;
-            var viewHeight = viewport ? viewport.height : window.innerHeight;
-            var viewRight = viewLeft + viewWidth;
-            var viewBottom = viewTop + viewHeight;
-            var gap = 12;
-            var margin = 16;
-            var tourStyle = window.getComputedStyle(tourRoot);
-            var safeTop = Math.max(margin, parseFloat(tourStyle.paddingTop) || 0);
-            var safeRight = Math.max(margin, parseFloat(tourStyle.paddingRight) || 0);
-            var safeBottom = Math.max(margin, parseFloat(tourStyle.paddingBottom) || 0);
-            var safeLeft = Math.max(margin, parseFloat(tourStyle.paddingLeft) || 0);
+            var bounds = tourViewport();
             var pad = 6;
-            var left = Math.max(viewLeft + safeLeft, rect.left - pad);
-            var top = Math.max(viewTop + safeTop, rect.top - pad);
-            var right = Math.min(viewRight - safeRight, rect.right + pad);
-            var bottom = Math.min(viewBottom - safeBottom, rect.bottom + pad);
-            var width = Math.max(0, right - left);
-            var height = Math.max(0, bottom - top);
+            var targetBox = {
+              left: rect.left - pad,
+              top: rect.top - pad,
+              right: rect.right + pad,
+              bottom: rect.bottom + pad,
+              width: rect.width + pad * 2,
+              height: rect.height + pad * 2
+            };
 
-            setBox(tourShades.top, viewLeft, viewTop, viewWidth, top - viewTop);
-            setBox(tourShades.bottom, viewLeft, bottom, viewWidth, viewBottom - bottom);
-            setBox(tourShades.left, viewLeft, top, left - viewLeft, height);
-            setBox(tourShades.right, right, top, viewRight - right, height);
-            setBox(tourSpotlight, left, top, width, height);
-
-            var cardWidth = Math.min(340, viewWidth - safeLeft - safeRight);
+            var cardWidth = Math.min(window.innerWidth >= 421 ? 330 : 320, 340, bounds.right - bounds.left);
             tourCard.style.width = cardWidth + 'px';
+            tourCard.style.maxHeight = Math.floor(bounds.viewHeight * .45) + 'px';
             var cardHeight = tourCard.offsetHeight;
-            var belowTop = bottom + gap;
-            var aboveTop = top - gap - cardHeight;
-            var roomBelow = viewBottom - safeBottom - belowTop;
-            var roomAbove = aboveTop - (viewTop + safeTop);
-            var cardTop = roomBelow >= cardHeight || roomBelow >= roomAbove ? belowTop : aboveTop;
-            cardTop = Math.max(viewTop + safeTop, Math.min(cardTop, viewBottom - safeBottom - cardHeight));
-            var cardLeft = left + (width / 2) - (cardWidth / 2);
-            cardLeft = Math.max(viewLeft + safeLeft, Math.min(cardLeft, viewRight - safeRight - cardWidth));
-            tourCard.style.left = cardLeft + 'px';
-            tourCard.style.top = cardTop + 'px';
+            var placement = rectFits(targetBox, bounds) ? bestTourPlacement(targetBox, cardWidth, cardHeight, bounds) : null;
+            if (!placement) {
+              if (nudgeTourTarget(rect, cardHeight, bounds)) return;
+              return;
+            }
+            setBox(tourShades.top, bounds.viewLeft, bounds.viewTop, bounds.viewWidth, targetBox.top - bounds.viewTop);
+            setBox(tourShades.bottom, bounds.viewLeft, targetBox.bottom, bounds.viewWidth, bounds.viewTop + bounds.viewHeight - targetBox.bottom);
+            setBox(tourShades.left, bounds.viewLeft, targetBox.top, targetBox.left - bounds.viewLeft, targetBox.height);
+            setBox(tourShades.right, targetBox.right, targetBox.top, bounds.viewLeft + bounds.viewWidth - targetBox.right, targetBox.height);
+            setBox(tourSpotlight, targetBox.left, targetBox.top, targetBox.width, targetBox.height);
+            tourCard.dataset.placement = placement.name;
+            tourCard.style.left = placement.left + 'px';
+            tourCard.style.top = placement.top + 'px';
             tourRoot.classList.add('is-ready');
           });
+        }
+
+        function reflowTour() {
+          if (!tourOpen) return;
+          window.clearTimeout(tourNudgeTimer);
+          tourNudgeAttempts = 0;
+          if (tourRoot) tourRoot.classList.remove('is-ready');
+          window.requestAnimationFrame(positionTour);
         }
 
         function frameTarget(selector) {
@@ -995,6 +1084,7 @@
           if (tourNumber) tourNumber.textContent = String(tourIndex + 1);
           if (tourProgress) tourProgress.textContent = (tourIndex + 1) + ' sur ' + tourSteps.length;
           if (tourNext) tourNext.textContent = tourIndex === tourSteps.length - 1 ? 'Terminer' : 'Suivant';
+          tourNudgeAttempts = 0;
 
           unlockFrame();
           tourTarget = frameTarget(step.selector);
@@ -1020,6 +1110,7 @@
 
         function stopTour() {
           if (!tourOpen || !tourRoot) return;
+          window.clearTimeout(tourNudgeTimer);
           tourOpen = false;
           tourTarget = null;
           tourRoot.classList.remove('is-open', 'is-ready');
@@ -1078,12 +1169,13 @@
           tourRoot.addEventListener('wheel', function (event) { event.preventDefault(); }, { passive: false });
           tourRoot.addEventListener('touchmove', function (event) { event.preventDefault(); }, { passive: false });
           document.addEventListener('keydown', function (event) { if (tourOpen && event.key === 'Escape') stopTour(); });
-          window.addEventListener('resize', positionTour, { passive: true });
-          window.addEventListener('orientationchange', function () { window.setTimeout(positionTour, 120); }, { passive: true });
+          window.addEventListener('resize', reflowTour, { passive: true });
+          window.addEventListener('orientationchange', function () { window.setTimeout(reflowTour, 120); }, { passive: true });
           window.addEventListener('scroll', positionTour, { passive: true });
-          document.addEventListener('fullscreenchange', function () { window.requestAnimationFrame(positionTour); });
+          document.addEventListener('fullscreenchange', reflowTour);
+          document.addEventListener('webkitfullscreenchange', reflowTour);
           if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', positionTour, { passive: true });
+            window.visualViewport.addEventListener('resize', reflowTour, { passive: true });
             window.visualViewport.addEventListener('scroll', positionTour, { passive: true });
           }
         }
