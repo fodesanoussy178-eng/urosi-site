@@ -168,6 +168,22 @@ describe('DemoExperience founder scan', () => {
     expect(screen.getByText('À propos')).toBeInTheDocument();
   });
 
+  it('keeps the structure profile concise and reveals reviews progressively', async () => {
+    const user = userEvent.setup();
+    renderWorker();
+
+    await user.click(screen.getByRole('button', { name: 'Burger Nord ›' }));
+
+    expect(screen.getByText('94 % des missions réalisées')).toBeInTheDocument();
+    expect(screen.getByText('(10 avis)')).toBeInTheDocument();
+    expect(screen.queryByText('missions publiées')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Avis anonyme vérifié')).toHaveLength(3);
+    expect(screen.getByRole('button', { name: 'Voir les missions disponibles' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Voir 5 avis sur 10' }));
+    expect(screen.getAllByText('Avis anonyme vérifié')).toHaveLength(5);
+  });
+
   it('makes the living CV and bank status immediately readable', async () => {
     const user = userEvent.setup();
     renderWorker();

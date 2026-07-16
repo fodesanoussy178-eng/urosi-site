@@ -122,11 +122,53 @@
       .phone-live-frame { width: 100%; height: 100%; border: 0; display: block; background: #070814; opacity: 1; transform: translateY(0); transition: opacity .25s ease, transform .25s ease; }
       .phone-live-frame.is-switching { opacity: 0; transform: translateY(7px); }
       .phone-open-demo {
-        position: absolute; z-index: 8; top: -12px; right: -12px; width: 40px; height: 40px; border-radius: 50%;
-        display: grid; place-items: center; background: var(--text); color: #fff; border: 3px solid var(--bg);
-        box-shadow: 0 9px 24px rgba(29,42,46,.2); font-size: 17px; font-weight: 900; transition: transform .22s ease, box-shadow .22s ease;
+        position: absolute; z-index: 12; top: 10px; right: 10px; width: 44px; height: 44px; border-radius: 50%;
+        display: grid; place-items: center; padding: 0; background: rgba(18,25,27,.78); color: #fff;
+        border: 1px solid rgba(255,255,255,.38); backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px);
+        box-shadow: 0 8px 24px rgba(0,0,0,.22); cursor: pointer; transition: transform .22s ease, background .22s ease;
       }
-      .phone-open-demo:hover, .phone-open-demo:focus-visible { transform: translateY(-2px) scale(1.04); box-shadow: 0 12px 30px rgba(29,42,46,.26); }
+      .phone-open-demo:hover, .phone-open-demo:focus-visible { transform: translateY(-1px); background: rgba(18,25,27,.92); }
+      .phone-open-demo svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+      .phone-open-demo .icon-reduce { display: none; }
+      .phone-open-demo.is-active .icon-expand { display: none; }
+      .phone-open-demo.is-active .icon-reduce { display: block; }
+      .phone-fullscreen-hint {
+        position: absolute; z-index: 11; top: 16px; right: 62px; padding: 7px 10px; border-radius: 999px;
+        color: #fff; background: rgba(18,25,27,.78); box-shadow: 0 7px 20px rgba(0,0,0,.16);
+        font-size: 10px; font-weight: 900; opacity: 0; transform: translateX(6px); pointer-events: none; transition: opacity .22s ease, transform .22s ease;
+      }
+      .phone-fullscreen-hint.show { opacity: 1; transform: none; }
+      .phone-zone:fullscreen,
+      .phone-zone.demo-fullscreen-fallback {
+        width: 100vw; height: 100dvh; max-width: none; padding: 10px; background: #070814;
+        justify-content: center; overflow: hidden;
+      }
+      .phone-zone.demo-fullscreen-fallback { position: fixed; inset: 0; z-index: 9999; }
+      body.demo-fullscreen-open { overflow: hidden; }
+      .phone-zone:fullscreen::before,
+      .phone-zone.demo-fullscreen-fallback::before,
+      .phone-zone:fullscreen .float-card,
+      .phone-zone.demo-fullscreen-fallback .float-card { display: none; }
+      .phone-zone:fullscreen .phone,
+      .phone-zone.demo-fullscreen-fallback .phone {
+        width: min(430px, calc(100vw - 20px)); height: calc(100dvh - 78px); aspect-ratio: auto;
+      }
+      .phone-zone:fullscreen .phone-open-demo,
+      .phone-zone.demo-fullscreen-fallback .phone-open-demo { position: fixed; top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); }
+      .phone-zone:fullscreen .phone-fullscreen-hint,
+      .phone-zone.demo-fullscreen-fallback .phone-fullscreen-hint { display: none; }
+      .phone-zone:fullscreen .preview-role-switch,
+      .phone-zone.demo-fullscreen-fallback .preview-role-switch { margin-top: 8px; }
+      .phone-zone:fullscreen .phone-hint,
+      .phone-zone.demo-fullscreen-fallback .phone-hint { display: none; }
+      @media (max-width: 520px) {
+        .phone-zone:fullscreen,
+        .phone-zone.demo-fullscreen-fallback { padding: 0; }
+        .phone-zone:fullscreen .phone,
+        .phone-zone.demo-fullscreen-fallback .phone { width: 100vw; height: 100dvh; border: 0; border-radius: 0; }
+        .phone-zone:fullscreen .preview-role-switch,
+        .phone-zone.demo-fullscreen-fallback .preview-role-switch { display: none; }
+      }
       .preview-role-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: min(330px, calc(100vw - 56px)); margin-top: 14px; }
       .preview-role {
         border: 1px solid var(--cb); border-radius: 999px; padding: 9px 13px; background: rgba(255,255,255,.72);
@@ -314,8 +356,6 @@
           title="Aperçu défilable de l’espace Travailleur UROSI"
           loading="eager"
         ></iframe>
-        <a class="phone-open-demo" href="/demo?role=worker" aria-label="Agrandir la démo" title="Agrandir la démo">↗</a>
-
         <!-- Choix -->
         <div class="screen on" data-s="choice">
           <div class="s-head"><span class="s-title">UROSI</span><span class="stars" style="font-size:9px">MODE DÉMO · fictif</span></div>
@@ -522,6 +562,12 @@
         </div>
       </div>
 
+      <button id="demoFullscreenButton" class="phone-open-demo" type="button" aria-label="Ouvrir la démo en plein écran" title="Plein écran" aria-pressed="false">
+        <svg class="icon-expand" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" /></svg>
+        <svg class="icon-reduce" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h5V3M21 8h-5V3M3 16h5v5M21 16h-5v5" /></svg>
+      </button>
+      <div id="demoFullscreenHint" class="phone-fullscreen-hint" role="status">Agrandir la démo</div>
+
       <div class="preview-role-switch" aria-label="Choisir l’aperçu affiché dans le téléphone">
         <button class="preview-role on" type="button" data-preview-role="worker" aria-pressed="true">Travailleur</button>
         <button class="preview-role" type="button" data-preview-role="structure" aria-pressed="false">Structure</button>
@@ -616,6 +662,92 @@
         if (!phone) return;
         var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         var preview = document.getElementById('phonePreview');
+        var demoZone = document.getElementById('demo');
+        var fullscreenButton = document.getElementById('demoFullscreenButton');
+        var fullscreenHint = document.getElementById('demoFullscreenHint');
+        var fallbackFullscreen = false;
+        var fallbackHistoryEntry = false;
+        var pageScrollY = 0;
+
+        function nativeFullscreenActive() {
+          return document.fullscreenElement === demoZone;
+        }
+
+        function fullscreenActive() {
+          return nativeFullscreenActive() || fallbackFullscreen;
+        }
+
+        function syncFullscreenControl() {
+          if (!fullscreenButton) return;
+          var active = fullscreenActive();
+          fullscreenButton.classList.toggle('is-active', active);
+          fullscreenButton.setAttribute('aria-pressed', active ? 'true' : 'false');
+          fullscreenButton.setAttribute('aria-label', active ? 'Réduire la démo' : 'Ouvrir la démo en plein écran');
+          fullscreenButton.title = active ? 'Réduire' : 'Plein écran';
+        }
+
+        function hideFullscreenHint() {
+          if (fullscreenHint) fullscreenHint.classList.remove('show');
+          try { sessionStorage.setItem('urosi_demo_fullscreen_hint_seen_v1', '1'); } catch (error) { /* stockage indisponible */ }
+        }
+
+        function enterFallbackFullscreen() {
+          if (!demoZone || fallbackFullscreen) return;
+          pageScrollY = window.scrollY;
+          fallbackFullscreen = true;
+          fallbackHistoryEntry = true;
+          demoZone.classList.add('demo-fullscreen-fallback');
+          document.body.classList.add('demo-fullscreen-open');
+          history.pushState({ urosiDemoFullscreen: true }, '', window.location.href);
+          syncFullscreenControl();
+        }
+
+        function leaveFallbackFullscreen(fromBrowserBack) {
+          if (!demoZone || !fallbackFullscreen) return;
+          fallbackFullscreen = false;
+          demoZone.classList.remove('demo-fullscreen-fallback');
+          document.body.classList.remove('demo-fullscreen-open');
+          window.scrollTo(0, pageScrollY);
+          syncFullscreenControl();
+          if (!fromBrowserBack && fallbackHistoryEntry) history.back();
+          fallbackHistoryEntry = false;
+        }
+
+        if (fullscreenButton && demoZone) {
+          var hintAlreadySeen = false;
+          try { hintAlreadySeen = sessionStorage.getItem('urosi_demo_fullscreen_hint_seen_v1') === '1'; } catch (error) { /* stockage indisponible */ }
+          if (!hintAlreadySeen && fullscreenHint) {
+            window.setTimeout(function () { fullscreenHint.classList.add('show'); }, 550);
+            window.setTimeout(hideFullscreenHint, 3900);
+          }
+
+          fullscreenButton.addEventListener('click', function () {
+            hideFullscreenHint();
+            if (fallbackFullscreen) {
+              leaveFallbackFullscreen(false);
+              return;
+            }
+            if (nativeFullscreenActive()) {
+              document.exitFullscreen().catch(function () {});
+              return;
+            }
+            if (typeof demoZone.requestFullscreen === 'function') {
+              demoZone.requestFullscreen().catch(enterFallbackFullscreen);
+            } else {
+              enterFallbackFullscreen();
+            }
+          });
+
+          document.addEventListener('fullscreenchange', syncFullscreenControl);
+          document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && fallbackFullscreen) leaveFallbackFullscreen(false);
+          });
+          window.addEventListener('popstate', function () {
+            if (fallbackFullscreen) leaveFallbackFullscreen(true);
+          });
+          syncFullscreenControl();
+        }
+
         if (preview) {
           var switchTimer = null;
           preview.addEventListener('load', function () {

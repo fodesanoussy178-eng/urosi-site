@@ -896,9 +896,18 @@ function StructurePlacePhotos({ photos }: { photos: StructurePlacePhoto[] }) {
 function StructureProfile({ name, onBack }: { name: string; onBack: () => void }) {
   const isAsso = name.includes('Alimentaire');
   const profile = isAsso ? structureSeed.asso : structureSeed.pme;
+  const [expandedReviews, setExpandedReviews] = useState(false);
   // Temporairement vide. La galerie se réaffichera automatiquement dès que
   // les photos téléversées par la structure seront fournies ici.
   const placePhotos: StructurePlacePhoto[] = [];
+  const reviews = [
+    ['Mission bien organisée', 'Les horaires et les consignes étaient clairs dès le départ.'],
+    ['Accueil professionnel', "L'équipe m'a intégré rapidement et le responsable était disponible."],
+    ['Cadre fiable', 'La mission correspondait exactement à ce qui était annoncé.'],
+    ['Communication simple', "J'ai reçu toutes les informations utiles avant mon arrivée."],
+    ['Bonne expérience', 'Le déroulement était fluide du début à la fin.'],
+  ];
+  const visibleReviews = reviews.slice(0, expandedReviews ? 5 : 3);
   return (
     <div style={{ minHeight: '100%', background: T.bg }}>
       <div style={{ height: 175, background: `linear-gradient(155deg, ${isAsso ? '#14532d' : '#172554'}, #05060d)`, position: 'relative', display: 'flex', alignItems: 'flex-end', padding: 20 }}>
@@ -916,29 +925,55 @@ function StructureProfile({ name, onBack }: { name: string; onBack: () => void }
             <div style={{ display: 'flex', gap: 7, alignItems: 'center', marginTop: 5 }}>
               <Stars n={isAsso ? 4.8 : 4.7} size={12} />
               <span style={{ color: T.text, fontSize: 12, fontWeight: 900 }}>{isAsso ? '4,8' : '4,7'}</span>
-              <span style={{ color: T.mu, fontSize: 11 }}>({isAsso ? 61 : 38} avis)</span>
+              <span style={{ color: T.mu, fontSize: 11 }}>(10 avis)</span>
             </div>
           </div>
         </div>
-        <span style={{ display: 'inline-flex', color: isAsso ? T.green : T.cyan, background: isAsso ? T.greenBg : '#22d3ee15', border: `1px solid ${isAsso ? T.greenBorder : '#0e7490'}`, borderRadius: 14, padding: '4px 10px', fontSize: 10, fontWeight: 900, marginBottom: 12 }}>{profile.type}</span>
-        <div style={{ color: T.mu, fontSize: 11, marginBottom: 16 }}>SIRET {isAsso ? '421 987 654 00021' : '852 123 456 00018'} ⓘ</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: '15px 0', marginBottom: 16 }}>
-          {profile.stats.map(([v, l], i) => (
-            <div key={l} style={{ textAlign: 'center', borderRight: i < 2 ? `1px solid ${T.cb}` : 'none' }}>
-              <div style={{ fontSize: 19, color: T.text, fontWeight: 900 }}>{v}</div>
-              <div style={{ fontSize: 9, color: T.mu }}>{l}</div>
-            </div>
-          ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: T.card, border: `1px solid ${T.greenBorder}`, borderRadius: 14, padding: '12px 14px', marginBottom: 18 }}>
+          <span aria-hidden="true" style={{ color: T.green, fontSize: 17 }}>✓</span>
+          <span style={{ color: T.text, fontSize: 12, fontWeight: 900 }}>94 % des missions réalisées</span>
         </div>
-        {['Rue Nationale, 59000 Lille', 'Métro Gambetta (300 m)', isAsso ? 'Créneaux solidaires en semaine' : 'Ouvert 11h-23h'].map((line) => (
-          <div key={line} style={{ color: T.sub, fontSize: 12, marginBottom: 10 }}>{line}</div>
-        ))}
+        <div style={{ color: T.sub, fontSize: 12, marginBottom: 10 }}>📍 Rue Nationale, 59000 Lille</div>
+        <div style={{ color: T.sub, fontSize: 12, marginBottom: 18 }}>Ⓜ Métro Gambetta · 300 m</div>
         <StructurePlacePhotos photos={placePhotos} />
-        <div style={{ marginTop: 14 }}>
+        <section>
           <div style={{ color: T.text, fontSize: 14, fontWeight: 900, marginBottom: 6 }}>À propos</div>
           <div style={{ color: T.sub, fontSize: 12, lineHeight: 1.6 }}>
             {isAsso ? "Association d'aide alimentaire. Missions bénévoles pour préparer et distribuer des colis aux familles." : 'Fast-food indépendant à Lille. Missions courtes, équipe jeune et process clair.'}
           </div>
+        </section>
+        <details style={{ borderTop: `1px solid ${T.cb}`, borderBottom: `1px solid ${T.cb}`, marginTop: 18, padding: '13px 0' }}>
+          <summary style={{ color: T.text, fontSize: 12, fontWeight: 900, cursor: 'pointer' }}>Informations de la structure</summary>
+          <div style={{ display: 'grid', gap: 8, marginTop: 12, color: T.sub, fontSize: 11 }}>
+            <span>{profile.type}</span>
+            <span>SIRET {isAsso ? '421 987 654 00021' : '852 123 456 00018'}</span>
+            <span>{isAsso ? 'Créneaux solidaires en semaine' : 'Ouvert 11h-23h'}</span>
+          </div>
+        </details>
+        <section aria-label="Avis sur la structure" style={{ marginTop: 20 }}>
+          <div style={{ color: T.text, fontSize: 14, fontWeight: 900, marginBottom: 10 }}>Avis</div>
+          <div style={{ display: 'grid', gap: 9 }}>
+            {visibleReviews.map(([title, body]) => (
+              <article key={title} style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 13, padding: 13 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+                  <strong style={{ color: T.text, fontSize: 11 }}>{title}</strong>
+                  <Stars n={5} size={10} />
+                </div>
+                <p style={{ color: T.sub, fontSize: 11, lineHeight: 1.5, margin: '7px 0 8px' }}>{body}</p>
+                <span style={{ color: T.mu, fontSize: 9, fontWeight: 800 }}>Avis anonyme vérifié</span>
+              </article>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setExpandedReviews((value) => !value)}
+            style={{ width: '100%', marginTop: 10, padding: '11px 12px', borderRadius: 11, border: `1px solid ${T.cb}`, background: 'transparent', color: T.text, fontSize: 11, fontWeight: 900, cursor: 'pointer' }}
+          >
+            {expandedReviews ? 'Réduire les avis' : 'Voir 5 avis sur 10'}
+          </button>
+        </section>
+        <div style={{ marginTop: 18 }}>
+          <Button onClick={onBack}>Voir les missions disponibles</Button>
         </div>
       </div>
     </div>
