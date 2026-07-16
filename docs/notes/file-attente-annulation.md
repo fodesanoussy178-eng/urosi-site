@@ -1,11 +1,18 @@
 # Note technique — File d'attente et redistribution après annulation (app réelle)
 
-> Statut : SPÉCIFICATION. La démo illustre déjà le comportement
-> (bannière d'annulation côté structure + proposition de la file
-> d'attente, ajoutées le 16/07/2026). L'implémentation réelle touche le
-> schéma, les gardes de cycle de vie et le backend planifié : elle doit
-> passer par de nouvelles migrations + revue sécurité, pas par un patch
-> front.
+> Statut : IMPLÉMENTÉ le 16/07/2026 (spécification validée par le fondateur).
+> Migration `20260716140000_mission_waitlist_offers.sql`, tâche planifiée
+> `supabase/functions/process-spot-offers` (à planifier toutes les minutes,
+> service_role), front `spotOffersService.ts` + bannière dans `WorkerApp`.
+> Décisions retenues : capacité totale = places + 3 ; offre à confirmer
+> sous 2 minutes (jamais d'acceptation automatique) ; refus/expiration →
+> candidat suivant ; file vide → mission remise en avant (`requeued_at`
+> touché → refresh realtime du flux) ; annulation journalisée dans
+> `reliability_events` (`mission_cancelled_by_worker`, weight 0, AUCUNE
+> sanction automatique tant que les règles métier ne sont pas figées) ;
+> aucun `pg_sleep`. Un candidat qui a refusé ou laissé expirer une offre
+> n'est plus re-proposé sur la même mission ; la garde de capacité
+> existante reste la seule autorité sur la transition `pending → accepted`.
 
 ## Comportement cible (demande produit du 16/07/2026)
 
