@@ -37,7 +37,7 @@ export type RatingDirection = 'worker_to_structure' | 'structure_to_worker';
 export type ReportMotif = 'absent' | 'conditions' | 'securite' | 'autre';
 export type DisputeStatus = 'open' | 'reviewing' | 'resolved' | 'rejected';
 export type AttendanceStatus = 'not_started' | 'start_confirmed' | 'end_confirmed' | 'remote_pending' | 'paper_pending' | 'disputed';
-export type AttendanceMethod = 'qr' | 'remote' | 'paper' | 'support';
+export type AttendanceMethod = 'qr' | 'manual' | 'remote' | 'paper' | 'support';
 export type AttendanceEventType =
   | 'start_requested'
   | 'start_confirmed'
@@ -865,7 +865,7 @@ export interface Database {
           id: string;
           structure_id: string;
           user_id: string;
-          role: 'owner' | 'manager' | 'member';
+          role: 'owner' | 'manager' | 'member' | 'attendance_validator';
           can_validate_attendance: boolean;
           created_at: string;
         };
@@ -873,7 +873,7 @@ export interface Database {
           id?: string;
           structure_id: string;
           user_id: string;
-          role?: 'owner' | 'manager' | 'member';
+          role?: 'owner' | 'manager' | 'member' | 'attendance_validator';
           can_validate_attendance?: boolean;
           created_at?: string;
         };
@@ -1215,6 +1215,55 @@ export interface Database {
       };
       confirm_attendance_qr: {
         Args: { p_token: string };
+        Returns: Json;
+      };
+      list_validator_missions: {
+        Args: Record<string, never>;
+        Returns: Array<{
+          mission_id: string;
+          structure_id: string;
+          structure_name: string;
+          title: string;
+          city: string | null;
+          starts_at: string | null;
+          ends_at: string | null;
+          scheduled_date: string;
+          mission_code: string;
+          qr_code: string;
+        }>;
+      };
+      get_mission_validation_card: {
+        Args: { p_mission_id: string };
+        Returns: Json;
+      };
+      issue_mission_validation_pin: {
+        Args: { p_mission_id: string; p_step: QRTokenType };
+        Returns: Json;
+      };
+      get_worker_validation_context: {
+        Args: { p_qr_code?: string | null; p_mission_code?: string | null };
+        Returns: Json;
+      };
+      validate_mission_attendance: {
+        Args: {
+          p_qr_code?: string | null;
+          p_mission_code?: string | null;
+          p_pin?: string | null;
+          p_step?: QRTokenType | null;
+          p_manual_reason?: string | null;
+        };
+        Returns: Json;
+      };
+      list_structure_validators: {
+        Args: { p_structure_id: string };
+        Returns: Array<{ user_id: string; full_name: string; email: string; created_at: string }>;
+      };
+      add_structure_attendance_validator: {
+        Args: { p_structure_id: string; p_email: string };
+        Returns: Json;
+      };
+      remove_structure_attendance_validator: {
+        Args: { p_structure_id: string; p_user_id: string };
         Returns: Json;
       };
       request_remote_attendance: {

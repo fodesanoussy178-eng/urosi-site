@@ -20,6 +20,7 @@ import {
 import { rate, fetchRatedApplicationIds, fetchWorkerReputation, type WorkerReputation } from '@/features/missions/ratingsService';
 import { fetchDelaysForApplications } from '@/features/missions/feedbackService';
 import { confirmRemoteAttendance, reportWorkerAbsence } from '@/features/missions/attendanceService';
+import { MissionValidationPanel } from '@/features/missions/MissionValidationPanel';
 import { fetchUnreadCounts } from '@/features/messages/messagesService';
 import { geocodeMelCity } from '@/lib/geo';
 import { distinctDays, slotMinutes, spanDays, totalMinutes } from '@/lib/slots';
@@ -143,6 +144,7 @@ export function StructureApp() {
   const [unread, setUnread] = useState<Map<string, number>>(new Map());
   const [candMis, setCandMis] = useState<string | null>(null);
   const [showPub, setShowPub] = useState(false);
+  const [validationMissionId, setValidationMissionId] = useState<string | null>(null);
   const [panelC, setPanelC] = useState<CandWithMission | null>(null);
   const [panelRep, setPanelRep] = useState<WorkerReputation | null>(null);
   const [ratingCand, setRatingCand] = useState<CandWithMission | null>(null);
@@ -523,6 +525,11 @@ export function StructureApp() {
                           ) : (
                             <span style={{ fontSize: 10, color: T.mu }}>Aucun candidat pour l'instant</span>
                           )}
+                          {m.status !== 'cancelled' && (
+                            <button onClick={() => setValidationMissionId(m.id)} style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 800, color: T.text, background: T.row, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '5px 9px', cursor: 'pointer' }}>
+                              QR & PIN
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -755,6 +762,9 @@ export function StructureApp() {
                   notif(`« ${m.title} » publiée${m.pricing_breakdown && m.pricing_breakdown.adjustments.length > 0 ? ` à ${euros(m.worker_rate_cents)} (rémunération boostée)` : ''}.`);
                 }}
               />
+            )}
+            {validationMissionId && structure && (
+              <MissionValidationPanel missionId={validationMissionId} structureId={structure.id} onClose={() => setValidationMissionId(null)} />
             )}
           </>
         )}
