@@ -12,6 +12,7 @@ import { findLocalLabAccount } from '@/features/founder/localLabAccounts';
 import { hasDemoFounderAccess, hasRememberedFounderAccess, isDemoFounderCode, isFounderEmail, rememberDemoFounderAccess } from '@/lib/founder';
 
 const DEMO_SECONDS = 60;
+const DEMO_OPEN_ACCESS_UNTIL = Date.parse('2026-07-16T20:00:00+02:00');
 const DEMO_KEY = 'urosi_internal_demo_seconds_v1';
 const DEMO_SHARED_KEY = 'urosi_founder_demo_shared_v1';
 const DEMO_SERVICE_FEE_RATE = 0.18;
@@ -2362,12 +2363,20 @@ export function DemoExperience() {
   const labAccount = findLocalLabAccount(params.get('labAccount'));
   const [role, setRole] = useState<DemoRole | null>(initialRole);
   const [used, setUsed] = useState(() => readNumber(DEMO_KEY));
+  const [temporarilyFree, setTemporarilyFree] = useState(() => Date.now() < DEMO_OPEN_ACCESS_UNTIL);
   const [demoVersion, setDemoVersion] = useState(0);
   const [founderByCode, setFounderByCode] = useState(() => hasDemoFounderAccess() || hasRememberedFounderAccess(session?.user.id));
   const founder = isFounderEmail(session?.user.email) || founderByCode;
   const displayedFounder = embedded ? false : founder;
-  const frozen = Boolean(role && !founder && !guidedTour && used >= DEMO_SECONDS);
+  const frozen = Boolean(role && !founder && !guidedTour && !temporarilyFree && used >= DEMO_SECONDS);
   const left = Math.max(0, DEMO_SECONDS - used);
+
+  useEffect(() => {
+    if (!temporarilyFree) return undefined;
+    const remaining = Math.max(0, DEMO_OPEN_ACCESS_UNTIL - Date.now());
+    const timeout = window.setTimeout(() => setTemporarilyFree(false), remaining);
+    return () => window.clearTimeout(timeout);
+  }, [temporarilyFree]);
 
   useEffect(() => {
     let alive = true;
@@ -2395,7 +2404,7 @@ export function DemoExperience() {
   }, [embedded, session]);
 
   useEffect(() => {
-    if (!role || founder || frozen || guidedTour) return undefined;
+    if (!role || founder || frozen || guidedTour || temporarilyFree) return undefined;
     const id = window.setInterval(() => {
       setUsed((previous) => {
         const next = previous + 1;
@@ -2408,7 +2417,7 @@ export function DemoExperience() {
       });
     }, 1000);
     return () => window.clearInterval(id);
-  }, [role, founder, frozen, guidedTour]);
+  }, [role, founder, frozen, guidedTour, temporarilyFree]);
 
   function resetDemo() {
     try {
@@ -2459,7 +2468,7 @@ export function DemoExperience() {
             <Link to="/acces" style={{ textDecoration: 'none', display: 'block', marginBottom: 16 }}><Button tone="ghost">Créer un compte</Button></Link>
             {founder ? (
               <button onClick={resetDemo} style={{ background: 'none', color: T.green, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 900 }}>Accès fondateur actif · réinitialiser</button>
-            ) : <div style={{ color: T.mu, fontSize: 11 }}>Aperçu gratuit : {left}s restantes</div>}
+            ) : temporarilyFree ? null : <div style={{ color: T.mu, fontSize: 11 }}>Aperçu gratuit : {left}s restantes</div>}
           </div>
         </div>
       </DemoShell>
@@ -2468,7 +2477,7 @@ export function DemoExperience() {
 
   return (
     <>
-      {!founder && !embedded && (
+      {!founder && !embedded && !temporarilyFree && (
         <div style={{ position: 'fixed', top: 18, right: 18, zIndex: 450, background: left > 8 ? T.amberBg : T.redBg, color: left > 8 ? T.amber : T.red, border: `1px solid ${left > 8 ? T.amberBorder : T.redBorder}`, borderRadius: 18, padding: '7px 13px', fontFamily: FONT, fontSize: 12, fontWeight: 900 }}>
           Aperçu démo · {left}s
         </div>
