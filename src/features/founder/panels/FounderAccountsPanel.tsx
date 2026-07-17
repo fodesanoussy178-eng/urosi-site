@@ -43,7 +43,7 @@ export function FounderAccountsPanel() {
       </div>
       {error && <div style={{ ...founderNotice, color: T.red, marginBottom: 10 }}>{error}</div>}
       <h2 style={{ fontSize: 15 }}>Utilisateurs</h2>
-      <div style={{ display: 'grid', gap: 9 }}>
+      <div className="rsp-cols-2-lg" style={{ display: 'grid', gap: 9 }}>
         {data.profiles.map((row) => (
           <article key={row.id} style={founderCard}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
@@ -64,7 +64,7 @@ export function FounderAccountsPanel() {
       </div>
 
       <h2 style={{ fontSize: 15, marginTop: 20 }}>Structures</h2>
-      <div style={{ display: 'grid', gap: 9 }}>
+      <div className="rsp-cols-2-lg" style={{ display: 'grid', gap: 9 }}>
         {data.structures.map((row) => (
           <article key={row.id} style={founderCard}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>

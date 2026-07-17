@@ -144,8 +144,16 @@
         width: 100vw; height: 100dvh; max-width: none; padding: 10px; background: #070814;
         justify-content: center; overflow: hidden;
       }
-      .phone-zone.demo-fullscreen-fallback { position: fixed; inset: 0; z-index: 9999; }
-      body.demo-fullscreen-open { overflow: hidden; }
+      .phone-zone.demo-fullscreen-fallback { position: fixed; inset: 0; z-index: 9999; overscroll-behavior: contain; }
+      /* .site-shell > * cree un contexte d'empilement (z-index: 1) sur chaque
+         section : sans le hisser, les sections suivantes (Comment ca marche,
+         FAQ) se peignent PAR-DESSUS la demo fixee en z-index 9999. */
+      body.demo-fullscreen-open .hero-stage,
+      body.demo-tour-open .hero-stage { z-index: 2147483000; }
+      /* position: fixed sur body : overflow hidden seul ne bloque pas le
+         defilement de la page sous l'overlay sur iOS Safari. Le scroll est
+         memorise/restaure par le script (pageScrollY). */
+      body.demo-fullscreen-open { overflow: hidden; position: fixed; inset: 0 auto auto 0; width: 100%; }
       .phone-zone:fullscreen::before,
       .phone-zone.demo-fullscreen-fallback::before,
       .phone-zone:fullscreen .float-card,
@@ -298,9 +306,6 @@
       }
       .demo-tour-button.primary { border-color: #0891b2; background: #0891b2; color: #fff; }
       .demo-tour-button:focus-visible { outline: 3px solid rgba(34, 211, 238, .45); outline-offset: 2px; }
-      .tour-intro { max-width: 520px; margin: 18px auto 0; text-align: center; }
-      .tour-intro p { color: var(--sub); font-size: 13px; line-height: 1.55; margin-bottom: 15px; }
-      .tour-intro .btn { border: 0; cursor: pointer; }
       .phone-tour-link { border: 0; padding: 0; background: none; color: var(--cyan); font: inherit; font-weight: 900; cursor: pointer; }
 
       @media (min-width: 421px) {
@@ -644,14 +649,9 @@
         </div>
       </main>
 
-    <!-- ── Tutoriel guidé ── -->
-    <section class="wrap reveal">
-      <div class="sec-title">Comment ça marche</div>
-      <div class="tour-intro">
-        <p>Découvre le parcours dans la vraie interface, une étape à la fois.</p>
-        <button class="btn btn-dark" type="button" data-demo-tour-start>Voir le parcours en 3 étapes</button>
-      </div>
-    </section>
+    <!-- Le tutoriel guidé se lance automatiquement à l'agrandissement de la
+         démo (et reste accessible via « Comment ça marche ? » sous le
+         téléphone). L'ancienne section dédiée a été retirée. -->
 
     <!-- ── FAQ ── -->
     <section class="wrap reveal" style="max-width: 640px">
@@ -801,14 +801,16 @@
             }
             if (typeof demoZone.requestFullscreen === 'function') {
               demoZone.requestFullscreen()
-                .then(function () { window.setTimeout(reflowTour, 80); })
+                .then(function () { window.setTimeout(reflowTour, 80); maybeAutoStartTour(); })
                 .catch(function () {
                   enterFallbackFullscreen();
                   window.setTimeout(reflowTour, 80);
+                  maybeAutoStartTour();
                 });
             } else {
               enterFallbackFullscreen();
               window.setTimeout(reflowTour, 80);
+              maybeAutoStartTour();
             }
           });
 
@@ -834,23 +836,46 @@
         var tourNext = document.getElementById('demoTourNext');
         var tourShades = {};
         document.querySelectorAll('[data-tour-shade]').forEach(function (shade) { tourShades[shade.dataset.tourShade] = shade; });
-        var tourSteps = [
-          {
-            selector: '[data-demo-tour="mission-card"]',
-            title: 'Tu choisis une expérience',
-            copy: 'Payée ou solidaire, près de toi, avec les informations visibles avant de postuler.'
-          },
-          {
-            selector: '[data-demo-tour="mission-action"]',
-            title: 'Ta présence est validée',
-            copy: 'Le début et la fin de la mission sont confirmés simplement.'
-          },
-          {
-            selector: '[data-demo-tab="moi"]',
-            title: 'Ton CV vivant avance',
-            copy: 'Chaque mission terminée ajoute une preuve claire à ton profil.'
-          }
-        ];
+        // Un tutoriel par rôle : chacun se lance automatiquement quand la
+        // démo passe en plein écran, et reste toujours ignorable (Passer).
+        var tourStepsByRole = {
+          worker: [
+            {
+              selector: '[data-demo-tour="mission-card"]',
+              title: 'Tu choisis une expérience',
+              copy: 'Payée ou solidaire, près de toi, avec les informations visibles avant de postuler.'
+            },
+            {
+              selector: '[data-demo-tour="mission-action"]',
+              title: 'Ta présence est validée',
+              copy: 'Le début et la fin de la mission sont confirmés simplement.'
+            },
+            {
+              selector: '[data-demo-tab="moi"]',
+              title: 'Ton CV vivant avance',
+              copy: 'Chaque mission terminée ajoute une preuve claire à ton profil.'
+            }
+          ],
+          structure: [
+            {
+              selector: '[data-demo-tour="structure-publish"]',
+              title: 'Publie une mission',
+              copy: 'Décris le besoin, le créneau et le montant : la mission part immédiatement dans le flux des travailleurs autour de toi.'
+            },
+            {
+              selector: '[data-demo-tab="candidats"]',
+              title: 'Vois les candidats',
+              copy: 'Chaque profil montre ses missions vérifiées. Tu acceptes ou refuses en un geste.'
+            },
+            {
+              selector: '[data-demo-tab="historique"]',
+              title: 'Suis ton historique',
+              copy: 'Missions terminées, annulées ou archivées : tout reste consultable au même endroit.'
+            }
+          ]
+        };
+        var tourRole = 'worker';
+        var tourSteps = tourStepsByRole.worker;
         var tourIndex = 0;
         var tourOpen = false;
         var tourTarget = null;
@@ -1116,50 +1141,73 @@
           tourRoot.classList.remove('is-open', 'is-ready');
           tourRoot.setAttribute('aria-hidden', 'true');
           if (demoZone) demoZone.classList.remove('tour-active');
+          document.body.classList.remove('demo-tour-open');
+          try { sessionStorage.setItem('urosi_demo_tour_seen_' + tourRole, '1'); } catch (error) { /* stockage indisponible */ }
           restoreScroll();
           if (preview && (preview.getAttribute('src') || '').indexOf('tour=1') !== -1) {
             preview.classList.add('is-switching');
-            preview.src = '/demo?role=worker&embed=1';
+            preview.src = '/demo?role=' + tourRole + '&embed=1';
           }
           if (tourStartFocus && typeof tourStartFocus.focus === 'function') tourStartFocus.focus();
           tourStartFocus = null;
         }
 
-        function ensureWorkerPreview() {
+        function currentPreviewRole() {
+          var active = document.querySelector('[data-preview-role].on');
+          return active && active.dataset.previewRole === 'structure' ? 'structure' : 'worker';
+        }
+
+        function ensurePreviewForRole(role) {
           if (!preview) return Promise.resolve();
           var currentSrc = preview.getAttribute('src') || '';
-          if (currentSrc.indexOf('role=worker') !== -1 && currentSrc.indexOf('tour=1') !== -1) return Promise.resolve();
+          if (currentSrc.indexOf('role=' + role) !== -1 && currentSrc.indexOf('tour=1') !== -1) return Promise.resolve();
           preview.classList.add('is-switching');
           document.querySelectorAll('[data-preview-role]').forEach(function (item) {
-            var active = item.dataset.previewRole === 'worker';
+            var active = item.dataset.previewRole === role;
             item.classList.toggle('on', active);
             item.setAttribute('aria-pressed', active ? 'true' : 'false');
           });
-          preview.src = '/demo?role=worker&embed=1&tour=1';
-          preview.title = 'Aperçu défilable de l’espace Travailleur UROSI';
+          preview.src = '/demo?role=' + role + '&embed=1&tour=1';
+          preview.title = role === 'structure'
+            ? 'Aperçu défilable de l’espace Structure UROSI'
+            : 'Aperçu défilable de l’espace Travailleur UROSI';
           return waitForPreviewLoad();
         }
 
         function startTour(event) {
           if (!tourRoot || !preview || tourOpen) return;
+          tourRole = currentPreviewRole();
+          tourSteps = tourStepsByRole[tourRole];
           tourStartFocus = event && event.currentTarget ? event.currentTarget : document.activeElement;
-          // Sur iPhone, le parcours explicite occupe la démo entière. Le bouton
-          // d'agrandissement, lui, n'ouvre plus automatiquement le tutoriel.
+          // Sur iPhone, le parcours occupe la démo entière.
           if (window.matchMedia('(max-width: 520px)').matches && !fullscreenActive()) enterFallbackFullscreen();
-          ensureWorkerPreview().then(function () {
+          ensurePreviewForRole(tourRole).then(function () {
             var frameDoc = previewDocument();
-            var fluxTab = frameDoc && frameDoc.querySelector('[data-demo-tab="flux"]');
-            if (fluxTab && fluxTab.getAttribute('aria-pressed') !== 'true') fluxTab.click();
+            var homeTab = frameDoc && frameDoc.querySelector(tourRole === 'structure' ? '[data-demo-tab="missions"]' : '[data-demo-tab="flux"]');
+            if (homeTab && homeTab.getAttribute('aria-pressed') !== 'true') homeTab.click();
             if (!fullscreenActive() && demoZone) demoZone.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
             window.setTimeout(function () {
               tourOpen = true;
               if (demoZone) demoZone.classList.add('tour-active');
+              document.body.classList.add('demo-tour-open');
               tourRoot.classList.add('is-open');
               tourRoot.setAttribute('aria-hidden', 'false');
               lockPage();
               showTourStep(0).then(function () { if (tourCard) tourCard.focus({ preventScroll: true }); });
             }, reduceMotion ? 20 : 320);
           });
+        }
+
+        // Le tutoriel du rôle affiché se lance automatiquement au passage en
+        // plein écran, une fois par session : l'utilisateur peut toujours
+        // l'ignorer (Passer, Échap), et il ne se réaffiche plus ensuite.
+        function maybeAutoStartTour() {
+          if (tourOpen) return;
+          var role = currentPreviewRole();
+          try {
+            if (sessionStorage.getItem('urosi_demo_tour_seen_' + role) === '1') return;
+          } catch (error) { /* stockage indisponible */ }
+          window.setTimeout(function () { startTour(null); }, 380);
         }
 
         if (tourRoot && preview) {

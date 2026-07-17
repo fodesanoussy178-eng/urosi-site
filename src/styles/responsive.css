@@ -1,0 +1,137 @@
+/*
+  Responsive avancé — espace Structure et centre Fondateur uniquement.
+
+  Principes :
+  - Mobile (< 768 px) : AUCUNE règle de ce fichier ne s'applique. Les styles
+    inline des composants restent la seule source de vérité — zéro régression
+    sur la démo téléphone et l'espace travailleur (qui ne reçoivent aucune
+    de ces classes).
+  - Détection par largeur (media queries CSS) uniquement : jamais de
+    user-agent ni de type d'appareil, pas de window.innerWidth.
+  - `!important` est employé UNIQUEMENT quand il faut prendre le pas sur un
+    style inline mobile (max-width, display, align-items…). Chaque usage est
+    volontaire ; les propriétés absentes des styles inline (comme
+    grid-template-columns) n'en ont pas besoin.
+*/
+
+/* ── Tablette ≥ 768 px : l'espace Structure respire ─────────────────────── */
+@media (min-width: 768px) {
+  .rsp-structure-shell {
+    max-width: 720px !important;
+  }
+  /* Pile mobile (flex column inline) → grille 2 colonnes. */
+  .rsp-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    align-items: start;
+  }
+  .rsp-grid > .rsp-span {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ── Desktop ≥ 1024 px : tableau de gestion + centre Fondateur ──────────── */
+@media (min-width: 1024px) {
+  .rsp-structure-shell {
+    max-width: 1080px !important;
+  }
+  .rsp-grid {
+    gap: 12px;
+  }
+  /* Grille réservée au desktop (pilotage, historique, listes Fondateur). */
+  .rsp-grid-lg {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    align-items: start;
+  }
+  .rsp-grid-lg > .rsp-span {
+    grid-column: 1 / -1;
+  }
+  /* Conteneur déjà en grid inline : on ne change que les colonnes. */
+  .rsp-cols-2-lg {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  /* Les bottom-sheets mobiles deviennent des fenêtres centrées. */
+  .rsp-sheet {
+    align-items: center !important;
+    padding: 24px;
+  }
+  .rsp-sheet-body {
+    border-radius: 18px !important;
+    max-width: 560px !important;
+    max-height: 86vh;
+    overflow-y: auto;
+  }
+
+  /* Centre Fondateur : barre latérale fixe + zone principale large. */
+  .rsp-founder-main {
+    max-width: 1240px !important;
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    column-gap: 24px;
+    align-items: start;
+  }
+  .rsp-founder-main > header {
+    grid-column: 1 / -1;
+  }
+  .rsp-founder-nav {
+    flex-direction: column !important;
+    overflow-x: visible !important;
+    position: sticky;
+    top: 20px;
+  }
+  .rsp-founder-nav > button {
+    width: 100%;
+    text-align: left;
+  }
+}
+
+/* ── Très grand écran ≥ 1440 px : plafond, pas d'étirement ──────────────── */
+@media (min-width: 1440px) {
+  .rsp-structure-shell {
+    max-width: 1140px !important;
+  }
+  .rsp-grid,
+  .rsp-grid-lg {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ── Aperçu « Ordinateur / tablette » de la DÉMO ────────────────────────── */
+/* Activé uniquement par le sélecteur de format de la démo (jamais dans
+   l'iframe de la landing). Le format téléphone reste le défaut absolu :
+   sans la classe demo-wide-shell, rien ne change. */
+.demo-format-switch {
+  display: none;
+}
+@media (min-width: 768px) {
+  .demo-format-switch {
+    display: inline-flex;
+  }
+  .demo-wide-shell > div {
+    max-width: 1080px !important;
+    border-radius: 18px !important;
+  }
+  .demo-wide-shell nav {
+    max-width: 640px !important;
+  }
+  .demo-wide-shell .dsp-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .demo-wide-shell .dsp-grid > .dsp-span {
+    grid-column: 1 / -1;
+  }
+}
+@media (min-width: 1280px) {
+  .demo-wide-shell > div {
+    max-width: 1180px !important;
+  }
+  .demo-wide-shell .dsp-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

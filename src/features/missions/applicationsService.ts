@@ -37,6 +37,26 @@ export async function fetchApplicationsForMission(missionId: string): Promise<Ap
   return (data ?? []) as unknown as ApplicationWithApplicant[];
 }
 
+// Variante groupee : une seule requete pour toutes les missions d'une
+// structure (le tableau de bord chargeait auparavant mission par mission).
+export async function fetchApplicationsForMissions(missionIds: string[]): Promise<Map<string, ApplicationWithApplicant[]>> {
+  const map = new Map<string, ApplicationWithApplicant[]>();
+  if (missionIds.length === 0) return map;
+  const { data, error } = await supabase
+    .from('applications')
+    .select('*, profile:profiles(full_name)')
+    .in('mission_id', missionIds)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  for (const id of missionIds) map.set(id, []);
+  for (const row of (data ?? []) as unknown as ApplicationWithApplicant[]) {
+    const list = map.get(row.mission_id);
+    if (list) list.push(row);
+    else map.set(row.mission_id, [row]);
+  }
+  return map;
+}
+
 export async function updateApplicationStatus(applicationId: string, status: ApplicationStatus): Promise<void> {
   const { error } = await supabase.from('applications').update({ status }).eq('id', applicationId);
   if (error) throw error;
