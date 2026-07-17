@@ -234,14 +234,19 @@ describe('DemoExperience founder scan', () => {
     expect(screen.getByText('Terminer la mission')).toBeInTheDocument();
   });
 
-  it('keeps internal demo tools out of the structure dashboard', () => {
-    renderStructure();
+  it('keeps the mission limit clear and exposes the dedicated desktop regions', () => {
+    const { container } = renderStructure();
 
     expect(screen.queryByText('MODE DÉMO')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Peupler le flux' })).not.toBeInTheDocument();
+    expect(screen.getByText('Plusieurs missions possibles · 3 jours maximum par mission')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Publier une mission' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ouvrir QR + PIN' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Actions pour Renfort service midi' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Actions pour Préparation mariage' })).toBeInTheDocument();
+    expect(container.querySelector('.structure-sidebar')).toContainElement(screen.getByRole('navigation', { name: 'Navigation de l’espace Structure' }));
+    expect(container.querySelector('.structure-dashboard-content')).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'QR et PIN de la prochaine mission' })).toBeInTheDocument();
   });
 
   it('keeps the structure statistics in history', () => {
