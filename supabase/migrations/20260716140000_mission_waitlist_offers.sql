@@ -18,6 +18,12 @@
 -- La garde de capacite existante n'est pas affaiblie : la confirmation d'une
 -- offre passe par la transition pending -> accepted qui reste soumise a
 -- guard_application_state_and_capacity (capacite, mission ouverte).
+--
+-- PRINCIPE PRODUIT : le travailleur ne voit JAMAIS la file d'attente.
+-- Il postule normalement ; tous les messages qui lui sont adresses restent
+-- neutres (« mission disponible », « delai depasse ») sans jamais mentionner
+-- une place liberee, un rang ou une liste d'attente. Seuls UROSI et la
+-- structure connaissent la mecanique de file.
 
 -- ---------------------------------------------------------------------------
 -- Evenement de fiabilite dedie, sans poids.
@@ -127,9 +133,11 @@ begin
   values (p_mission_id, v_next.id, v_next.worker_id, now() + interval '2 minutes')
   returning id into v_offer_id;
 
+  -- Message travailleur volontairement neutre : aucune mention de place
+  -- liberee ni de file d'attente.
   perform public.notify(
-    v_next.worker_id, 'spot_offer', 'Une place s est liberee',
-    'Une place est disponible sur « ' || v_mission.title || ' ». Confirme dans les 2 minutes depuis ton espace.',
+    v_next.worker_id, 'spot_offer', 'Mission disponible',
+    'La mission « ' || v_mission.title || ' » est disponible pour toi. Confirme ta participation dans les 2 minutes depuis ton espace.',
     jsonb_build_object('offer_id', v_offer_id, 'mission_id', p_mission_id,
       'application_id', v_next.id, 'expires_at', now() + interval '2 minutes')
   );
@@ -341,16 +349,18 @@ begin
   end if;
 
   for r in
-    select o.id, o.mission_id, o.worker_id
+    select o.id, o.mission_id, o.worker_id, m.title
     from public.mission_spot_offers o
+    join public.missions m on m.id = o.mission_id
     where o.status = 'pending' and o.expires_at <= now()
     order by o.created_at asc
     for update skip locked
   loop
     update public.mission_spot_offers set status = 'expired', decided_at = now() where id = r.id;
+    -- Message travailleur neutre : pas de mention du candidat suivant.
     perform public.notify(
-      r.worker_id, 'spot_offer', 'Offre expiree',
-      'Le delai de confirmation est depasse. La place est proposee au candidat suivant.',
+      r.worker_id, 'spot_offer', 'Delai de confirmation depasse',
+      'Le delai de confirmation pour « ' || r.title || ' » est depasse.',
       jsonb_build_object('offer_id', r.id, 'mission_id', r.mission_id)
     );
     perform private.offer_spot_to_next(r.mission_id);
@@ -409,7 +419,9 @@ begin
           and a.id is distinct from new.id
           and a.status in ('pending', 'accepted', 'in_progress', 'payment_pending', 'disputed');
         if v_active >= v_capacity + 3 then
-          raise exception using errcode = '23514', message = 'La liste d attente de cette mission est complete.';
+          -- Message neutre : le travailleur ne doit pas savoir qu'une file
+          -- d'attente existe.
+          raise exception using errcode = '23514', message = 'Cette mission n accepte plus de candidatures.';
         end if;
       end if;
     end if;

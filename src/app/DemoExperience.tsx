@@ -1128,7 +1128,9 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
     setAccepted(forgetAcceptedMission(mission.id, { missionTitle: mission.title, workerName: accountName ?? 'Alex Démo' }));
     setDemoState(readDemoState());
     setMissionAlert(null);
-    notif(`Mission « ${mission.title} » annulée. La structure est prévenue et UROSI propose ta place aux candidats en file d'attente.`);
+    // Côté travailleur, aucune mention de la file d'attente : seule la
+    // structure voit la mécanique de redistribution.
+    notif(`Mission « ${mission.title} » annulée. La structure est prévenue.`);
   }
 
   const myMissions = feed.filter((m) => accepted.includes(m.id));

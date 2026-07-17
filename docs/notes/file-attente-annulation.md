@@ -13,6 +13,15 @@
 > aucun `pg_sleep`. Un candidat qui a refusé ou laissé expirer une offre
 > n'est plus re-proposé sur la même mission ; la garde de capacité
 > existante reste la seule autorité sur la transition `pending → accepted`.
+>
+> INVISIBILITÉ (décision du 16/07/2026) : le travailleur ne voit JAMAIS la
+> file d'attente. Il postule normalement (« Participer »/« Accepter ») et
+> tous les messages qui lui sont adressés restent neutres : « Mission
+> disponible pour toi — confirme ta participation dans les 2 minutes »,
+> « Délai de confirmation dépassé », « Cette mission n'accepte plus de
+> candidatures ». Aucune mention de place libérée, de rang ou de liste
+> d'attente côté travailleur ; seuls UROSI et la structure connaissent la
+> mécanique de redistribution.
 
 ## Comportement cible (demande produit du 16/07/2026)
 

@@ -105,8 +105,10 @@ function normalizeIban(value: string): string {
   return value.replace(/\s/g, '').toUpperCase();
 }
 
-// Offre de place (liste d'attente) : compte à rebours isolé dans son propre
-// composant pour que le tic par seconde ne re-rende pas tout l'écran.
+// Offre de place : compte à rebours isolé dans son propre composant pour que
+// le tic par seconde ne re-rende pas tout l'écran. IMPORTANT : le travailleur
+// ne doit jamais savoir qu'une file d'attente existe — le message reste
+// « mission disponible », sans mention de place libérée ni de rang.
 function SpotOfferBanner({ offer, busy, onRespond }: { offer: SpotOffer; busy: boolean; onRespond: (accept: boolean) => void }) {
   const [secondsLeft, setSecondsLeft] = useState(() => Math.max(0, Math.floor((new Date(offer.expires_at).getTime() - Date.now()) / 1000)));
 
@@ -120,21 +122,21 @@ function SpotOfferBanner({ offer, busy, onRespond }: { offer: SpotOffer; busy: b
   const expired = secondsLeft <= 0;
   return (
     <div role="status" style={{ margin: '8px 12px 0', background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 12, padding: 13 }}>
-      <div style={{ color: T.amber, fontSize: 11, fontWeight: 900 }}>Une place s'est libérée</div>
+      <div style={{ color: T.amber, fontSize: 11, fontWeight: 900 }}>Mission disponible pour toi</div>
       <div style={{ color: T.text, fontSize: 13, fontWeight: 800, marginTop: 3 }}>{offer.mission_title}</div>
       <div style={{ color: T.sub, fontSize: 10.5, marginTop: 2 }}>
         {offer.city ?? ''}{offer.scheduled_date ? ` · ${formatDay(offer.scheduled_date)}` : ''}{offer.start_time ? ` · ${offer.start_time.slice(0, 5)}` : ''}
       </div>
       <div style={{ color: expired ? T.red : T.sub, fontSize: 10.5, fontWeight: 800, margin: '6px 0 9px' }}>
-        {expired ? 'Délai dépassé — la place part au candidat suivant.' : `Confirme dans les ${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`}
+        {expired ? 'Délai de confirmation dépassé.' : `Confirme ta participation dans les ${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`}
       </div>
       {!expired && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <button disabled={busy} onClick={() => onRespond(true)} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 900, cursor: 'pointer' }}>
-            Je prends la place
+            Je participe
           </button>
           <button disabled={busy} onClick={() => onRespond(false)} style={{ background: T.row, color: T.sub, border: `1px solid ${T.cb}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
-            Refuser
+            Pas disponible
           </button>
         </div>
       )}
@@ -461,11 +463,11 @@ export function WorkerApp() {
               setOfferBusy(true);
               try {
                 const state = await respondToSpotOffer(offer.id, accept);
-                if (state === 'accepted') notif('Place confirmée ! La mission est dans « Missions ».');
-                else if (state === 'declined') notif('Place refusée. Elle est proposée au candidat suivant.');
-                else if (state === 'expired') notif('Trop tard : le délai de 2 minutes est dépassé.');
-                else if (state === 'capacity_full' || state === 'application_not_pending') notif('La place vient d’être prise.');
-                else notif('Cette offre n’est plus disponible.');
+                if (state === 'accepted') notif('Participation confirmée ! La mission est dans « Missions ».');
+                else if (state === 'declined') notif('C’est noté, merci pour ta réponse.');
+                else if (state === 'expired') notif('Le délai de confirmation est dépassé.');
+                else if (state === 'capacity_full' || state === 'application_not_pending') notif('Cette mission n’est plus disponible.');
+                else notif('Cette proposition n’est plus disponible.');
               } catch (e) {
                 notif(e instanceof Error ? e.message : 'Réponse impossible.');
               } finally {
