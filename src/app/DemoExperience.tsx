@@ -12,6 +12,7 @@ import { findLocalLabAccount } from '@/features/founder/localLabAccounts';
 import { hasDemoFounderAccess, hasRememberedFounderAccess, isDemoFounderCode, rememberDemoFounderAccess } from '@/lib/founder';
 
 const DEMO_SECONDS = 60;
+const DEMO_OPEN_ACCESS_UNTIL = Date.parse('2026-07-17T20:00:00+02:00');
 const DEMO_KEY = 'urosi_internal_demo_seconds_v1';
 const DEMO_SHARED_KEY = 'urosi_founder_demo_shared_v1';
 const DEMO_SERVICE_FEE_RATE = 0.18;
@@ -1480,8 +1481,10 @@ function demoTodayPlus(days: number): string {
 }
 
 function demoAddDays(date: string, days: number): string {
-  const d = new Date(`${date}T00:00:00`);
-  d.setDate(d.getDate() + days);
+  const [year, month, day] = date.split('-').map(Number);
+  if (![year, month, day].every(Number.isFinite)) return date;
+  const d = new Date(Date.UTC(year!, month! - 1, day!));
+  d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
 
@@ -1582,7 +1585,7 @@ function PublishDemoModal({
                   <button onClick={() => setDays((prev) => prev.filter((_, idx) => idx !== i))} style={{ background: 'rgba(239,68,68,.14)', color: '#f87171', border: 'none', borderRadius: 8, width: 26, height: 26, cursor: 'pointer' }}>×</button>
                 )}
               </div>
-              <input type="date" value={day.date} onChange={(e) => setDay(i, { date: e.target.value })} style={{ ...inp, marginBottom: 8, padding: '10px 9px', fontSize: 12 }} />
+              <input aria-label={`Date du jour ${i + 1}`} type="date" value={day.date} onChange={(e) => setDay(i, { date: e.target.value })} style={{ ...inp, marginBottom: 8, padding: '10px 9px', fontSize: 12 }} />
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 5, marginBottom: 8 }}>
                 {DEMO_SHORTCUTS.map((shortcut) => (
                   <button key={shortcut.label} onClick={() => setDay(i, { start: shortcut.start, end: shortcut.end })} style={{ background: T.card, color: T.sub, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 0', fontSize: 9.5, fontWeight: 800, cursor: 'pointer' }}>
@@ -2140,31 +2143,11 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
                 <button onClick={() => dismissDelay(notice.missionId)} style={{ background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 9px', fontSize: 9, fontWeight: 900, cursor: 'pointer' }}>Vu</button>
               </div>
             ))}
-            <div className="dsp-span" style={{ position: 'relative' }} data-demo-tour="structure-publish">
+            <div className="dsp-span" data-demo-tour="structure-publish">
               <Button onClick={() => setShowPub(true)}>Publier une mission</Button>
-              <button
-                type="button"
-                aria-label="Deux missions disponibles en mode démo"
-                onClick={() => notif('Vous pouvez créer deux missions en mode démo.')}
-                style={{
-                  position: 'absolute',
-                  top: -8,
-                  right: -7,
-                  minWidth: 27,
-                  height: 27,
-                  padding: '0 6px',
-                  borderRadius: 14,
-                  border: '2px solid #080a13',
-                  background: '#ef4444',
-                  color: '#fff',
-                  fontSize: 10,
-                  fontWeight: 900,
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px #0008',
-                }}
-              >
-                +2
-              </button>
+              <div style={{ color: T.mu, fontSize: 9.5, textAlign: 'center', marginTop: 7 }}>
+                Plusieurs missions possibles · 3 jours maximum par mission
+              </div>
             </div>
             {missions[0] && <div className="dsp-span"><Button tone="green" onClick={() => setQrMission(missions[0] ?? null)}>Tester le QR + PIN</Button></div>}
             <div className="dsp-span" style={{ color: T.mu, fontSize: 9.5, textAlign: 'center' }}>Touche une mission ou utilise •••. Appui long ou swipe gauche disponibles sur mobile.</div>
@@ -2633,12 +2616,20 @@ export function DemoExperience() {
     }
   });
   const [expired, setExpired] = useState(() => readNumber(DEMO_KEY) >= DEMO_SECONDS);
+  const [temporarilyFree, setTemporarilyFree] = useState(() => Date.now() < DEMO_OPEN_ACCESS_UNTIL);
   const [demoVersion, setDemoVersion] = useState(0);
   const [founderByCode, setFounderByCode] = useState(() => hasDemoFounderAccess() || hasRememberedFounderAccess(session?.user.id));
   const founder = founderByCode;
   const displayedFounder = embedded ? false : founder;
-  const frozen = Boolean(role && !founder && !guidedTour && expired);
+  const frozen = Boolean(role && !founder && !guidedTour && !temporarilyFree && expired);
   const handleExpire = useCallback(() => setExpired(true), []);
+
+  useEffect(() => {
+    if (!temporarilyFree) return undefined;
+    const remaining = Math.max(0, DEMO_OPEN_ACCESS_UNTIL - Date.now());
+    const timeout = window.setTimeout(() => setTemporarilyFree(false), remaining);
+    return () => window.clearTimeout(timeout);
+  }, [temporarilyFree]);
 
   useEffect(() => {
     let alive = true;
@@ -2724,7 +2715,7 @@ export function DemoExperience() {
             <Link to="/acces" style={{ textDecoration: 'none', display: 'block', marginBottom: 16 }}><Button tone="ghost">Créer un compte</Button></Link>
             {founder ? (
               <button onClick={resetDemo} style={{ background: 'none', color: T.green, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 900 }}>Accès fondateur actif · réinitialiser</button>
-            ) : <DemoChoiceTimeLeft />}
+            ) : temporarilyFree ? null : <DemoChoiceTimeLeft />}
           </div>
         </div>
       </DemoShell>
@@ -2733,8 +2724,8 @@ export function DemoExperience() {
 
   return (
     <>
-      <DemoUsageTicker running={Boolean(role) && !founder && !expired && !guidedTour} onExpire={handleExpire} />
-      {!founder && !embedded && <DemoPreviewBadge />}
+      <DemoUsageTicker running={Boolean(role) && !founder && !expired && !guidedTour && !temporarilyFree} onExpire={handleExpire} />
+      {!founder && !embedded && !temporarilyFree && <DemoPreviewBadge />}
       {!embedded && founder && (
         <button onClick={resetDemo} style={{ position: 'fixed', top: 18, right: 18, zIndex: 450, background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 18, padding: '7px 13px', fontFamily: FONT, fontSize: 12, fontWeight: 900, cursor: 'pointer' }}>
           Accès fondateur
