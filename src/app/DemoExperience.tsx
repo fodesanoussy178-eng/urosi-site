@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Logo } from '@/components/ui/Logo';
-import { Stars } from '@/components/ui/Stars';
 import { Fld } from '@/components/ui/Fld';
 import { QRBadge } from '@/components/ui/QRBadge';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -947,9 +946,8 @@ function MissionCard({ mission, onAccept, onOpen }: { mission: DemoMission; onAc
   );
 }
 
-// Détail rapide ouvert d'un simple appui sur la carte : l'essentiel de la
-// mission, sans quitter le flux. « Voir les détails » ouvre la fiche
-// complète de la structure.
+// Détail rapide ouvert d'un simple appui sur la carte : l'essentiel reste
+// immédiatement visible, les informations secondaires sont repliées.
 function DemoMissionSheet({ mission, onClose, onAccept, onStructure }: { mission: DemoMission; onClose: () => void; onAccept: () => void; onStructure: () => void }) {
   return (
     <div role="dialog" aria-modal="true" aria-label={`Détail de la mission ${mission.title}`} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 190 }} onClick={onClose}>
@@ -963,32 +961,30 @@ function DemoMissionSheet({ mission, onClose, onAccept, onStructure }: { mission
           <button aria-label="Fermer le détail" onClick={onClose} style={{ background: T.row, border: 'none', borderRadius: 8, width: 28, height: 28, cursor: 'pointer', color: T.sub, fontSize: 14 }}>×</button>
         </div>
         <div style={{ color: T.text, fontSize: 17, fontWeight: 900, margin: '6px 0 3px' }}>{mission.title}</div>
-        <section aria-label="Détails de la structure" style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 12, margin: '10px 0' }}>
-          <div style={{ color: T.text, fontSize: 12, fontWeight: 900 }}>{mission.structure}</div>
-          <div style={{ color: T.amber, fontSize: 10.5, fontWeight: 900, marginTop: 4 }}>⭐ {mission.rating.toFixed(1).replace('.', ',')}{mission.reviews ? ` · ${mission.reviews} avis` : ''}</div>
-          <div style={{ color: T.green, fontSize: 9.5, fontWeight: 900, marginTop: 6 }}>✓ Structure vérifiée</div>
+        <section aria-label="Détails de la structure" style={{ borderTop: `1px solid ${T.cb}`, borderBottom: `1px solid ${T.cb}`, padding: '11px 0', margin: '10px 0 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: T.text, fontSize: 12, fontWeight: 900 }}>{mission.structure}</div>
+            <div style={{ color: T.amber, fontSize: 10.5, fontWeight: 900, marginTop: 4 }}>⭐ {mission.rating.toFixed(1).replace('.', ',')}{mission.reviews ? ` · ${mission.reviews} avis` : ''} <span style={{ color: T.green }}>· ✓ Vérifiée</span></div>
+          </div>
+          <button type="button" onClick={() => { onClose(); onStructure(); }} style={{ border: 0, background: 'transparent', color: T.sub, fontSize: 10.5, fontWeight: 900, cursor: 'pointer', padding: '6px 0' }}>Voir le profil</button>
         </section>
-        <section aria-label="Date, horaires et durée" style={{ color: T.mu, fontSize: 11, lineHeight: 1.7, marginBottom: 10 }}>
-          🕐 {mission.when}<br />Durée : {mission.duration}
+        <section aria-label="Date, horaires et durée" style={{ color: T.sub, fontSize: 11.5, lineHeight: 1.75, marginBottom: 2 }}>
+          🕐 {mission.when}<br />⌛ {mission.duration}
         </section>
-        <section aria-label="Adresse complète" style={{ color: T.sub, fontSize: 11, lineHeight: 1.6, marginBottom: 10 }}>
+        <section aria-label="Adresse complète" style={{ color: T.sub, fontSize: 11.5, lineHeight: 1.6, marginBottom: 14 }}>
           📍 {mission.address || `${mission.city} · adresse communiquée par la structure`}
         </section>
-        <section aria-label="Description de la mission" style={{ color: T.sub, fontSize: 12, lineHeight: 1.6, background: T.row, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 12, marginBottom: 10 }}>{mission.desc}</section>
-        <section aria-label="Conditions de la mission" style={{ color: T.sub, fontSize: 11, lineHeight: 1.7, marginBottom: 10 }}>
-          <strong style={{ color: T.text }}>Conditions</strong><br />
-          Type : {mission.missionType || (mission.solid ? 'Mission solidaire' : 'Mission rémunérée')}<br />
-          Tenue : {mission.dressCode || 'Aucune tenue particulière indiquée'}<br />
-          Équipement : {mission.equipment || 'Fourni ou précisé par la structure'}
-        </section>
-        <section aria-label="Informations pratiques" style={{ color: T.sub, fontSize: 11, lineHeight: 1.6, marginBottom: 14 }}>
-          <strong style={{ color: T.text }}>Informations pratiques</strong><br />
-          {mission.instructions || `Lieu à ${mission.distance}${mission.places && mission.places > 1 ? ` · ${mission.places} places` : ''}`}
-        </section>
-        <div style={{ display: 'grid', gap: 8 }}>
+        <div style={{ marginBottom: 12 }}>
           <Button onClick={() => { onClose(); onAccept(); }} tone={mission.solid ? 'green' : 'dark'}>{mission.solid ? 'Participer' : 'Accepter'}</Button>
-          <Button tone="light" onClick={() => { onClose(); onStructure(); }}>Voir le profil</Button>
         </div>
+        <details style={{ borderTop: `1px solid ${T.cb}`, paddingTop: 12 }}>
+          <summary style={{ color: T.text, fontSize: 12, fontWeight: 900, cursor: 'pointer', padding: '3px 0 10px' }}>Voir les détails</summary>
+          <div style={{ display: 'grid', gap: 13, color: T.sub, fontSize: 11, lineHeight: 1.65, paddingBottom: 4 }}>
+            <section aria-label="Description de la mission"><strong style={{ color: T.text }}>Description</strong><br />{mission.desc}</section>
+            <section aria-label="Conditions de la mission"><strong style={{ color: T.text }}>Conditions</strong><br />Type : {mission.missionType || (mission.solid ? 'Mission solidaire' : 'Mission rémunérée')}<br />Tenue : {mission.dressCode || 'Aucune tenue particulière indiquée'}<br />Équipement : {mission.equipment || 'Fourni ou précisé par la structure'}</section>
+            <section aria-label="Informations pratiques"><strong style={{ color: T.text }}>Informations pratiques</strong><br />{mission.instructions || `Lieu à ${mission.distance}${mission.places && mission.places > 1 ? ` · ${mission.places} places` : ''}`}</section>
+          </div>
+        </details>
       </div>
     </div>
   );
@@ -1032,10 +1028,10 @@ function StructureReviewList({ initialCount, total }: { initialCount: 2 | 3; tot
     <>
       <div style={{ display: 'grid', gap: 9 }}>
         {visibleReviews.map(([title, body]) => (
-          <article key={title} style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 13, padding: 13 }}>
+          <article key={title} style={{ borderTop: `1px solid ${T.cb}`, padding: '12px 0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
               <strong style={{ color: T.text, fontSize: 11 }}>{title}</strong>
-              <Stars n={5} size={10} />
+              <span style={{ color: T.amber, fontSize: 10, fontWeight: 900 }}>⭐ 5,0</span>
             </div>
             <p style={{ color: T.sub, fontSize: 11, lineHeight: 1.5, margin: '7px 0 8px' }}>{body}</p>
             <span style={{ color: T.mu, fontSize: 9, fontWeight: 800 }}>Avis anonyme vérifié</span>
@@ -1073,34 +1069,18 @@ function StructureProfile({ name, onBack }: { name: string; onBack: () => void }
               <span style={{ color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 12, padding: '2px 8px', fontSize: 9, fontWeight: 900 }}>{profile.verified}</span>
             </div>
             <div style={{ display: 'flex', gap: 7, alignItems: 'center', marginTop: 5 }}>
-              <Stars n={isAsso ? 4.8 : 4.7} size={12} />
-              <span style={{ color: T.text, fontSize: 12, fontWeight: 900 }}>{isAsso ? '4,8' : '4,7'}</span>
+              <span style={{ color: T.amber, fontSize: 12, fontWeight: 900 }}>⭐ {isAsso ? '4,8' : '4,7'}</span>
               <span style={{ color: T.mu, fontSize: 11 }}>(10 avis)</span>
             </div>
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, background: T.card, border: `1px solid ${T.greenBorder}`, borderRadius: 14, padding: '12px 14px', marginBottom: 18 }}>
-          <div style={{ borderRight: `1px solid ${T.cb}`, paddingRight: 10 }}>
-            <div style={{ color: T.text, fontSize: 16, fontWeight: 900 }}>12</div>
-            <div style={{ color: T.sub, fontSize: 9.5, marginTop: 2 }}>missions réalisées</div>
-          </div>
-          <div style={{ paddingLeft: 12 }}>
-            <div style={{ color: T.green, fontSize: 16, fontWeight: 900 }}>94 %</div>
-            <div style={{ color: T.sub, fontSize: 9.5, marginTop: 2 }}>des missions réalisées</div>
-          </div>
-        </div>
-        <div style={{ color: T.sub, fontSize: 12, marginBottom: 10 }}>📍 Rue Nationale, 59000 Lille</div>
-        <div style={{ color: T.sub, fontSize: 12, marginBottom: 18 }}>Ⓜ Métro Gambetta · 300 m</div>
+        <div style={{ color: T.sub, fontSize: 12, marginBottom: 14 }}>📍 Rue Nationale, 59000 Lille</div>
+        <div style={{ marginBottom: 18 }}><Button onClick={onBack}>Voir les missions disponibles</Button></div>
         <StructurePlacePhotos photos={placePhotos} />
-        <section>
-          <div style={{ color: T.text, fontSize: 14, fontWeight: 900, marginBottom: 6 }}>À propos</div>
-          <div style={{ color: T.sub, fontSize: 12, lineHeight: 1.6 }}>
-            {isAsso ? "Association d'aide alimentaire. Missions bénévoles pour préparer et distribuer des colis aux familles." : 'Fast-food indépendant à Lille. Missions courtes, équipe jeune et process clair.'}
-          </div>
-        </section>
-        <details style={{ borderTop: `1px solid ${T.cb}`, borderBottom: `1px solid ${T.cb}`, marginTop: 18, padding: '13px 0' }}>
-          <summary style={{ color: T.text, fontSize: 12, fontWeight: 900, cursor: 'pointer' }}>Informations de la structure</summary>
+        <details style={{ borderTop: `1px solid ${T.cb}`, borderBottom: `1px solid ${T.cb}`, marginTop: 4, padding: '13px 0' }}>
+          <summary style={{ color: T.text, fontSize: 12, fontWeight: 900, cursor: 'pointer' }}>À propos de la structure</summary>
           <div style={{ display: 'grid', gap: 8, marginTop: 12, color: T.sub, fontSize: 11 }}>
+            <span>{isAsso ? "Association d'aide alimentaire. Missions bénévoles pour préparer et distribuer des colis aux familles." : 'Fast-food indépendant à Lille. Missions courtes, équipe jeune et process clair.'}</span>
             <span>{profile.type}</span>
             <span>SIRET {isAsso ? '421 987 654 00021' : '852 123 456 00018'}</span>
             <span>{isAsso ? 'Créneaux solidaires en semaine' : 'Ouvert 11h-23h'}</span>
@@ -1110,9 +1090,6 @@ function StructureProfile({ name, onBack }: { name: string; onBack: () => void }
           <div style={{ color: T.text, fontSize: 14, fontWeight: 900, marginBottom: 10 }}>Avis</div>
           <StructureReviewList initialCount={isAsso ? 3 : 2} total={10} />
         </section>
-        <div style={{ marginTop: 18 }}>
-          <Button onClick={onBack}>Voir les missions disponibles</Button>
-        </div>
       </div>
     </div>
   );
@@ -1728,13 +1705,12 @@ function DemoStructureMissionCard({ mission, index, candidateCount, completed, o
         onPointerCancel={clearHold}
         onPointerLeave={clearHold}
       >
-        {index === 0 && <div style={{ fontSize: 9, fontWeight: 800, color: T.cyan, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6, marginTop: 4 }}>★ Dernière mission publiée</div>}
-        <div style={{ background: T.card, border: `1px solid ${index === 0 ? '#0e7490' : T.cb}`, borderRadius: 12, padding: '13px 15px' }}>
+        {index === 0 && <div style={{ fontSize: 9, fontWeight: 800, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6, marginTop: 4 }}>Prochaine mission</div>}
+        <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '13px 15px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
             <button type="button" onClick={() => { if (!held.current) onOpen(); }} style={{ flex: 1, minWidth: 0, padding: 0, border: 'none', background: 'none', color: 'inherit', textAlign: 'left', cursor: 'pointer' }}>
               <div style={{ color: T.text, fontSize: 14, fontWeight: 900 }}>{mission.title}</div>
               <div style={{ color: T.mu, fontSize: 10, marginTop: 4 }}>{mission.structure} · {mission.city} · {mission.when} · {mission.duration}</div>
-              <div style={{ color: T.sub, fontSize: 10.5, marginTop: 5, lineHeight: 1.45 }}>{mission.desc}</div>
             </button>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
               <button aria-label={`Actions pour ${mission.title}`} onClick={() => onOpen()} style={{ border: 'none', background: 'none', color: T.mu, fontSize: 20, fontWeight: 900, cursor: 'pointer', padding: '0 0 4px 12px' }}>•••</button>
@@ -1742,7 +1718,7 @@ function DemoStructureMissionCard({ mission, index, candidateCount, completed, o
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12 }}>
-            <span style={{ color: mission.status === 'draft' ? T.amber : completed ? T.cyan : T.green, background: mission.status === 'draft' ? T.amberBg : completed ? '#22d3ee15' : T.greenBg, borderRadius: 10, padding: '2px 8px', fontSize: 9, fontWeight: 900 }}>{mission.status === 'draft' ? 'Brouillon' : completed ? 'Terminée' : candidateCount > 0 ? 'Candidatures reçues' : 'Active'}</span>
+            <span style={{ color: mission.status === 'draft' ? T.amber : completed ? T.cyan : T.green, fontSize: 9, fontWeight: 900 }}>{mission.status === 'draft' ? 'Brouillon' : completed ? 'Terminée' : candidateCount > 0 ? 'Candidatures reçues' : 'Active'}</span>
             <span style={{ color: candidateCount > 0 ? T.cyan : T.mu, fontSize: 10 }}>{candidateCount > 0 ? `${candidateCount} candidat${candidateCount > 1 ? 's' : ''}` : 'Aucun candidat'}</span>
           </div>
         </div>
@@ -1908,7 +1884,6 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
   const [showPub, setShowPub] = useState(false);
   const [managedMission, setManagedMission] = useState<{ mission: DemoMission; mode?: MissionManageMode } | null>(null);
   const [historyExpanded, setHistoryExpanded] = useState(false);
-  const [showStatsIntro, setShowStatsIntro] = useState(true);
   const [showStructureReviews, setShowStructureReviews] = useState(false);
   const [qrMission, setQrMission] = useState<DemoMission | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -1928,13 +1903,6 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
     return () => window.removeEventListener('storage', refresh);
   }, [kind]);
 
-  useEffect(() => {
-    if (!kind) return;
-    setShowStatsIntro(true);
-    const timer = window.setTimeout(() => setShowStatsIntro(false), 3000);
-    return () => window.clearTimeout(timer);
-  }, [kind]);
-
   function notif(m: string) {
     setToast(m);
     clearTimeout(tr.current);
@@ -1943,7 +1911,6 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
 
   function choose(next: StructureKind) {
     setKind(next);
-    setShowStatsIntro(true);
     setMissions(structureMissions(next));
     setCandidates(structureCandidates(next));
     setTab('missions');
@@ -2090,7 +2057,7 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
       <TopBar title="Espace structure" badge={displayedStructureName} onBack={onBack} founder={founder} />
       {toast && <div style={{ margin: '10px 14px 0', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 10, padding: '8px 12px', color: T.sub, fontSize: 11 }}>{toast}</div>}
       <div style={{ padding: 16, paddingBottom: 92, minHeight: 620 }}>
-        <div style={{ background: T.card, border: `1px solid ${T.greenBorder}`, borderRadius: 16, padding: 14, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ padding: '2px 0 13px', marginBottom: 10, borderBottom: `1px solid ${T.cb}`, display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: 14, background: kind === 'asso' ? '#14532d' : '#075985', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900 }}>{initials(displayedStructureName)}</div>
           <div style={{ flex: 1 }}>
             <div style={{ color: T.text, fontSize: 16, lineHeight: 1.2, fontWeight: 900, overflowWrap: 'anywhere' }}>{displayedStructureName}</div>
@@ -2104,17 +2071,12 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
               onClick={() => setShowStructureReviews(true)}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 7, padding: 0, border: 0, background: 'transparent', color: T.text, cursor: 'pointer', fontSize: 10, fontWeight: 900 }}
             >
-              <Stars n={kind === 'pme' ? 4.8 : 5} size={10} />
-              <span>{kind === 'pme' ? '4,8' : '5,0'}</span>
+              <span style={{ color: T.amber }}>⭐ {kind === 'pme' ? '4,8' : '5,0'}</span>
               <span style={{ color: T.mu, fontWeight: 700 }}>· {kind === 'pme' ? 21 : 15} avis ›</span>
             </button>
           </div>
           <button onClick={() => setKind(null)} style={{ background: T.row, color: T.mu, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 10px', fontSize: 10, fontWeight: 800, cursor: 'pointer' }}>Changer</button>
         </div>
-        <div style={{ color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 12, padding: '10px 12px', fontSize: 10.5, fontWeight: 900, marginBottom: 12 }}>
-          ✓ Structure vérifiée · identité et SIRET confirmés (démo)
-        </div>
-        {showStatsIntro && tab !== 'historique' && <StructureStats stats={seed.stats} live />}
         <BottomTabs
           tabs={[
             ['missions', `Missions ${missions.length}`],
@@ -2160,13 +2122,14 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
                 Plusieurs missions possibles · 3 jours maximum par mission
               </div>
             </div>
-            {missions[0] && <div className="dsp-span"><Button tone="green" onClick={() => setQrMission(missions[0] ?? null)}>Tester le QR + PIN</Button></div>}
-            <div className="dsp-span" style={{ color: T.mu, fontSize: 9.5, textAlign: 'center' }}>Touche une mission ou utilise •••. Appui long ou swipe gauche disponibles sur mobile.</div>
+            {pending.length > 0 && <button className="dsp-span" type="button" onClick={() => changeStructureTab('candidats')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', background: 'transparent', color: T.text, border: 0, borderBottom: `1px solid ${T.cb}`, padding: '10px 2px', fontSize: 11.5, fontWeight: 900, cursor: 'pointer' }}><span>Candidatures à traiter</span><span style={{ color: T.amber }}>{pending.length} urgente{pending.length > 1 ? 's' : ''} →</span></button>}
+            <div className="dsp-span" style={{ color: T.text, fontSize: 13, fontWeight: 900, marginTop: 4 }}>Missions en cours</div>
             {missions.map((m, i) => {
               const allMissionCandidates = candidates.filter((candidate) => candidate.missionId === m.id);
               const completed = demoState.completedMissionIds.includes(m.id);
               return <DemoStructureMissionCard key={m.id} mission={m} index={i} candidateCount={allMissionCandidates.length} completed={completed} onOpen={(mode) => setManagedMission({ mission: m, mode })} onRepublish={() => duplicateMission(m, completed)} />;
             })}
+            {missions[0] && <div className="dsp-span" style={{ borderTop: `1px solid ${T.cb}`, paddingTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ color: T.sub, fontSize: 11, fontWeight: 800 }}>QR + PIN · {missions[0].title}</span><button type="button" aria-label="Ouvrir QR + PIN" onClick={() => setQrMission(missions[0] ?? null)} style={{ border: 0, background: T.row, color: T.sub, borderRadius: 8, padding: '7px 10px', fontSize: 10, fontWeight: 900, cursor: 'pointer' }}>Ouvrir</button></div>}
           </div>
         )}
         {tab === 'historique' && (
@@ -2224,8 +2187,8 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
             <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 16, padding: 15 }}>
               <div style={{ color: T.text, fontSize: 13, fontWeight: 900 }}>Avis anonymes</div>
               <div style={{ color: T.mu, fontSize: 9, margin: '3px 0 9px' }}>Publication le lundi par lots de 3 avis · sinon report · aucun auteur affiché</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}><Stars n={kind === 'pme' ? 4.8 : 5} size={13} /><strong>{kind === 'pme' ? '4,8' : '5,0'}</strong><span style={{ color: T.mu, fontSize: 10 }}>({kind === 'pme' ? 21 : 15} avis)</span></div>
-              <div style={{ color: T.sub, fontSize: 10.5, borderTop: `1px solid ${T.cb}`, marginTop: 9, paddingTop: 9 }}>★★★★★ · « Équipe accueillante et consignes claires. »</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}><strong>⭐ {kind === 'pme' ? '4,8' : '5,0'}</strong><span style={{ color: T.mu, fontSize: 10 }}>({kind === 'pme' ? 21 : 15} avis)</span></div>
+              <div style={{ color: T.sub, fontSize: 10.5, borderTop: `1px solid ${T.cb}`, marginTop: 9, paddingTop: 9 }}>« Équipe accueillante et consignes claires. »</div>
             </div>
           </div>
         )}
@@ -2246,7 +2209,7 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
                 <div style={{ width: 42, height: 42, borderRadius: 13, background: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>{c.name.charAt(0)}</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ color: T.text, fontSize: 14, fontWeight: 900 }}>{c.name}</div>
-                  <div style={{ display: 'flex', gap: 7, alignItems: 'center', marginTop: 3 }}><Stars n={c.note} size={12} /><span style={{ color: T.mu, fontSize: 10 }}>{c.note}/5</span></div>
+                  <div style={{ color: T.amber, fontSize: 10.5, fontWeight: 900, marginTop: 3 }}>⭐ {c.note.toFixed(1).replace('.', ',')}</div>
                 </div>
                 <div style={{ color: T.amber, fontSize: 22, fontWeight: 900 }}>{c.here}×<div style={{ color: T.mu, fontSize: 8, fontWeight: 700 }}>missions ici</div></div>
               </div>
@@ -2352,7 +2315,7 @@ function CandidateCard({
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ color: T.text, fontSize: 14, fontWeight: 900 }}>{candidate.name} {candidate.here >= 2 && <span style={{ color: T.amber, fontSize: 9 }}>★ Habitué · {candidate.here}×</span>}</div>
           <div style={{ color: T.mu, fontSize: 10, marginTop: 3 }}>{missionTitle} · {candidate.city}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}><Stars n={candidate.note} size={11} /><span style={{ color: T.mu, fontSize: 10 }}>{candidate.note} · {candidate.history.length} missions</span></div>
+          <div style={{ color: T.amber, fontSize: 10.5, fontWeight: 900, marginTop: 4 }}>⭐ {candidate.note.toFixed(1).replace('.', ',')} <span style={{ color: T.mu, fontWeight: 700 }}>· {candidate.history.length} missions</span></div>
         </div>
         {candidate.status !== 'pending' && <span style={{ color: candidate.status === 'accepted' ? T.green : T.red, fontSize: 10, fontWeight: 900 }}>{candidate.status === 'accepted' ? 'accepté' : 'refusé'}</span>}
       </button>

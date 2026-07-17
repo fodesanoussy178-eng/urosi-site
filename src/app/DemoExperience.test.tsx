@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { DemoExperience } from './DemoExperience';
@@ -112,22 +112,21 @@ describe('DemoExperience founder scan', () => {
     expect(screen.getByRole('button', { name: 'Restaurer' })).toBeInTheDocument();
   });
 
-  it('shows the structure activity statistics at a glance', () => {
+  it('keeps the structure dashboard focused on immediate actions', () => {
     renderStructure();
 
-    expect(screen.getByText('✓ Structure vérifiée · identité et SIRET confirmés (démo)')).toBeInTheDocument();
-    expect(screen.getByText('12')).toBeInTheDocument();
-    expect(screen.getByText('missions publiées')).toBeInTheDocument();
-    expect(screen.getByText('94 %')).toBeInTheDocument();
-    expect(screen.getByText('★ 4,8')).toBeInTheDocument();
-    expect(screen.getByText('21 avis')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Publier une mission' })).toBeInTheDocument();
+    expect(screen.getByText('Candidatures à traiter')).toBeInTheDocument();
+    expect(screen.getByText('Missions en cours')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ouvrir QR + PIN' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Statistiques de la structure')).not.toBeInTheDocument();
   });
 
   it('offers a QR and dynamic PIN simulation from the structure demo', async () => {
     const user = userEvent.setup();
     renderStructure();
 
-    await user.click(screen.getByRole('button', { name: 'Tester le QR + PIN' }));
+    await user.click(screen.getByRole('button', { name: 'Ouvrir QR + PIN' }));
 
     expect(screen.getByRole('dialog', { name: 'Simulation QR et PIN' })).toBeInTheDocument();
     expect(screen.getByText('482731')).toBeInTheDocument();
@@ -235,27 +234,23 @@ describe('DemoExperience founder scan', () => {
     expect(screen.getByText('Terminer la mission')).toBeInTheDocument();
   });
 
-  it('replaces internal demo tools with a compact two-mission notice', async () => {
-    const user = userEvent.setup();
+  it('keeps internal demo tools out of the structure dashboard', () => {
     renderStructure();
 
     expect(screen.queryByText('MODE DÉMO')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Peupler le flux' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Deux missions disponibles en mode démo' }));
-    expect(screen.getByText('Vous pouvez créer deux missions en mode démo.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Publier une mission' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Actions pour Renfort service midi' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Actions pour Préparation mariage' })).toBeInTheDocument();
   });
 
-  it('moves the structure statistics to history after three seconds', () => {
-    vi.useFakeTimers();
+  it('keeps the structure statistics in history', () => {
     renderStructure();
 
-    expect(screen.getByLabelText('Statistiques de la structure')).toBeInTheDocument();
-    act(() => vi.advanceTimersByTime(3000));
     expect(screen.queryByLabelText('Statistiques de la structure')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Historique' }));
     expect(screen.getByLabelText('Statistiques de la structure')).toBeInTheDocument();
-    vi.useRealTimers();
   });
 
   it('uses varied structures, jobs and ratings in the worker feed', () => {
@@ -323,7 +318,7 @@ describe('DemoExperience founder scan', () => {
     await user.click(screen.getByRole('button', { name: 'Voir le profil' }));
     expect(screen.queryByText('Photos du lieu')).not.toBeInTheDocument();
     expect(screen.queryByText(/Voir toutes les photos/)).not.toBeInTheDocument();
-    expect(screen.getByText('À propos')).toBeInTheDocument();
+    expect(screen.getByText('À propos de la structure')).toBeInTheDocument();
   });
 
   it('keeps the structure profile concise and reveals reviews progressively', async () => {
@@ -334,10 +329,8 @@ describe('DemoExperience founder scan', () => {
     await user.click(screen.getByRole('button', { name: 'Voir le profil' }));
 
     expect(screen.getByLabelText('En-tête du profil structure')).toHaveStyle({ height: '58px' });
-    expect(screen.getByText('12')).toBeInTheDocument();
-    expect(screen.getByText('missions réalisées')).toBeInTheDocument();
-    expect(screen.getByText('94 %')).toBeInTheDocument();
-    expect(screen.getByText('des missions réalisées')).toBeInTheDocument();
+    expect(screen.queryByText('missions réalisées')).not.toBeInTheDocument();
+    expect(screen.queryByText('94 %')).not.toBeInTheDocument();
     expect(screen.getByText('(10 avis)')).toBeInTheDocument();
     expect(screen.queryByText('missions publiées')).not.toBeInTheDocument();
     expect(screen.getAllByText('Avis anonyme vérifié')).toHaveLength(2);

@@ -151,7 +151,6 @@ export function StructureApp() {
   const [chatFor, setChatFor] = useState<CandWithMission | null>(null);
   const [docKey, setDocKey] = useState<DocKey | null>(null);
   const [subBusy, setSubBusy] = useState(false);
-  const [showStatsIntro, setShowStatsIntro] = useState(true);
   const [vf, setVf] = useState({ nom: '', siret: '' });
   const [founderAccess, setFounderAccess] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -185,8 +184,6 @@ export function StructureApp() {
     setMis(missions);
     await loadMissionData(missions);
   }
-
-  const structureId = structure?.id;
 
   useEffect(() => {
     (async () => {
@@ -231,13 +228,6 @@ export function StructureApp() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
-
-  useEffect(() => {
-    if (!structureId) return;
-    setShowStatsIntro(true);
-    const timer = window.setTimeout(() => setShowStatsIntro(false), 3000);
-    return () => window.clearTimeout(timer);
-  }, [structureId]);
 
   async function createFromForm() {
     if (!session) return;
@@ -405,7 +395,7 @@ export function StructureApp() {
         ) : (
           <>
             {/* Bandeau structure */}
-            <div style={{ background: T.card, border: `1px solid ${T.greenBorder}`, borderRadius: 12, padding: '12px 15px', marginBottom: 12 }}>
+            <div style={{ padding: '4px 2px 12px', marginBottom: 8, borderBottom: `1px solid ${T.cb}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 34, height: 34, borderRadius: 10, background: 'hsl(200 58% 46%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 14, flexShrink: 0 }}>
                   {structure.name.charAt(0).toUpperCase()}
@@ -419,20 +409,11 @@ export function StructureApp() {
                   </div>
                 </div>
               </div>
-              <AboutEditor structure={structure} onSaved={(about) => setStructure((s) => (s ? { ...s, about } : s))} notif={notif} />
+              <details style={{ marginTop: 8 }}>
+                <summary style={{ color: T.mu, fontSize: 10, fontWeight: 800, cursor: 'pointer' }}>Profil public</summary>
+                <AboutEditor structure={structure} onSaved={(about) => setStructure((s) => (s ? { ...s, about } : s))} notif={notif} />
+              </details>
             </div>
-
-            {structureVerified && (
-              <div style={{ background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 10, padding: '9px 12px', marginBottom: 12, color: T.green, fontSize: 10.5, fontWeight: 900 }}>
-                ✓ Structure vérifiée · identité et SIRET confirmés
-              </div>
-            )}
-
-            {showStatsIntro && tab !== 'historique' && (
-              <div style={{ marginBottom: 12 }}>
-                <StructureStatsSummary structureId={structure.id} acceptedCount={acceptedDecisionCount} decidedCount={decidedCount} />
-              </div>
-            )}
 
             {/* Abonnement requis pour publier */}
             {!structure.subscription_active && (
@@ -479,16 +460,22 @@ export function StructureApp() {
                     Vérification SIRET requise avant publication.
                   </div>
                 )}
-                <button className="rsp-span" onClick={() => structureVerified && setShowPub(true)} disabled={!structureVerified} style={{ width: '100%', background: structureVerified ? T.grad : T.row, color: structureVerified ? '#fff' : T.mu, border: 'none', borderRadius: 11, padding: '12px 0', fontSize: 13, fontWeight: 900, cursor: structureVerified ? 'pointer' : 'not-allowed', marginBottom: 2 }}>
+                <button className="rsp-span" onClick={() => structureVerified && setShowPub(true)} disabled={!structureVerified} style={{ width: '100%', background: structureVerified ? '#fff' : T.row, color: structureVerified ? '#000' : T.mu, border: 'none', borderRadius: 11, padding: '13px 0', fontSize: 13, fontWeight: 900, cursor: structureVerified ? 'pointer' : 'not-allowed', marginBottom: 2 }}>
                   {structureVerified ? '＋ Publier une mission' : 'Structure à vérifier'}
                 </button>
+                {pending.length > 0 && (
+                  <button className="rsp-span" type="button" onClick={() => { setCandMis(null); setTab('candidats'); }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', background: 'transparent', color: T.text, border: 0, borderBottom: `1px solid ${T.cb}`, padding: '10px 2px', fontSize: 11.5, fontWeight: 900, cursor: 'pointer' }}>
+                    <span>Candidatures à traiter</span><span style={{ color: T.amber }}>{pending.length} urgente{pending.length > 1 ? 's' : ''} →</span>
+                  </button>
+                )}
+                {mis.length > 0 && <div className="rsp-span" style={{ color: T.text, fontSize: 13, fontWeight: 900, marginTop: 6 }}>Missions en cours</div>}
                 {mis.length === 0 && <div className="rsp-span" style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 20, textAlign: 'center', fontSize: 11, color: T.mu }}>Aucune mission publiée pour l'instant.</div>}
                 {mis.map((m, i) => {
                   const cc = candCount(m.id);
                   return (
                     <div key={m.id}>
-                      {i === 0 && <div style={{ fontSize: 9, fontWeight: 800, color: T.cyan, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6, marginTop: 4 }}>★ Dernière mission publiée</div>}
-                      <div style={{ background: T.card, border: `1px solid ${i === 0 ? '#0e7490' : T.cb}`, borderRadius: 12, padding: '13px 15px' }}>
+                      {i === 0 && <div style={{ fontSize: 9, fontWeight: 800, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6, marginTop: 4 }}>Prochaine mission</div>}
+                      <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '13px 15px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 7 }}>
                           <div style={{ minWidth: 0, flex: 1 }}>
                             <div style={{ fontSize: 13, fontWeight: 800, color: T.text, marginBottom: 2 }}>
@@ -499,17 +486,13 @@ export function StructureApp() {
                               📍 {m.city || 'MEL'} · {m.scheduled_date}
                               {m.start_time ? ` · ${m.start_time.slice(0, 5)}` : ''} · {formatHours(m.duration_minutes)}
                             </div>
-                            {m.detail && <div style={{ fontSize: 10, color: T.sub, marginTop: 4, lineHeight: 1.45 }}>{m.detail}</div>}
                           </div>
                           <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 10 }}>
                             <div style={{ fontSize: 16, fontWeight: 900, color: m.is_solidaire ? T.green : T.text }}>{m.is_solidaire ? 'Solidaire' : euros(m.worker_rate_cents)}</div>
-                            {!m.is_solidaire && m.base_rate_cents != null && m.worker_rate_cents > m.base_rate_cents && (
-                              <div style={{ fontSize: 9, color: T.green, fontWeight: 700 }}>⚡ base {euros(m.base_rate_cents)}</div>
-                            )}
                           </div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 9, fontWeight: 700, color: m.status === 'open' ? T.green : T.mu, background: m.status === 'open' ? T.greenBg : T.row, borderRadius: 8, padding: '2px 8px' }}>
+                          <span style={{ fontSize: 9, fontWeight: 700, color: m.status === 'open' ? T.green : T.mu }}>
                             {m.status === 'open' ? 'Active' : m.status === 'closed' ? 'Clôturée' : 'Annulée'}
                           </span>
                           {cc > 0 ? (
