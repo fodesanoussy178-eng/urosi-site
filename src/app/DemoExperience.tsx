@@ -886,10 +886,25 @@ function StructureStats({ stats, live = false }: { stats: [string, string][]; li
   );
 }
 
-function DemoShell({ children, embedded = false }: { children: ReactNode; embedded?: boolean }) {
+function DemoShell({ children, embedded = false, wide = false }: { children: ReactNode; embedded?: boolean; wide?: boolean }) {
   return (
-    <div style={{ minHeight: '100vh', background: embedded ? T.bg : '#000', color: T.text, fontFamily: FONT, display: 'flex', justifyContent: 'center', padding: embedded ? 0 : '22px 14px' }}>
+    <div className={wide ? 'demo-wide-shell' : undefined} style={{ minHeight: '100vh', background: embedded ? T.bg : '#000', color: T.text, fontFamily: FONT, display: 'flex', justifyContent: 'center', padding: embedded ? 0 : '22px 14px' }}>
       <div style={{ width: '100%', maxWidth: embedded ? 'none' : 430, minHeight: embedded ? '100vh' : 'calc(100vh - 44px)', background: T.bg, border: embedded ? 'none' : `1px solid ${T.cb}`, borderRadius: embedded ? 0 : 32, overflow: 'hidden', boxShadow: embedded ? 'none' : '0 24px 90px rgba(0,0,0,.75)' }}>{children}</div>
+    </div>
+  );
+}
+
+// Sélecteur d'aperçu de la démo (visible seulement sur grand écran, via CSS) :
+// permet de voir la démo au format téléphone ou au format ordinateur/tablette.
+function DemoFormatSwitch({ format, onChange }: { format: 'phone' | 'wide'; onChange: (format: 'phone' | 'wide') => void }) {
+  const pill = (active: boolean): React.CSSProperties => ({
+    background: active ? '#fff' : 'transparent', color: active ? '#05060d' : T.sub,
+    border: 'none', borderRadius: 999, padding: '7px 12px', fontSize: 10.5, fontWeight: 900, cursor: 'pointer',
+  });
+  return (
+    <div className="demo-format-switch" role="group" aria-label="Format d’aperçu de la démo" style={{ position: 'fixed', left: 18, bottom: 18, zIndex: 460, background: T.card, border: `1px solid ${T.cb}`, borderRadius: 999, padding: 4, gap: 2, boxShadow: '0 10px 30px rgba(0,0,0,.45)', fontFamily: FONT }}>
+      <button type="button" aria-pressed={format === 'phone'} onClick={() => onChange('phone')} style={pill(format === 'phone')}>📱 Téléphone</button>
+      <button type="button" aria-pressed={format === 'wide'} onClick={() => onChange('wide')} style={pill(format === 'wide')}>🖥 Ordi / tablette</button>
     </div>
   );
 }
@@ -1188,8 +1203,8 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
       {toast && <div style={{ margin: '10px 14px 0', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 10, padding: '8px 12px', color: T.sub, fontSize: 11 }}>{toast}</div>}
       <div style={{ padding: 16, paddingBottom: 92, minHeight: 620 }}>
         {tab === 'flux' && (
-          <div style={{ display: 'grid', gap: 12 }}>
-            <div style={{ color: T.mu, fontSize: 10, textAlign: 'center' }}>
+          <div className="dsp-grid" style={{ display: 'grid', gap: 12 }}>
+            <div className="dsp-span" style={{ color: T.mu, fontSize: 10, textAlign: 'center' }}>
               Flux trié autour de toi · compte fictif{founderPublishedCount ? ` · ${founderPublishedCount} mission${founderPublishedCount > 1 ? 's' : ''} lancée${founderPublishedCount > 1 ? 's' : ''} côté structure` : ''}
             </div>
             {feed.map((mission) => (
@@ -2098,11 +2113,11 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
         />
         <div style={{ height: 12 }} />
         {tab === 'missions' && (
-          <div style={{ display: 'grid', gap: 10 }}>
+          <div className="dsp-grid" style={{ display: 'grid', gap: 10 }}>
             {cancellationNotices.map((notice) => {
               const waitingCount = candidates.filter((candidate) => candidate.missionId === notice.missionId && candidate.status === 'pending').length;
               return (
-                <div key={`cancel-${notice.missionId}`} role="status" style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, borderRadius: 14, padding: 13, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div key={`cancel-${notice.missionId}`} className="dsp-span" role="status" style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, borderRadius: 14, padding: 13, display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ color: T.red, fontSize: 11, fontWeight: 900 }}>{notice.workerName} a annulé sa participation</div>
                     <div style={{ color: T.sub, fontSize: 10, marginTop: 3 }}>{notice.missionTitle}</div>
@@ -2117,7 +2132,7 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
               );
             })}
             {delayNotices.map((notice) => (
-              <div key={notice.missionId} role="status" style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 14, padding: 13, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div key={notice.missionId} className="dsp-span" role="status" style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 14, padding: 13, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ color: T.amber, fontSize: 11, fontWeight: 900 }}>+1 · Retard signalé : {notice.minutes}{notice.minutes === 30 ? '+' : ''} min</div>
                   <div style={{ color: T.sub, fontSize: 10, marginTop: 3 }}>{notice.missionTitle} · Alex Démo</div>
@@ -2125,7 +2140,7 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
                 <button onClick={() => dismissDelay(notice.missionId)} style={{ background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 9px', fontSize: 9, fontWeight: 900, cursor: 'pointer' }}>Vu</button>
               </div>
             ))}
-            <div style={{ position: 'relative' }} data-demo-tour="structure-publish">
+            <div className="dsp-span" style={{ position: 'relative' }} data-demo-tour="structure-publish">
               <Button onClick={() => setShowPub(true)}>Publier une mission</Button>
               <button
                 type="button"
@@ -2151,8 +2166,8 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
                 +2
               </button>
             </div>
-            {missions[0] && <Button tone="green" onClick={() => setQrMission(missions[0] ?? null)}>Tester le QR + PIN</Button>}
-            <div style={{ color: T.mu, fontSize: 9.5, textAlign: 'center' }}>Touche une mission ou utilise •••. Appui long ou swipe gauche disponibles sur mobile.</div>
+            {missions[0] && <div className="dsp-span"><Button tone="green" onClick={() => setQrMission(missions[0] ?? null)}>Tester le QR + PIN</Button></div>}
+            <div className="dsp-span" style={{ color: T.mu, fontSize: 9.5, textAlign: 'center' }}>Touche une mission ou utilise •••. Appui long ou swipe gauche disponibles sur mobile.</div>
             {missions.map((m, i) => {
               const allMissionCandidates = candidates.filter((candidate) => candidate.missionId === m.id);
               const completed = demoState.completedMissionIds.includes(m.id);
@@ -2161,8 +2176,8 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
           </div>
         )}
         {tab === 'historique' && (
-          <div style={{ display: 'grid', gap: 10 }}>
-            <div>
+          <div className="dsp-grid" style={{ display: 'grid', gap: 10 }}>
+            <div className="dsp-span">
               <div style={{ color: T.text, fontSize: 13, fontWeight: 900, marginBottom: 8 }}>Performance de la structure</div>
               <StructureStats stats={seed.stats} />
             </div>
@@ -2222,16 +2237,16 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
         )}
         {qrMission && <DemoQrPinModal mission={qrMission} onClose={() => setQrMission(null)} />}
         {tab === 'candidats' && (
-          <div style={{ display: 'grid', gap: 10 }}>
-            <div style={{ color: T.sub, fontSize: 11, lineHeight: 1.5 }}>Tape un candidat pour voir son CV vivant, puis accepte ou refuse.</div>
+          <div className="dsp-grid" style={{ display: 'grid', gap: 10 }}>
+            <div className="dsp-span" style={{ color: T.sub, fontSize: 11, lineHeight: 1.5 }}>Tape un candidat pour voir son CV vivant, puis accepte ou refuse.</div>
             {candidates.map((c) => (
               <CandidateCard key={c.id} candidate={c} missionTitle={missions.find((m) => m.id === c.missionId)?.title ?? 'Mission'} onOpen={() => setPanel(c)} onDecide={decide} />
             ))}
           </div>
         )}
         {tab === 'habitues' && (
-          <div style={{ display: 'grid', gap: 10 }}>
-            <div style={{ color: T.sub, fontSize: 11, lineHeight: 1.5 }}>Les travailleurs qui reviennent régulièrement chez toi.</div>
+          <div className="dsp-grid" style={{ display: 'grid', gap: 10 }}>
+            <div className="dsp-span" style={{ color: T.sub, fontSize: 11, lineHeight: 1.5 }}>Les travailleurs qui reviennent régulièrement chez toi.</div>
             {regulars.map((c) => (
               <div key={c.id} style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 16, padding: 15, display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ width: 42, height: 42, borderRadius: 13, background: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>{c.name.charAt(0)}</div>
@@ -2610,6 +2625,13 @@ export function DemoExperience() {
   const scannedStructure = params.get('structure') || 'Structure fictive';
   const labAccount = findLocalLabAccount(params.get('labAccount'));
   const [role, setRole] = useState<DemoRole | null>(initialRole);
+  const [demoFormat, setDemoFormat] = useState<'phone' | 'wide'>(() => {
+    try {
+      return sessionStorage.getItem('urosi_demo_format_v1') === 'wide' ? 'wide' : 'phone';
+    } catch {
+      return 'phone';
+    }
+  });
   const [expired, setExpired] = useState(() => readNumber(DEMO_KEY) >= DEMO_SECONDS);
   const [demoVersion, setDemoVersion] = useState(0);
   const [founderByCode, setFounderByCode] = useState(() => hasDemoFounderAccess() || hasRememberedFounderAccess(session?.user.id));
@@ -2642,6 +2664,15 @@ export function DemoExperience() {
       alive = false;
     };
   }, [embedded, session]);
+
+  function changeDemoFormat(next: 'phone' | 'wide') {
+    setDemoFormat(next);
+    try {
+      sessionStorage.setItem('urosi_demo_format_v1', next);
+    } catch {
+      // ignore
+    }
+  }
 
   function resetDemo() {
     try {
@@ -2678,7 +2709,8 @@ export function DemoExperience() {
 
   if (!role) {
     return (
-      <DemoShell embedded={embedded}>
+      <DemoShell embedded={embedded} wide={!embedded && demoFormat === 'wide'}>
+        {!embedded && <DemoFormatSwitch format={demoFormat} onChange={changeDemoFormat} />}
         <div style={{ minHeight: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <div style={{ position: 'absolute', top: 16, right: 16 }}><ThemeToggle /></div>
           <div style={{ width: '100%', textAlign: 'center' }}>
@@ -2708,7 +2740,8 @@ export function DemoExperience() {
           Accès fondateur
         </button>
       )}
-      <DemoShell embedded={embedded}>
+      {!embedded && <DemoFormatSwitch format={demoFormat} onChange={changeDemoFormat} />}
+      <DemoShell embedded={embedded} wide={!embedded && demoFormat === 'wide'}>
         {role === 'worker' ? (
           <WorkerDemo key={`worker-${demoVersion}`} founder={displayedFounder} onBack={returnToDemoChoice} accountName={labAccount?.role === 'worker' ? labAccount.name : undefined} />
         ) : (

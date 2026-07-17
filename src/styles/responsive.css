@@ -100,3 +100,38 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* ── Aperçu « Ordinateur / tablette » de la DÉMO ────────────────────────── */
+/* Activé uniquement par le sélecteur de format de la démo (jamais dans
+   l'iframe de la landing). Le format téléphone reste le défaut absolu :
+   sans la classe demo-wide-shell, rien ne change. */
+.demo-format-switch {
+  display: none;
+}
+@media (min-width: 768px) {
+  .demo-format-switch {
+    display: inline-flex;
+  }
+  .demo-wide-shell > div {
+    max-width: 1080px !important;
+    border-radius: 18px !important;
+  }
+  .demo-wide-shell nav {
+    max-width: 640px !important;
+  }
+  .demo-wide-shell .dsp-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .demo-wide-shell .dsp-grid > .dsp-span {
+    grid-column: 1 / -1;
+  }
+}
+@media (min-width: 1280px) {
+  .demo-wide-shell > div {
+    max-width: 1180px !important;
+  }
+  .demo-wide-shell .dsp-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
