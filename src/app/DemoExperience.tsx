@@ -97,6 +97,7 @@ type DemoSharedState = {
   candidates: DemoCandidate[];
   acceptedMissionIds: string[];
   workerCancellations: DemoWorkerCancellation[];
+  workerHiddenCvLabels: string[];
   archivedMissionIds: string[];
   cancelledMissionIds: string[];
   cancellationReasons: Record<string, string>;
@@ -408,6 +409,7 @@ function emptyDemoState(): DemoSharedState {
     candidates: [],
     acceptedMissionIds: [],
     workerCancellations: [],
+    workerHiddenCvLabels: [],
     archivedMissionIds: [],
     cancelledMissionIds: [],
     cancellationReasons: {},
@@ -436,6 +438,7 @@ function readDemoState(): DemoSharedState {
       candidates: Array.isArray(parsed.candidates) ? parsed.candidates : [],
       acceptedMissionIds: Array.isArray(parsed.acceptedMissionIds) ? parsed.acceptedMissionIds : [],
       workerCancellations: Array.isArray(parsed.workerCancellations) ? parsed.workerCancellations : [],
+      workerHiddenCvLabels: Array.isArray(parsed.workerHiddenCvLabels) ? parsed.workerHiddenCvLabels : [],
       archivedMissionIds: Array.isArray(parsed.archivedMissionIds) ? parsed.archivedMissionIds : [],
       cancelledMissionIds: Array.isArray(parsed.cancelledMissionIds) ? parsed.cancelledMissionIds : [],
       cancellationReasons: parsed.cancellationReasons && typeof parsed.cancellationReasons === 'object' ? parsed.cancellationReasons : {},
@@ -620,6 +623,25 @@ function forgetAcceptedMission(missionId: string, cancellation?: { missionTitle:
 function dismissWorkerCancellation(missionId: string) {
   const state = readDemoState();
   writeDemoState({ ...state, workerCancellations: state.workerCancellations.filter((item) => item.missionId !== missionId) });
+}
+
+// Confidentialité du CV vivant : le travailleur peut masquer chaque mission
+// de son profil public.
+function toggleHiddenCvMission(label: string) {
+  const state = readDemoState();
+  const hidden = state.workerHiddenCvLabels.includes(label)
+    ? state.workerHiddenCvLabels.filter((item) => item !== label)
+    : [...state.workerHiddenCvLabels, label];
+  writeDemoState({ ...state, workerHiddenCvLabels: hidden });
+}
+
+// Vue structure du CV : le travailleur peut tout masquer, mais deux missions
+// restent TOUJOURS affichées (les plus récentes complètent si besoin).
+function publicCvHistory(hidden: string[]): Array<(typeof DEMO_WORKER_HISTORY)[number]> {
+  const visible = DEMO_WORKER_HISTORY.filter((mission) => !hidden.includes(mission.label));
+  if (visible.length >= 2) return visible;
+  const filler = DEMO_WORKER_HISTORY.filter((mission) => hidden.includes(mission.label)).slice(0, 2 - visible.length);
+  return [...visible, ...filler];
 }
 
 function hideDemoMission(mission: DemoMission, action: 'archive' | 'delete') {
@@ -944,7 +966,7 @@ function DemoMissionSheet({ mission, onClose, onAccept, onStructure }: { mission
         </div>
         <div style={{ display: 'grid', gap: 8 }}>
           <Button onClick={() => { onClose(); onAccept(); }} tone={mission.solid ? 'green' : 'dark'}>{mission.solid ? 'Participer' : 'Accepter'}</Button>
-          <Button tone="light" onClick={() => { onClose(); onStructure(); }}>Voir les détails de la structure</Button>
+          <Button tone="light" onClick={() => { onClose(); onStructure(); }}>Voir le profil</Button>
         </div>
       </div>
     </div>
@@ -1086,6 +1108,7 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
   const [withdrawAmount, setWithdrawAmount] = useState(50);
   const [missionAlert, setMissionAlert] = useState<{ mission: DemoMission; type: 'delay' | 'cancel' } | null>(null);
   const [missionDetail, setMissionDetail] = useState<DemoMission | null>(null);
+  const [cvExpanded, setCvExpanded] = useState(false);
   const [demoQr, setDemoQr] = useState<{ mission: DemoMission; step: DemoQrStep } | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [toast, setToast] = useState<string | null>(null);
@@ -1239,16 +1262,31 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
                 <div style={{ color: T.mu, fontSize: 9, fontWeight: 900, textTransform: 'uppercase' }}>Historique vérifié</div>
                 <button type="button" onClick={() => setShowEarnings((visible) => !visible)} aria-label={showEarnings ? 'Masquer les gains' : 'Afficher les gains'} style={{ background: T.row, color: T.cyan, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '5px 8px', fontSize: 9, fontWeight: 900, cursor: 'pointer' }}>{showEarnings ? 'Masquer' : 'Afficher'}</button>
               </div>
-              {DEMO_WORKER_HISTORY.slice(0, 5).map((mission) => {
+              <div style={{ color: T.mu, fontSize: 9.5, lineHeight: 1.5, marginBottom: 4 }}>Tu peux masquer des missions de ton profil public : deux restent toujours visibles pour les structures.</div>
+              {(cvExpanded ? DEMO_WORKER_HISTORY : DEMO_WORKER_HISTORY.slice(0, 5)).map((mission) => {
                 const [title, amount] = mission.label.split(' · ');
+                const hiddenFromProfile = demoState.workerHiddenCvLabels.includes(mission.label);
                 return (
-                  <div key={mission.label} style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${T.cb}`, padding: '9px 0', color: T.text, fontSize: 12, fontWeight: 800 }}>
-                    <span>{title ?? mission.label}</span>
-                    <span style={{ color: T.mu }}>{showEarnings ? (amount ?? '') : '•••'}</span>
+                  <div key={mission.label} style={{ display: 'flex', alignItems: 'center', gap: 8, borderTop: `1px solid ${T.cb}`, padding: '9px 0' }}>
+                    <div style={{ flex: 1, minWidth: 0, opacity: hiddenFromProfile ? 0.45 : 1 }}>
+                      <div style={{ color: T.text, fontSize: 12, fontWeight: 800 }}>{title ?? mission.label}</div>
+                      {hiddenFromProfile && <div style={{ color: T.mu, fontSize: 9 }}>Masquée sur ton profil public</div>}
+                    </div>
+                    <span style={{ color: T.mu, fontSize: 12, fontWeight: 800, opacity: hiddenFromProfile ? 0.45 : 1 }}>{showEarnings ? (amount ?? '') : '•••'}</span>
+                    <button
+                      type="button"
+                      onClick={() => { toggleHiddenCvMission(mission.label); setDemoState(readDemoState()); }}
+                      aria-label={hiddenFromProfile ? `Afficher ${title ?? mission.label} sur le profil` : `Masquer ${title ?? mission.label} du profil`}
+                      style={{ background: T.row, color: hiddenFromProfile ? T.cyan : T.mu, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '5px 8px', fontSize: 9, fontWeight: 900, cursor: 'pointer', flexShrink: 0 }}
+                    >
+                      {hiddenFromProfile ? 'Afficher' : 'Masquer'}
+                    </button>
                   </div>
                 );
               })}
-              <div style={{ borderTop: `1px solid ${T.cb}`, paddingTop: 10, color: T.cyan, fontSize: 10, fontWeight: 900 }}>+ {completed - 5} autres missions vérifiées</div>
+              <button type="button" onClick={() => setCvExpanded((value) => !value)} style={{ width: '100%', background: 'none', border: 'none', borderTop: `1px solid ${T.cb}`, paddingTop: 10, color: T.cyan, fontSize: 10, fontWeight: 900, cursor: 'pointer', textAlign: 'left' }}>
+                {cvExpanded ? 'Réduire l’historique' : `+ ${completed - 5} autres missions vérifiées`}
+              </button>
             </div>
           </div>
         )}
@@ -1900,6 +1938,16 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
   const visibleMissionIds = new Set(missions.map((mission) => mission.id));
   const delayNotices = demoState.delayNotices.filter((notice) => visibleMissionIds.has(notice.missionId));
   const cancellationNotices = demoState.workerCancellations.filter((notice) => visibleMissionIds.has(notice.missionId));
+  // Profil candidat vu par la structure : pour le travailleur de la démo, le
+  // CV public respecte ses missions masquées (deux restent toujours visibles).
+  const panelHistory: Array<readonly [string, string]> = panel
+    ? (panel.id.startsWith('demo-worker-')
+        ? publicCvHistory(demoState.workerHiddenCvLabels).map((mission) => {
+            const [title, amount] = mission.label.split(' · ');
+            return [title ?? mission.label, amount ?? ''] as const;
+          })
+        : panel.history)
+    : [];
   const archivedMissions = archivedStructureMissions(kind);
   const cancelledMissions = cancelledStructureMissions(kind);
 
@@ -2065,7 +2113,7 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
                 <button onClick={() => dismissDelay(notice.missionId)} style={{ background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 9px', fontSize: 9, fontWeight: 900, cursor: 'pointer' }}>Vu</button>
               </div>
             ))}
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative' }} data-demo-tour="structure-publish">
               <Button onClick={() => setShowPub(true)}>Publier une mission</Button>
               <button
                 type="button"
@@ -2212,7 +2260,7 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
               {[
-                ['Missions', String(panel.history.length)],
+                ['Missions', String(panelHistory.length)],
                 ['Note', `${panel.note}/5`],
                 ['Chez toi', `${panel.here}×`],
               ].map(([l, v]) => (
@@ -2223,7 +2271,7 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
               ))}
             </div>
             <div style={{ color: T.mu, fontSize: 10, textTransform: 'uppercase', fontWeight: 900, marginBottom: 8 }}>Historique vérifié (CV vivant)</div>
-            {panel.history.map(([title, date]) => (
+            {panelHistory.map(([title, date]) => (
               <div key={title} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', color: T.text, fontSize: 12, fontWeight: 800 }}>
                 <span>{title}</span>
                 <span style={{ color: T.mu }}>{date}</span>
