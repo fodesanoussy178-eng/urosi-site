@@ -361,7 +361,7 @@ export function StructureApp() {
 
   return (
     <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', justifyContent: 'center', fontFamily: FONT, padding: '24px 16px' }}>
-      <div style={{ width: '100%', maxWidth: 420 }}>
+      <div className="rsp-structure-shell" style={{ width: '100%', maxWidth: 420 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 30, height: 30, borderRadius: 8, background: T.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: '#fff', fontSize: 15 }}>U</div>
@@ -473,16 +473,16 @@ export function StructureApp() {
 
             {/* ── MISSIONS ── */}
             {tab === 'missions' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="rsp-grid" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {!structureVerified && (
-                  <div style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 10, padding: '10px 12px', fontSize: 10.5, color: T.amber, lineHeight: 1.45 }}>
+                  <div className="rsp-span" style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 10, padding: '10px 12px', fontSize: 10.5, color: T.amber, lineHeight: 1.45 }}>
                     Vérification SIRET requise avant publication.
                   </div>
                 )}
-                <button onClick={() => structureVerified && setShowPub(true)} disabled={!structureVerified} style={{ width: '100%', background: structureVerified ? T.grad : T.row, color: structureVerified ? '#fff' : T.mu, border: 'none', borderRadius: 11, padding: '12px 0', fontSize: 13, fontWeight: 900, cursor: structureVerified ? 'pointer' : 'not-allowed', marginBottom: 2 }}>
+                <button className="rsp-span" onClick={() => structureVerified && setShowPub(true)} disabled={!structureVerified} style={{ width: '100%', background: structureVerified ? T.grad : T.row, color: structureVerified ? '#fff' : T.mu, border: 'none', borderRadius: 11, padding: '12px 0', fontSize: 13, fontWeight: 900, cursor: structureVerified ? 'pointer' : 'not-allowed', marginBottom: 2 }}>
                   {structureVerified ? '＋ Publier une mission' : 'Structure à vérifier'}
                 </button>
-                {mis.length === 0 && <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 20, textAlign: 'center', fontSize: 11, color: T.mu }}>Aucune mission publiée pour l'instant.</div>}
+                {mis.length === 0 && <div className="rsp-span" style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 20, textAlign: 'center', fontSize: 11, color: T.mu }}>Aucune mission publiée pour l'instant.</div>}
                 {mis.map((m, i) => {
                   const cc = candCount(m.id);
                   return (
@@ -540,16 +540,16 @@ export function StructureApp() {
 
             {/* ── CANDIDATS ── */}
             {tab === 'candidats' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="rsp-grid" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {candMis ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#22d3ee12', border: '1px solid #0e7490', borderRadius: 10, padding: '9px 12px' }}>
+                  <div className="rsp-span" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#22d3ee12', border: '1px solid #0e7490', borderRadius: 10, padding: '9px 12px' }}>
                     <span style={{ fontSize: 11, color: T.cyan, fontWeight: 800 }}>Candidats pour « {misTitle(candMis)} »</span>
                     <button onClick={() => setCandMis(null)} style={{ fontSize: 10, color: T.sub, background: T.row, border: `1px solid ${T.cb}`, borderRadius: 7, padding: '3px 9px', fontWeight: 700, cursor: 'pointer' }}>
                       Tous ✕
                     </button>
                   </div>
                 ) : (
-                  <div style={{ fontSize: 10, color: T.sub, lineHeight: 1.5, marginBottom: 2 }}>
+                  <div className="rsp-span" style={{ fontSize: 10, color: T.sub, lineHeight: 1.5, marginBottom: 2 }}>
                     Tape un candidat pour voir son CV vivant, puis confirme ou refuse. Une fois accepté, échange avec lui par message.
                   </div>
                 )}
@@ -642,7 +642,7 @@ export function StructureApp() {
 
             {/* ── PILOTAGE : stats + wallet + habitués ── */}
             {tab === 'pilotage' && session && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div className="rsp-grid-lg" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <StatsPanel structureId={structure.id} />
                 <WalletCard profileId={session.user.id} mode="structure" />
                 <AideRegles onOpen={setDocKey} />
@@ -663,7 +663,7 @@ export function StructureApp() {
             )}
 
             {tab === 'historique' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div className="rsp-grid-lg" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <section style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '13px 15px' }}>
                   <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 9 }}>Performance réelle</div>
                   <StructureStatsSummary structureId={structure.id} acceptedCount={acceptedDecisionCount} decidedCount={decidedCount} />
@@ -674,8 +674,8 @@ export function StructureApp() {
 
             {/* Panneau candidat */}
             {panelC && (
-              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 400 }} onClick={() => setPanelC(null)}>
-                <div style={{ width: '100%', maxWidth: 420, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 26px', fontFamily: FONT }} onClick={(e) => e.stopPropagation()}>
+              <div className="rsp-sheet" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 400 }} onClick={() => setPanelC(null)}>
+                <div className="rsp-sheet-body" style={{ width: '100%', maxWidth: 420, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 26px', fontFamily: FONT }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: 'flex', gap: 11, alignItems: 'center', marginBottom: 13 }}>
                     <div style={{ width: 44, height: 44, borderRadius: 12, background: 'hsl(24 58% 46%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 17, flexShrink: 0 }}>
                       {(panelC.profile?.full_name || 'C').charAt(0).toUpperCase()}
@@ -717,8 +717,8 @@ export function StructureApp() {
 
             {/* Notation du travailleur */}
             {ratingCand && (
-              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.92)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 400 }} onClick={() => setRatingCand(null)}>
-                <div style={{ width: '100%', maxWidth: 420, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 26px', fontFamily: FONT }} onClick={(e) => e.stopPropagation()}>
+              <div className="rsp-sheet" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.92)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 400 }} onClick={() => setRatingCand(null)}>
+                <div className="rsp-sheet-body" style={{ width: '100%', maxWidth: 420, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 26px', fontFamily: FONT }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ fontSize: 14, fontWeight: 900, color: T.text, marginBottom: 3 }}>Noter {ratingCand.profile?.full_name || 'le travailleur'}</div>
                   <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.5, marginBottom: 12 }}>
                     Mission « {ratingCand.missionTitle} ». Ta note apparaîtra dans son CV vivant — informative, jamais bloquante (CGU).
@@ -959,8 +959,8 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 400 }} onClick={onClose}>
-      <div style={{ width: '100%', maxWidth: 420, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 26px', fontFamily: FONT, maxHeight: '88vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+    <div className="rsp-sheet" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 400 }} onClick={onClose}>
+      <div className="rsp-sheet-body" style={{ width: '100%', maxWidth: 420, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 26px', fontFamily: FONT, maxHeight: '88vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <span style={{ fontSize: 15, fontWeight: 900, color: T.text }}>Nouvelle mission</span>
           <button onClick={onClose} style={{ background: T.row, border: 'none', borderRadius: 6, width: 26, height: 26, cursor: 'pointer', color: T.sub, fontSize: 14 }}>×</button>
