@@ -24,7 +24,7 @@ import {
   fetchMyApplications,
   type ApplicationWithMission,
 } from '@/features/missions/applicationsService';
-import { rate, fetchStructureRatings, fetchWorkerReceivedRatings, type StructureRating } from '@/features/missions/ratingsService';
+import { rate, fetchStructureRatings, fetchStructureReviews, fetchWorkerReceivedRatings, type StructureRating, type StructureReview } from '@/features/missions/ratingsService';
 import { notifyDelay } from '@/features/missions/feedbackService';
 import {
   attendanceEventLabel,
@@ -167,11 +167,12 @@ export function WorkerApp() {
   const [offerBusy, setOfferBusy] = useState(false);
   const [showEarnings, setShowEarnings] = useState(false);
   const [rates, setRates] = useState<CommissionRates | null>(null);
-  const [showPriceDetail, setShowPriceDetail] = useState(false);
   const [position, setPosition] = useState<LatLng | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [detail, setDetail] = useState<MissionWithStructure | null>(null);
+  const [structureProfile, setStructureProfile] = useState<MissionWithStructure | null>(null);
+  const [structureReviews, setStructureReviews] = useState<StructureReview[]>([]);
   const [ratingFor, setRatingFor] = useState<ApplicationWithMission | null>(null);
   const [structureRatingScore, setStructureRatingScore] = useState<number | null>(null);
   const [structureRatingNote, setStructureRatingNote] = useState('');
@@ -252,11 +253,6 @@ export function WorkerApp() {
   useEffect(() => {
     fetchCommissionRates().then(setRates).catch(() => undefined);
   }, []);
-
-  // Réinitialise le toggle « Détail du montant » à chaque mission ouverte.
-  useEffect(() => {
-    setShowPriceDetail(false);
-  }, [detail?.id]);
 
   // Position du navigateur (jamais stockee en base) : affiche la distance et
   // trie le flux par proximite.
@@ -380,6 +376,13 @@ export function WorkerApp() {
       return;
     }
     navigate('/valider');
+  }
+
+  function openStructureProfile(mission: MissionWithStructure) {
+    setDetail(null);
+    setStructureProfile(mission);
+    setStructureReviews([]);
+    fetchStructureReviews(mission.structure_id).then(setStructureReviews).catch(() => setStructureReviews([]));
   }
 
   // Le flux sert uniquement à décider rapidement. Toutes les informations
@@ -805,53 +808,24 @@ export function WorkerApp() {
               ) : (
                 <div style={{ fontSize: 30, fontWeight: 900, color: T.text, letterSpacing: -2, marginBottom: 4 }}>{euros(missionPriceTotalCents(detail))}</div>
               )}
-              <div style={{ fontSize: 15, fontWeight: 800, color: T.text, marginBottom: 10 }}>{detail.title}</div>
-              {!detail.is_solidaire && rates && (
-                <div style={{ fontSize: 12.5, fontWeight: 800, color: T.green, marginBottom: 10 }}>
-                  Tu recevras : {euros(splitPrice(detail.worker_rate_cents, rates.structurePct).netWorkerCents)}
-                  <button
-                    onClick={() => setShowPriceDetail((v) => !v)}
-                    style={{ marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: 10.5, color: T.mu, textDecoration: 'underline', fontWeight: 600 }}
-                  >
-                    {showPriceDetail ? 'Masquer le détail' : 'Détail du montant'}
-                  </button>
+              <div style={{ fontSize: 16, fontWeight: 900, color: T.text, marginBottom: 10 }}>{detail.title}</div>
+              <section aria-label="Détails de la structure" style={{ borderTop: `1px solid ${T.cb}`, borderBottom: `1px solid ${T.cb}`, padding: '11px 0', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 900, color: T.text }}>{detail.structure?.name ?? 'Structure'}</div>
+                  <div style={{ fontSize: 10.5, fontWeight: 900, color: T.amber, marginTop: 3 }}>
+                    {(() => {
+                      const sr = structRatings.get(detail.structure_id);
+                      return sr ? `⭐ ${sr.average.toFixed(1).replace('.', ',')} · ${sr.count} avis` : 'Nouvelle structure';
+                    })()}
+                    <span style={{ color: detail.structure?.verification_status === 'verified' || detail.structure?.verification_status === 'founder_bypass' ? T.green : T.amber }}> · {detail.structure?.verification_status === 'verified' || detail.structure?.verification_status === 'founder_bypass' ? '✓ Vérifiée' : 'Vérification en cours'}</span>
+                  </div>
                 </div>
-              )}
-              {!detail.is_solidaire && showPriceDetail && rates && (
-                <>
-                  <PriceSplit values={splitPrice(detail.worker_rate_cents, rates.structurePct)} side="worker" />
-                  {detail.pricing_breakdown && detail.pricing_breakdown.adjustments.length > 0 && <PricingDetails breakdown={detail.pricing_breakdown} compact />}
-                </>
-              )}
-              <section aria-label="Détails de la structure" style={{ background: T.row, borderRadius: 11, padding: '12px 13px', marginBottom: 11 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
-                  <span style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{detail.structure?.name ?? 'Structure'}</span>
-                  {(() => {
-                    const sr = structRatings.get(detail.structure_id);
-                    return sr ? <span style={{ color: T.amber, fontSize: 10.5, fontWeight: 900 }}>⭐ {sr.average.toFixed(1).replace('.', ',')} · {sr.count} avis</span> : null;
-                  })()}
-                </div>
-                <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.55 }}>
-                  📍 {detail.address || detail.location || detail.city || 'Adresse à confirmer'}
-                  {(() => {
-                    const d = missionDistance(detail);
-                    return d != null ? ` (à ${formatDistance(d)})` : '';
-                  })()}
-                </div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-                  <span style={{ color: detail.structure?.verification_status === 'verified' || detail.structure?.verification_status === 'founder_bypass' ? T.green : T.amber, background: detail.structure?.verification_status === 'verified' || detail.structure?.verification_status === 'founder_bypass' ? T.greenBg : T.amberBg, borderRadius: 12, padding: '3px 8px', fontSize: 9.5, fontWeight: 900 }}>
-                    {detail.structure?.verification_status === 'verified' || detail.structure?.verification_status === 'founder_bypass' ? '✓ Structure vérifiée' : 'Vérification en cours'}
-                  </span>
-                  {detail.structure?.is_ess && <span style={{ color: T.green, background: T.greenBg, borderRadius: 12, padding: '3px 8px', fontSize: 9.5, fontWeight: 900 }}>Association · ESS</span>}
-                </div>
-                {detail.structure?.about && <p style={{ color: T.sub, fontSize: 11, lineHeight: 1.55, margin: '9px 0 0' }}>{detail.structure.about}</p>}
+                <button type="button" onClick={() => openStructureProfile(detail)} style={{ border: 0, padding: '6px 0', background: 'transparent', color: T.sub, fontSize: 10.5, fontWeight: 900, cursor: 'pointer' }}>Voir le profil</button>
               </section>
-              {/* Planning par journée */}
-              <section aria-label="Date, horaires et durée" style={{ background: T.row, borderRadius: 11, padding: '12px 13px', marginBottom: 11 }}>
-                <div style={{ fontSize: 9, fontWeight: 800, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Planning</div>
+              <section aria-label="Date, horaires et durée" style={{ marginBottom: 4 }}>
                 {detail.slots && detail.slots.length > 0 ? (
                   groupByDay(detail.slots).map((day) => (
-                    <div key={day.date} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: T.sub, padding: '3px 0' }}>
+                    <div key={day.date} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: T.sub, padding: '2px 0' }}>
                       <span style={{ fontWeight: 700, color: T.text }}>{formatDay(day.date)}</span>
                       <span>{day.ranges.join(' · ')}</span>
                     </div>
@@ -863,42 +837,54 @@ export function WorkerApp() {
                     {detail.end_time ? `–${detail.end_time.slice(0, 5)}` : ''}
                   </div>
                 )}
-                <div style={{ fontSize: 10, color: T.mu, marginTop: 5 }}>
-                  Durée totale : {formatHours(detail.duration_minutes)}
-                  {detail.places > 1 ? ` · ${detail.places} places` : ''}
-                </div>
+                <div style={{ fontSize: 11.5, color: T.sub, marginTop: 4 }}>⌛ {formatHours(detail.duration_minutes)}</div>
               </section>
-              <section aria-label="Description de la mission" style={{ marginBottom: 11 }}>
-                <div style={{ fontSize: 10, fontWeight: 900, color: T.text, marginBottom: 5 }}>Description</div>
-                <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.55 }}>{detail.detail || 'Les consignes détaillées seront communiquées par la structure.'}</div>
-              </section>
-              <section aria-label="Conditions de la mission" style={{ background: T.row, borderRadius: 11, padding: '11px 12px', marginBottom: 11 }}>
-                <div style={{ fontSize: 10, fontWeight: 900, color: T.text, marginBottom: 6 }}>Conditions</div>
-                <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.6 }}>
-                  Type : {detail.mission_category || 'autre'}<br />
-                  Tenue : {detail.dress_code || 'Aucune tenue particulière indiquée'}<br />
-                  Équipement : {detail.equipment || 'Aucun équipement particulier indiqué'}
-                </div>
-              </section>
-              <section aria-label="Consignes de la mission" style={{ marginBottom: 11 }}>
-                <div style={{ fontSize: 10, fontWeight: 900, color: T.text, marginBottom: 5 }}>Consignes</div>
-                <div style={{ fontSize: 11.5, color: T.sub, lineHeight: 1.55 }}>{detail.instructions || 'Les consignes complémentaires seront communiquées par la structure.'}</div>
-              </section>
-              <section aria-label="Informations pratiques" style={{ background: T.row, borderRadius: 11, padding: '11px 12px', marginBottom: 13 }}>
-                <div style={{ fontSize: 10, fontWeight: 900, color: T.text, marginBottom: 6 }}>Informations pratiques</div>
-                <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.6 }}>
-                  {SECTOR_LABELS[detail.sector ?? 'autre'] ?? detail.sector ?? 'Autre'} · difficulté {detail.difficulty || 1}<br />
-                  {detail.places > 1 ? `${detail.places} places disponibles` : '1 place disponible'}
-                  {detail.is_urgent ? ' · Mission urgente' : ''}
-                  {detail.mission_category ? ` · ${detail.mission_category}` : ''}
-                </div>
+              <section aria-label="Adresse complète" style={{ fontSize: 11.5, color: T.sub, lineHeight: 1.55, marginBottom: 14 }}>
+                📍 {detail.address || detail.location || detail.city || 'Adresse à confirmer'}
+                {(() => {
+                  const distance = missionDistance(detail);
+                  return distance != null ? ` · ${formatDistance(distance)}` : '';
+                })()}
               </section>
               <button
                 onClick={() => postuler(detail)}
-                style={{ width: '100%', background: detail.is_solidaire ? '#16a34a' : '#fff', color: detail.is_solidaire ? '#fff' : '#000', border: 'none', borderRadius: 10, padding: '12px 0', fontSize: 14, fontWeight: 900, cursor: 'pointer' }}
+                style={{ width: '100%', background: detail.is_solidaire ? T.green : '#fff', color: detail.is_solidaire ? '#06100a' : '#000', border: 'none', borderRadius: 10, padding: '12px 0', fontSize: 14, fontWeight: 900, cursor: 'pointer', marginBottom: 12 }}
               >
-                {detail.is_solidaire ? '🤝 Participer à la mission' : 'Accepter la mission'}
+                {detail.is_solidaire ? 'Participer' : 'Accepter'}
               </button>
+              <details style={{ borderTop: `1px solid ${T.cb}`, paddingTop: 12 }}>
+                <summary style={{ color: T.text, fontSize: 12, fontWeight: 900, cursor: 'pointer', padding: '3px 0 10px' }}>Voir les détails</summary>
+                <div style={{ display: 'grid', gap: 13, color: T.sub, fontSize: 11, lineHeight: 1.65 }}>
+                  <section aria-label="Description de la mission"><strong style={{ color: T.text }}>Description</strong><br />{detail.detail || 'Les consignes détaillées seront communiquées par la structure.'}</section>
+                  <section aria-label="Conditions de la mission"><strong style={{ color: T.text }}>Conditions</strong><br />Type : {detail.mission_category || 'autre'}<br />Tenue : {detail.dress_code || 'Aucune tenue particulière indiquée'}<br />Équipement : {detail.equipment || 'Aucun équipement particulier indiqué'}</section>
+                  <section aria-label="Consignes de la mission"><strong style={{ color: T.text }}>Consignes</strong><br />{detail.instructions || 'Les consignes complémentaires seront communiquées par la structure.'}</section>
+                  <section aria-label="Informations pratiques"><strong style={{ color: T.text }}>Informations pratiques</strong><br />{SECTOR_LABELS[detail.sector ?? 'autre'] ?? detail.sector ?? 'Autre'} · difficulté {detail.difficulty || 1}<br />{detail.places > 1 ? `${detail.places} places disponibles` : '1 place disponible'}{detail.is_urgent ? ' · Mission urgente' : ''}</section>
+                  {!detail.is_solidaire && rates && <section aria-label="Détail du montant"><strong style={{ color: T.text }}>Montant reçu</strong><br />Tu recevras {euros(splitPrice(detail.worker_rate_cents, rates.structurePct).netWorkerCents)}<PriceSplit values={splitPrice(detail.worker_rate_cents, rates.structurePct)} side="worker" />{detail.pricing_breakdown && detail.pricing_breakdown.adjustments.length > 0 && <PricingDetails breakdown={detail.pricing_breakdown} compact />}</section>}
+                </div>
+              </details>
+            </div>
+          </div>
+        )}
+
+        {/* Profil structure : uniquement les signaux utiles pour juger sa fiabilité. */}
+        {structureProfile && (
+          <div style={SHEET} onClick={() => setStructureProfile(null)}>
+            <div role="dialog" aria-modal="true" aria-label={`Profil de ${structureProfile.structure?.name ?? 'la structure'}`} style={{ ...SHEET_BODY, maxHeight: '86vh', overflowY: 'auto' }} onClick={(event) => event.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                <div>
+                  <div style={{ color: T.text, fontSize: 18, fontWeight: 900 }}>{structureProfile.structure?.name ?? 'Structure'}</div>
+                  <div style={{ color: structureProfile.structure?.verification_status === 'verified' || structureProfile.structure?.verification_status === 'founder_bypass' ? T.green : T.amber, fontSize: 10.5, fontWeight: 900, marginTop: 5 }}>{structureProfile.structure?.verification_status === 'verified' || structureProfile.structure?.verification_status === 'founder_bypass' ? '✓ Structure vérifiée' : 'Vérification en cours'}</div>
+                </div>
+                <button aria-label="Fermer le profil structure" onClick={() => setStructureProfile(null)} style={{ background: T.row, border: 'none', borderRadius: 6, width: 26, height: 26, cursor: 'pointer', color: T.sub }}>×</button>
+              </div>
+              <div style={{ color: T.amber, fontSize: 12, fontWeight: 900, marginTop: 12 }}>{(() => { const rating = structRatings.get(structureProfile.structure_id); return rating ? `⭐ ${rating.average.toFixed(1).replace('.', ',')} · ${rating.count} avis` : 'Pas encore notée'; })()}</div>
+              <div style={{ color: T.sub, fontSize: 11.5, marginTop: 9 }}>📍 {structureProfile.city || structureProfile.address || 'Localisation à confirmer'}</div>
+              <section aria-label="Avis sur la structure" style={{ marginTop: 18 }}>
+                <div style={{ color: T.text, fontSize: 13, fontWeight: 900, marginBottom: 5 }}>Avis récents</div>
+                {structureReviews.length === 0 ? <div style={{ color: T.mu, fontSize: 11, padding: '10px 0', borderTop: `1px solid ${T.cb}` }}>Aucun avis détaillé publié pour le moment.</div> : structureReviews.map((review) => <article key={`${review.created_at}-${review.comment}`} style={{ borderTop: `1px solid ${T.cb}`, padding: '11px 0' }}><div style={{ color: T.amber, fontSize: 10 }}>⭐ {review.score}/5</div><div style={{ color: T.sub, fontSize: 11, lineHeight: 1.55, marginTop: 4 }}>{review.comment}</div></article>)}
+              </section>
+              {structureProfile.structure?.about && <details style={{ borderTop: `1px solid ${T.cb}`, marginTop: 8, paddingTop: 12 }}><summary style={{ color: T.text, fontSize: 11.5, fontWeight: 900, cursor: 'pointer' }}>À propos</summary><p style={{ color: T.sub, fontSize: 11, lineHeight: 1.55 }}>{structureProfile.structure.about}</p></details>}
+              <button type="button" onClick={() => { setStructureProfile(null); setTab('flux'); }} style={{ width: '100%', background: '#fff', color: '#000', border: 0, borderRadius: 10, padding: '12px 0', fontSize: 13, fontWeight: 900, cursor: 'pointer', marginTop: 16 }}>Voir les missions disponibles</button>
             </div>
           </div>
         )}

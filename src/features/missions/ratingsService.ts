@@ -6,6 +6,12 @@ export interface StructureRating {
   count: number;
 }
 
+export interface StructureReview {
+  score: number;
+  comment: string;
+  created_at: string;
+}
+
 // Note donnee par le travailleur a la structure (affichee sur la fiche de la
 // structure) ou par la structure au travailleur (affichee dans son CV vivant).
 // Informative, jamais bloquante : inscrit aux CGU.
@@ -35,6 +41,19 @@ export async function fetchStructureRatings(structureIds: string[]): Promise<Map
   return new Map(
     (data ?? []).map((row) => [row.structure_id, { average: Number(row.average), count: Number(row.review_count) }]),
   );
+}
+
+export async function fetchStructureReviews(structureId: string): Promise<StructureReview[]> {
+  const { data, error } = await supabase
+    .from('ratings')
+    .select('score, comment, created_at')
+    .eq('structure_id', structureId)
+    .eq('direction', 'worker_to_structure')
+    .not('comment', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(3);
+  if (error) throw error;
+  return (data ?? []).flatMap((review) => review.comment ? [{ ...review, comment: review.comment }] : []);
 }
 
 // Notes RECUES par un travailleur (donnees par les structures) : c'est ce qui
