@@ -81,20 +81,25 @@ export function WalletCard({
           Solde à provisionner : les rémunérations versées dépassent ton provisionnement.
         </div>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 12 }}>
-        {[
-          ['Disponible', balance, T.green],
-          ['En attente', pending, T.amber],
-          ['Bloqué', blocked, T.red],
-        ].map(([label, amount, color]) => (
-          <div key={String(label)} style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 9, padding: '8px 6px', minWidth: 0 }}>
-            <div style={{ color: T.mu, fontSize: 8, marginBottom: 3 }}>{label}</div>
-            <div style={{ color: String(color), fontSize: 10.5, fontWeight: 900, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {amountsVisible ? euros(Number(amount)) : '•••'}
-            </div>
+      {/* « Virement en cours » et « Bloqué » ne s'affichent que s'ils sont
+          non nuls : un montant en attente permanent crée de la frustration. */}
+      {(() => {
+        const tiles: Array<[string, number, string]> = [['Disponible', balance, T.green]];
+        if (pending > 0) tiles.push(['Virement en cours · J+3', pending, T.amber]);
+        if (blocked > 0) tiles.push(['Bloqué', blocked, T.red]);
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${tiles.length}, 1fr)`, gap: 6, marginBottom: 12 }}>
+            {tiles.map(([label, amount, color]) => (
+              <div key={label} style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 9, padding: '8px 6px', minWidth: 0 }}>
+                <div style={{ color: T.mu, fontSize: 8, marginBottom: 3 }}>{label}</div>
+                <div style={{ color, fontSize: 10.5, fontWeight: 900, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {amountsVisible ? euros(amount) : '•••'}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        );
+      })()}
       <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 7 }}>Historique</div>
       {txs.length === 0 && <div style={{ fontSize: 11, color: T.mu }}>Aucun mouvement pour l'instant.</div>}
       {shown.map((tx) => (
@@ -103,7 +108,7 @@ export function WalletCard({
             <div style={{ fontSize: 11.5, fontWeight: 700, color: T.text }}>{TX_KIND_LABELS[tx.kind]}</div>
             {tx.label && <div style={{ fontSize: 9.5, color: T.mu, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.label}</div>}
             <div style={{ fontSize: 8.5, color: T.mu }}>{new Date(tx.created_at).toLocaleDateString('fr-FR')}</div>
-            {tx.fund_status !== 'available' && <div style={{ fontSize: 8.5, color: tx.fund_status === 'pending' ? T.amber : T.red }}>{tx.fund_status === 'pending' ? 'En attente' : 'Bloqué'}</div>}
+            {tx.fund_status !== 'available' && <div style={{ fontSize: 8.5, color: tx.fund_status === 'pending' ? T.amber : T.red }}>{tx.fund_status === 'pending' ? 'Virement en cours' : 'Bloqué'}</div>}
           </div>
           <span style={{ fontSize: 12.5, fontWeight: 900, color: tx.amount_cents > 0 ? T.green : T.red, flexShrink: 0 }}>
             {amountsVisible ? `${tx.amount_cents > 0 ? '+' : ''}${euros(tx.amount_cents)}` : '•••'}

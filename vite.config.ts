@@ -35,6 +35,14 @@ export default defineConfig({
         cgu: path.resolve(__dirname, 'cgu.html'),
         confidentialite: path.resolve(__dirname, 'confidentialite.html'),
       },
+      output: {
+        // Les gros vendors changent rarement : les isoler stabilise le cache
+        // navigateur entre deux deploiements du code applicatif.
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          supabase: ['@supabase/supabase-js'],
+        },
+      },
     },
   },
 });

@@ -2,6 +2,13 @@
 -- migrations. Les politiques RLS ont bien ete restaurees, mais les privileges
 -- de table Supabase implicites n'existaient plus. Sans ces GRANT, PostgREST
 -- renvoie 403 avant meme d'evaluer la politique RLS.
+--
+-- ⚠️ AVERTISSEMENT (audit 2026-07-16, L1) : cette derivation automatique
+-- accorde select/insert/update/delete a `authenticated` pour TOUTE table
+-- portant une policy, y compris une policy deny-all `using (false)`
+-- (la RLS bloque, mais le GRANT reste). Les tables mission_validation_*
+-- sont re-revoquees par 20260716120000. Pour toute nouvelle table, ecrire
+-- des GRANT explicites : ne pas reutiliser ce motif.
 
 do $$
 declare

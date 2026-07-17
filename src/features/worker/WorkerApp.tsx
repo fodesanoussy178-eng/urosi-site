@@ -33,6 +33,7 @@ import {
   type AttendanceEvent,
 } from '@/features/missions/attendanceService';
 import { fetchUnreadCounts } from '@/features/messages/messagesService';
+import { fetchMySpotOffers, respondToSpotOffer, type SpotOffer } from '@/features/missions/spotOffersService';
 import { fetchWorkerStats, type WorkerStats } from '@/features/stats/statsService';
 import { fetchCommissionRates, type CommissionRates } from '@/features/pricing/pricingService';
 import { PriceSplit } from '@/components/ui/PriceSplit';
@@ -104,6 +105,45 @@ function normalizeIban(value: string): string {
   return value.replace(/\s/g, '').toUpperCase();
 }
 
+// Offre de place : compte à rebours isolé dans son propre composant pour que
+// le tic par seconde ne re-rende pas tout l'écran. IMPORTANT : le travailleur
+// ne doit jamais savoir qu'une file d'attente existe — le message reste
+// « mission disponible », sans mention de place libérée ni de rang.
+function SpotOfferBanner({ offer, busy, onRespond }: { offer: SpotOffer; busy: boolean; onRespond: (accept: boolean) => void }) {
+  const [secondsLeft, setSecondsLeft] = useState(() => Math.max(0, Math.floor((new Date(offer.expires_at).getTime() - Date.now()) / 1000)));
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setSecondsLeft(Math.max(0, Math.floor((new Date(offer.expires_at).getTime() - Date.now()) / 1000)));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [offer.expires_at]);
+
+  const expired = secondsLeft <= 0;
+  return (
+    <div role="status" style={{ margin: '8px 12px 0', background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 12, padding: 13 }}>
+      <div style={{ color: T.amber, fontSize: 11, fontWeight: 900 }}>Mission disponible pour toi</div>
+      <div style={{ color: T.text, fontSize: 13, fontWeight: 800, marginTop: 3 }}>{offer.mission_title}</div>
+      <div style={{ color: T.sub, fontSize: 10.5, marginTop: 2 }}>
+        {offer.city ?? ''}{offer.scheduled_date ? ` · ${formatDay(offer.scheduled_date)}` : ''}{offer.start_time ? ` · ${offer.start_time.slice(0, 5)}` : ''}
+      </div>
+      <div style={{ color: expired ? T.red : T.sub, fontSize: 10.5, fontWeight: 800, margin: '6px 0 9px' }}>
+        {expired ? 'Délai de confirmation dépassé.' : `Confirme ta participation dans les ${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`}
+      </div>
+      {!expired && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <button disabled={busy} onClick={() => onRespond(true)} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 900, cursor: 'pointer' }}>
+            Je participe
+          </button>
+          <button disabled={busy} onClick={() => onRespond(false)} style={{ background: T.row, color: T.sub, border: `1px solid ${T.cb}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
+            Pas disponible
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function WorkerApp() {
   const navigate = useNavigate();
   const { session, profile, refreshProfile } = useAuth();
@@ -115,6 +155,8 @@ export function WorkerApp() {
   const [structRatings, setStructRatings] = useState<Map<string, StructureRating>>(new Map());
   const [unread, setUnread] = useState<Map<string, number>>(new Map());
   const [stats, setStats] = useState<WorkerStats | null>(null);
+  const [spotOffers, setSpotOffers] = useState<SpotOffer[]>([]);
+  const [offerBusy, setOfferBusy] = useState(false);
   const [showEarnings, setShowEarnings] = useState(false);
   const [rates, setRates] = useState<CommissionRates | null>(null);
   const [showPriceDetail, setShowPriceDetail] = useState(false);
@@ -148,15 +190,17 @@ export function WorkerApp() {
   async function load() {
     if (!session) return;
     try {
-      const [missions, myApps, received, myStats] = await Promise.all([
+      const [missions, myApps, received, myStats, offers] = await Promise.all([
         fetchOpenMissions(),
         fetchMyApplications(session.user.id),
         fetchWorkerReceivedRatings(session.user.id),
         fetchWorkerStats().catch(() => null),
+        fetchMySpotOffers().catch(() => [] as SpotOffer[]),
       ]);
       setFlux(missions);
       setApps(myApps);
       setReceivedRatings(received);
+      setSpotOffers(offers);
       if (myStats) setStats(myStats);
       const structureIds = [...new Set(missions.map((m) => m.structure_id))];
       setStructRatings(await fetchStructureRatings(structureIds));
@@ -180,11 +224,20 @@ export function WorkerApp() {
   }, [session]);
 
   // Flux en direct : toute mission publiée/clôturée rafraîchit la liste.
+  // Les événements arrivent parfois en rafale (plusieurs structures actives) :
+  // un court debounce évite de relancer toutes les requêtes à chaque événement.
   useEffect(() => {
+    let reloadTimer: ReturnType<typeof setTimeout> | undefined;
     const channel = subscribeToMissionFeed(() => {
-      load();
+      clearTimeout(reloadTimer);
+      reloadTimer = setTimeout(() => {
+        load();
+      }, 800);
     });
-    return () => unsubscribeMissionFeed(channel);
+    return () => {
+      clearTimeout(reloadTimer);
+      unsubscribeMissionFeed(channel);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
@@ -245,7 +298,7 @@ export function WorkerApp() {
       await applyToMission(m.id, session.user.id);
       await load();
       setDetail(null);
-      notif('✓ Candidature envoyée. Elle apparaîtra dans Missions si la structure accepte.');
+      notif('✓ Candidature envoyée. Tu seras prévenu dès que ta mission est confirmée.');
     } catch (e) {
       notif(e instanceof Error ? e.message : 'Impossible de postuler.');
     } finally {
@@ -400,6 +453,31 @@ export function WorkerApp() {
 
         {toast && <div style={{ margin: '8px 12px 0', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 11px', fontSize: 11, color: T.sub }}>{toast}</div>}
 
+        {spotOffers.map((offer) => (
+          <SpotOfferBanner
+            key={offer.id}
+            offer={offer}
+            busy={offerBusy}
+            onRespond={async (accept) => {
+              if (offerBusy) return;
+              setOfferBusy(true);
+              try {
+                const state = await respondToSpotOffer(offer.id, accept);
+                if (state === 'accepted') notif('Participation confirmée ! La mission est dans « Missions ».');
+                else if (state === 'declined') notif('C’est noté, merci pour ta réponse.');
+                else if (state === 'expired') notif('Le délai de confirmation est dépassé.');
+                else if (state === 'capacity_full' || state === 'application_not_pending') notif('Cette mission n’est plus disponible.');
+                else notif('Cette proposition n’est plus disponible.');
+              } catch (e) {
+                notif(e instanceof Error ? e.message : 'Réponse impossible.');
+              } finally {
+                setOfferBusy(false);
+                load();
+              }
+            }}
+          />
+        ))}
+
         <div style={{ padding: '10px 12px 84px', flex: 1 }}>
           {/* ── FLUX ── */}
           {tab === 'flux' && (
@@ -424,7 +502,7 @@ export function WorkerApp() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {pendingCount > 0 && (
                 <div style={{ fontSize: 10, color: T.mu, textAlign: 'center', padding: '2px 0' }}>
-                  {pendingCount} candidature{pendingCount > 1 ? 's' : ''} en attente de réponse des structures
+                  {pendingCount} candidature{pendingCount > 1 ? 's' : ''} envoyée{pendingCount > 1 ? 's' : ''} · tu seras prévenu dès confirmation
                 </div>
               )}
               {acceptedApps.length === 0 && (

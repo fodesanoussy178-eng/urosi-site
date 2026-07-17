@@ -145,7 +145,94 @@ describe('DemoExperience founder scan', () => {
     await user.type(screen.getByLabelText('PIN temporaire de simulation'), '482731');
     await user.click(screen.getByRole('button', { name: 'Démarrer maintenant' }));
 
-    expect(screen.getByText('✓ Arrivée horodatée dans la simulation')).toBeInTheDocument();
+    expect(screen.getByText('✓ Arrivée horodatée · confirmé en direct côté structure')).toBeInTheDocument();
+
+    // Le même QR sert ensuite à la fin de mission, sans changer de page.
+    await user.click(screen.getByRole('button', { name: 'Simuler la fin de mission maintenant' }));
+    expect(screen.getByText('Terminer la mission')).toBeInTheDocument();
+    await user.type(screen.getByLabelText('PIN temporaire de simulation'), '482731');
+    await user.click(screen.getByRole('button', { name: 'Terminer maintenant' }));
+    expect(screen.getByText('✓ Départ horodaté · confirmé en direct côté structure')).toBeInTheDocument();
+  });
+
+  it('opens a quick mission detail from the feed card, with the full structure page behind a button', async () => {
+    const user = userEvent.setup();
+    renderWorker();
+
+    await user.click(screen.getByText('Renfort service midi'));
+    const sheet = screen.getByRole('dialog', { name: 'Détail de la mission Renfort service midi' });
+    expect(sheet).toBeInTheDocument();
+    expect(screen.getByText('Rush du midi, aide comptoir, salle propre et équipe déjà briefée.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Voir le profil' }));
+    expect(screen.queryByRole('dialog', { name: 'Détail de la mission Renfort service midi' })).not.toBeInTheDocument();
+  });
+
+  it('shows the structure only the two most recent missions by default, and never the earnings', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('urosi_founder_demo_shared_v1', JSON.stringify({
+      candidates: [{ id: 'demo-worker-m1', missionId: 'm1', name: 'Alex Démo', city: 'Lille', note: 4.7, here: 1, history: [['x', 'y']], status: 'pending' }],
+    }));
+    renderStructure();
+
+    await user.click(screen.getByRole('button', { name: /Candidats/ }));
+    await user.click(screen.getByText('Alex Démo'));
+
+    expect(screen.getByText('Historique vérifié (CV vivant)')).toBeInTheDocument();
+    // Sans autorisation du travailleur : seulement les 2 plus récentes.
+    expect(screen.getByText('Renfort service midi')).toBeInTheDocument();
+    expect(screen.getByText('Inventaire magasin')).toBeInTheDocument();
+    expect(screen.queryByText('Montage festival')).not.toBeInTheDocument();
+    // Les revenus ne sont jamais visibles côté structure.
+    expect(screen.queryByText(/64 €/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/42 €/)).not.toBeInTheDocument();
+  });
+
+  it('shows the full mission history when the worker authorises it, still without earnings', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('urosi_founder_demo_shared_v1', JSON.stringify({
+      workerCvShareAll: true,
+      candidates: [{ id: 'demo-worker-m1', missionId: 'm1', name: 'Alex Démo', city: 'Lille', note: 4.7, here: 1, history: [['x', 'y']], status: 'pending' }],
+    }));
+    renderStructure();
+
+    await user.click(screen.getByRole('button', { name: /Candidats/ }));
+    await user.click(screen.getByText('Alex Démo'));
+
+    expect(screen.getByText('Montage festival')).toBeInTheDocument();
+    expect(screen.getByText('Service en salle')).toBeInTheDocument();
+    expect(screen.queryByText(/91 €/)).not.toBeInTheDocument();
+  });
+
+  it('shows the worker cancellation to the structure with the waiting-list proposal', () => {
+    localStorage.setItem('urosi_founder_demo_shared_v1', JSON.stringify({
+      workerCancellations: [{ missionId: 'm1', missionTitle: 'Renfort service midi', workerName: 'Alex Démo' }],
+    }));
+    renderStructure();
+
+    expect(screen.getByText('Alex Démo a annulé sa participation')).toBeInTheDocument();
+    expect(screen.getByText(/file d'attente|republie automatiquement/)).toBeInTheDocument();
+  });
+
+  it('derives the scan step from the simulation state: a started mission proposes the end', async () => {
+    const user = userEvent.setup();
+    const first = render(
+      <MemoryRouter initialEntries={['/demo?scan=worker-pin&step=start&mission=pm1&title=Renfort&structure=Burger+Nord']}>
+        <DemoExperience />
+      </MemoryRouter>,
+    );
+    await user.type(screen.getByLabelText('PIN temporaire de simulation'), '482731');
+    await user.click(screen.getByRole('button', { name: 'Démarrer maintenant' }));
+    first.unmount();
+
+    // Nouveau scan du même QR (paramètre d'URL toujours step=start) :
+    // la page doit proposer la fin de mission.
+    render(
+      <MemoryRouter initialEntries={['/demo?scan=worker-pin&step=start&mission=pm1&title=Renfort&structure=Burger+Nord']}>
+        <DemoExperience />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('Terminer la mission')).toBeInTheDocument();
   });
 
   it('replaces internal demo tools with a compact two-mission notice', async () => {

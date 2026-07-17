@@ -26,6 +26,8 @@ const KIND_ICONS: Record<string, string> = {
   message: '💬',
   payment: '💶',
   delay: '⏱',
+  spot_offer: '🎟',
+  waitlist: '👥',
 };
 
 // Cloche de notifications : pastille non-lus + panneau, alimentee en temps

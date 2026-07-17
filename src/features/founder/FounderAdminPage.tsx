@@ -45,7 +45,7 @@ export function FounderAdminPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: T.bg, color: T.text, fontFamily: FONT, padding: '20px 14px 40px' }}>
-      <main style={{ maxWidth: 1040, margin: '0 auto' }}>
+      <main className="rsp-founder-main" style={{ maxWidth: 1040, margin: '0 auto' }}>
         <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 18 }}>
           <div>
             <div style={{ color: T.cyan, fontSize: 10, fontWeight: 900, letterSpacing: 1.3 }}>UROSI · ADMINISTRATION</div>
@@ -54,7 +54,7 @@ export function FounderAdminPage() {
           <button onClick={() => navigate('/app')} style={founderButton}>← Retour à l’app</button>
         </header>
 
-        <nav aria-label="Sections Fondateur" style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 10, marginBottom: 12 }}>
+        <nav className="rsp-founder-nav" aria-label="Sections Fondateur" style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 10, marginBottom: 12 }}>
           {sections.map(([key, label]) => (
             <button
               key={key}
@@ -66,14 +66,16 @@ export function FounderAdminPage() {
           ))}
         </nav>
 
-        {active === 'dashboard' && <FounderDashboardPanel />}
-        {active === 'accounts' && <FounderAccountsPanel />}
-        {active === 'missions' && <FounderMissionsPanel />}
-        {active === 'kyc' && <FounderKycPanel />}
-        {active === 'reports' && <FounderReportsPanel />}
-        {active === 'revenue' && <FounderRevenuePanel />}
-        {active === 'audit' && <FounderAuditPanel />}
-        {active === 'lab' && <FounderLabPanel />}
+        <div>
+          {active === 'dashboard' && <FounderDashboardPanel />}
+          {active === 'accounts' && <FounderAccountsPanel />}
+          {active === 'missions' && <FounderMissionsPanel />}
+          {active === 'kyc' && <FounderKycPanel />}
+          {active === 'reports' && <FounderReportsPanel />}
+          {active === 'revenue' && <FounderRevenuePanel />}
+          {active === 'audit' && <FounderAuditPanel />}
+          {active === 'lab' && <FounderLabPanel />}
+        </div>
       </main>
     </div>
   );
