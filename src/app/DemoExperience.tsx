@@ -97,7 +97,7 @@ type DemoSharedState = {
   candidates: DemoCandidate[];
   acceptedMissionIds: string[];
   workerCancellations: DemoWorkerCancellation[];
-  workerHiddenCvLabels: string[];
+  workerCvShareAll: boolean;
   archivedMissionIds: string[];
   cancelledMissionIds: string[];
   cancellationReasons: Record<string, string>;
@@ -409,7 +409,7 @@ function emptyDemoState(): DemoSharedState {
     candidates: [],
     acceptedMissionIds: [],
     workerCancellations: [],
-    workerHiddenCvLabels: [],
+    workerCvShareAll: false,
     archivedMissionIds: [],
     cancelledMissionIds: [],
     cancellationReasons: {},
@@ -438,7 +438,7 @@ function readDemoState(): DemoSharedState {
       candidates: Array.isArray(parsed.candidates) ? parsed.candidates : [],
       acceptedMissionIds: Array.isArray(parsed.acceptedMissionIds) ? parsed.acceptedMissionIds : [],
       workerCancellations: Array.isArray(parsed.workerCancellations) ? parsed.workerCancellations : [],
-      workerHiddenCvLabels: Array.isArray(parsed.workerHiddenCvLabels) ? parsed.workerHiddenCvLabels : [],
+      workerCvShareAll: parsed.workerCvShareAll === true,
       archivedMissionIds: Array.isArray(parsed.archivedMissionIds) ? parsed.archivedMissionIds : [],
       cancelledMissionIds: Array.isArray(parsed.cancelledMissionIds) ? parsed.cancelledMissionIds : [],
       cancellationReasons: parsed.cancellationReasons && typeof parsed.cancellationReasons === 'object' ? parsed.cancellationReasons : {},
@@ -625,23 +625,17 @@ function dismissWorkerCancellation(missionId: string) {
   writeDemoState({ ...state, workerCancellations: state.workerCancellations.filter((item) => item.missionId !== missionId) });
 }
 
-// Confidentialité du CV vivant : le travailleur peut masquer chaque mission
-// de son profil public.
-function toggleHiddenCvMission(label: string) {
+// Confidentialité du CV vivant : le travailleur autorise (ou non) les
+// structures à voir tout son historique. Sans autorisation, seules ses DEUX
+// missions les plus récentes sont visibles. Les revenus ne sont JAMAIS
+// partagés avec les structures, quel que soit ce choix.
+function setCvShareAll(shareAll: boolean) {
   const state = readDemoState();
-  const hidden = state.workerHiddenCvLabels.includes(label)
-    ? state.workerHiddenCvLabels.filter((item) => item !== label)
-    : [...state.workerHiddenCvLabels, label];
-  writeDemoState({ ...state, workerHiddenCvLabels: hidden });
+  writeDemoState({ ...state, workerCvShareAll: shareAll });
 }
 
-// Vue structure du CV : le travailleur peut tout masquer, mais deux missions
-// restent TOUJOURS affichées (les plus récentes complètent si besoin).
-function publicCvHistory(hidden: string[]): Array<(typeof DEMO_WORKER_HISTORY)[number]> {
-  const visible = DEMO_WORKER_HISTORY.filter((mission) => !hidden.includes(mission.label));
-  if (visible.length >= 2) return visible;
-  const filler = DEMO_WORKER_HISTORY.filter((mission) => hidden.includes(mission.label)).slice(0, 2 - visible.length);
-  return [...visible, ...filler];
+function publicCvHistory(shareAll: boolean): Array<(typeof DEMO_WORKER_HISTORY)[number]> {
+  return shareAll ? [...DEMO_WORKER_HISTORY] : DEMO_WORKER_HISTORY.slice(0, 2);
 }
 
 function hideDemoMission(mission: DemoMission, action: 'archive' | 'delete') {
@@ -1262,25 +1256,33 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
                 <div style={{ color: T.mu, fontSize: 9, fontWeight: 900, textTransform: 'uppercase' }}>Historique vérifié</div>
                 <button type="button" onClick={() => setShowEarnings((visible) => !visible)} aria-label={showEarnings ? 'Masquer les gains' : 'Afficher les gains'} style={{ background: T.row, color: T.cyan, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '5px 8px', fontSize: 9, fontWeight: 900, cursor: 'pointer' }}>{showEarnings ? 'Masquer' : 'Afficher'}</button>
               </div>
-              <div style={{ color: T.mu, fontSize: 9.5, lineHeight: 1.5, marginBottom: 4 }}>Tu peux masquer des missions de ton profil public : deux restent toujours visibles pour les structures.</div>
+              <div style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '10px 12px', marginBottom: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ color: T.text, fontSize: 11, fontWeight: 900 }}>Visibilité pour les structures</div>
+                    <div style={{ color: T.mu, fontSize: 9.5, lineHeight: 1.45, marginTop: 2 }}>
+                      {demoState.workerCvShareAll ? 'Tout ton historique de missions est partagé.' : 'Seules tes 2 missions les plus récentes sont visibles.'}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={demoState.workerCvShareAll}
+                    aria-label="Autoriser les structures à voir tout mon historique"
+                    onClick={() => { setCvShareAll(!demoState.workerCvShareAll); setDemoState(readDemoState()); }}
+                    style={{ background: demoState.workerCvShareAll ? T.greenBg : T.card, color: demoState.workerCvShareAll ? T.green : T.mu, border: `1px solid ${demoState.workerCvShareAll ? T.greenBorder : T.cb}`, borderRadius: 999, padding: '7px 11px', fontSize: 10, fontWeight: 900, cursor: 'pointer', flexShrink: 0 }}
+                  >
+                    {demoState.workerCvShareAll ? 'Tout partager · ON' : 'Tout partager · OFF'}
+                  </button>
+                </div>
+                <div style={{ color: T.green, fontSize: 9, fontWeight: 800, marginTop: 6 }}>Tes revenus ne sont jamais partagés avec les structures.</div>
+              </div>
               {(cvExpanded ? DEMO_WORKER_HISTORY : DEMO_WORKER_HISTORY.slice(0, 5)).map((mission) => {
                 const [title, amount] = mission.label.split(' · ');
-                const hiddenFromProfile = demoState.workerHiddenCvLabels.includes(mission.label);
                 return (
-                  <div key={mission.label} style={{ display: 'flex', alignItems: 'center', gap: 8, borderTop: `1px solid ${T.cb}`, padding: '9px 0' }}>
-                    <div style={{ flex: 1, minWidth: 0, opacity: hiddenFromProfile ? 0.45 : 1 }}>
-                      <div style={{ color: T.text, fontSize: 12, fontWeight: 800 }}>{title ?? mission.label}</div>
-                      {hiddenFromProfile && <div style={{ color: T.mu, fontSize: 9 }}>Masquée sur ton profil public</div>}
-                    </div>
-                    <span style={{ color: T.mu, fontSize: 12, fontWeight: 800, opacity: hiddenFromProfile ? 0.45 : 1 }}>{showEarnings ? (amount ?? '') : '•••'}</span>
-                    <button
-                      type="button"
-                      onClick={() => { toggleHiddenCvMission(mission.label); setDemoState(readDemoState()); }}
-                      aria-label={hiddenFromProfile ? `Afficher ${title ?? mission.label} sur le profil` : `Masquer ${title ?? mission.label} du profil`}
-                      style={{ background: T.row, color: hiddenFromProfile ? T.cyan : T.mu, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '5px 8px', fontSize: 9, fontWeight: 900, cursor: 'pointer', flexShrink: 0 }}
-                    >
-                      {hiddenFromProfile ? 'Afficher' : 'Masquer'}
-                    </button>
+                  <div key={mission.label} style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${T.cb}`, padding: '9px 0', color: T.text, fontSize: 12, fontWeight: 800 }}>
+                    <span>{title ?? mission.label}</span>
+                    <span style={{ color: T.mu }}>{showEarnings ? (amount ?? '') : '•••'}</span>
                   </div>
                 );
               })}
@@ -1938,13 +1940,15 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
   const visibleMissionIds = new Set(missions.map((mission) => mission.id));
   const delayNotices = demoState.delayNotices.filter((notice) => visibleMissionIds.has(notice.missionId));
   const cancellationNotices = demoState.workerCancellations.filter((notice) => visibleMissionIds.has(notice.missionId));
-  // Profil candidat vu par la structure : pour le travailleur de la démo, le
-  // CV public respecte ses missions masquées (deux restent toujours visibles).
+  // Profil candidat vu par la structure : missions uniquement, JAMAIS les
+  // revenus (la colonne de droite montre la catégorie, pas le montant).
+  // Sans autorisation du travailleur, seules ses 2 missions les plus
+  // récentes apparaissent.
   const panelHistory: Array<readonly [string, string]> = panel
     ? (panel.id.startsWith('demo-worker-')
-        ? publicCvHistory(demoState.workerHiddenCvLabels).map((mission) => {
-            const [title, amount] = mission.label.split(' · ');
-            return [title ?? mission.label, amount ?? ''] as const;
+        ? publicCvHistory(demoState.workerCvShareAll).map((mission) => {
+            const [title] = mission.label.split(' · ');
+            return [title ?? mission.label, mission.category] as const;
           })
         : panel.history)
     : [];

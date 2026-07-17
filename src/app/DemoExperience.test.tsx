@@ -168,17 +168,9 @@ describe('DemoExperience founder scan', () => {
     expect(screen.queryByRole('dialog', { name: 'Détail de la mission Renfort service midi' })).not.toBeInTheDocument();
   });
 
-  it('always shows at least two CV missions to the structure, even if the worker hides everything', async () => {
+  it('shows the structure only the two most recent missions by default, and never the earnings', async () => {
     const user = userEvent.setup();
-    const allLabels = [
-      'Renfort service midi · 64 €', 'Inventaire magasin · 42 €', 'Montage festival · 91 €',
-      'Préparation commandes · 61 €', 'Accueil au stade · 112 €', 'Installation forum étudiant · 44 €',
-      'Assistant tournage · 95 €', 'Accueil spectacle · 52 €', 'Classement bibliothèque · 39 €',
-      'Accueil au musée · 78 €', 'Livraison interne · 57 €', 'Renfort association · Solidaire',
-      'Aide photographe · 46 €', 'Mise en place événement · 73 €', 'Service en salle · 48 €',
-    ];
     localStorage.setItem('urosi_founder_demo_shared_v1', JSON.stringify({
-      workerHiddenCvLabels: allLabels,
       candidates: [{ id: 'demo-worker-m1', missionId: 'm1', name: 'Alex Démo', city: 'Lille', note: 4.7, here: 1, history: [['x', 'y']], status: 'pending' }],
     }));
     renderStructure();
@@ -187,10 +179,29 @@ describe('DemoExperience founder scan', () => {
     await user.click(screen.getByText('Alex Démo'));
 
     expect(screen.getByText('Historique vérifié (CV vivant)')).toBeInTheDocument();
-    // Tout est masqué, mais deux missions restent affichées.
+    // Sans autorisation du travailleur : seulement les 2 plus récentes.
     expect(screen.getByText('Renfort service midi')).toBeInTheDocument();
     expect(screen.getByText('Inventaire magasin')).toBeInTheDocument();
     expect(screen.queryByText('Montage festival')).not.toBeInTheDocument();
+    // Les revenus ne sont jamais visibles côté structure.
+    expect(screen.queryByText(/64 €/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/42 €/)).not.toBeInTheDocument();
+  });
+
+  it('shows the full mission history when the worker authorises it, still without earnings', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('urosi_founder_demo_shared_v1', JSON.stringify({
+      workerCvShareAll: true,
+      candidates: [{ id: 'demo-worker-m1', missionId: 'm1', name: 'Alex Démo', city: 'Lille', note: 4.7, here: 1, history: [['x', 'y']], status: 'pending' }],
+    }));
+    renderStructure();
+
+    await user.click(screen.getByRole('button', { name: /Candidats/ }));
+    await user.click(screen.getByText('Alex Démo'));
+
+    expect(screen.getByText('Montage festival')).toBeInTheDocument();
+    expect(screen.getByText('Service en salle')).toBeInTheDocument();
+    expect(screen.queryByText(/91 €/)).not.toBeInTheDocument();
   });
 
   it('shows the worker cancellation to the structure with the waiting-list proposal', () => {
