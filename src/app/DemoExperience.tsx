@@ -887,10 +887,10 @@ function StructureStats({ stats, live = false }: { stats: [string, string][]; li
   );
 }
 
-function DemoShell({ children, embedded = false, wide = false }: { children: ReactNode; embedded?: boolean; wide?: boolean }) {
+function DemoShell({ children, embedded = false, wide = false, contentClassName }: { children: ReactNode; embedded?: boolean; wide?: boolean; contentClassName?: string }) {
   return (
     <div className={wide ? 'demo-wide-shell' : undefined} style={{ minHeight: '100vh', background: embedded ? T.bg : '#000', color: T.text, fontFamily: FONT, display: 'flex', justifyContent: 'center', padding: embedded ? 0 : '22px 14px' }}>
-      <div style={{ width: '100%', maxWidth: embedded ? 'none' : 430, minHeight: embedded ? '100vh' : 'calc(100vh - 44px)', background: T.bg, border: embedded ? 'none' : `1px solid ${T.cb}`, borderRadius: embedded ? 0 : 32, overflow: 'hidden', boxShadow: embedded ? 'none' : '0 24px 90px rgba(0,0,0,.75)' }}>{children}</div>
+      <div className={contentClassName} style={{ width: '100%', maxWidth: embedded ? 'none' : 430, minHeight: embedded ? '100vh' : 'calc(100vh - 44px)', background: T.bg, border: embedded ? 'none' : `1px solid ${T.cb}`, borderRadius: embedded ? 0 : 32, overflow: 'hidden', boxShadow: embedded ? 'none' : '0 24px 90px rgba(0,0,0,.75)' }}>{children}</div>
     </div>
   );
 }
@@ -1460,9 +1460,15 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
   );
 }
 
-function BottomTabs({ tabs, current, onChange }: { tabs: [string, string, string?, number?][]; current: string; onChange: (v: string) => void }) {
+function BottomTabs({ tabs, current, onChange, className, ariaLabel = 'Navigation de la démo' }: {
+  tabs: [string, string, string?, number?][];
+  current: string;
+  onChange: (v: string) => void;
+  className?: string;
+  ariaLabel?: string;
+}) {
   return (
-    <nav aria-label="Navigation de la démo" style={{ width: '100%', maxWidth: 430, borderTop: `1px solid ${T.cb}`, padding: '8px 10px 10px', display: 'grid', gridTemplateColumns: `repeat(${tabs.length}, 1fr)`, gap: 5, background: T.bg, position: 'fixed', zIndex: 180, bottom: 0, left: '50%', transform: 'translateX(-50%)', boxShadow: '0 -10px 28px rgba(0,0,0,.16)' }}>
+    <nav className={className} aria-label={ariaLabel} style={{ width: '100%', maxWidth: 430, borderTop: `1px solid ${T.cb}`, padding: '8px 10px 10px', display: 'grid', gridTemplateColumns: `repeat(${tabs.length}, 1fr)`, gap: 5, background: T.bg, position: 'fixed', zIndex: 180, bottom: 0, left: '50%', transform: 'translateX(-50%)', boxShadow: '0 -10px 28px rgba(0,0,0,.16)' }}>
       {tabs.map(([key, label, icon, unread]) => (
         <button data-demo-tab={key} aria-pressed={current === key} key={key} onClick={() => onChange(key)} style={{ position: 'relative', background: current === key ? '#fff' : 'transparent', color: current === key ? '#05060d' : T.mu, border: 'none', borderRadius: 12, minHeight: 48, padding: '6px 3px', cursor: 'pointer', fontSize: tabs.length > 3 ? 10 : 11, fontWeight: 900, display: 'grid', placeItems: 'center', gap: 1 }}>
           {!!unread && unread > 0 && <span aria-label={`${unread} nouvelle${unread > 1 ? 's' : ''} notification${unread > 1 ? 's' : ''}`} style={{ position: 'absolute', top: 3, right: '18%', minWidth: 18, height: 18, padding: '0 5px', borderRadius: 10, display: 'grid', placeItems: 'center', background: '#ef4444', color: '#fff', fontSize: 9, lineHeight: 1, boxShadow: `0 0 0 2px ${T.bg}` }}>+{unread}</span>}
@@ -1980,6 +1986,8 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
     : [];
   const archivedMissions = archivedStructureMissions(kind);
   const cancelledMissions = cancelledStructureMissions(kind);
+  const nextMission = missions[0] ?? null;
+  const structureAlertCount = delayNotices.length + cancellationNotices.length;
 
   function decide(id: string, status: CandidateStatus) {
     const candidate = candidates.find((item) => item.id === id);
@@ -2078,8 +2086,28 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
     <>
       <TopBar title="Espace structure" badge={displayedStructureName} onBack={onBack} founder={founder} />
       {toast && <div style={{ margin: '10px 14px 0', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 10, padding: '8px 12px', color: T.sub, fontSize: 11 }}>{toast}</div>}
-      <div style={{ padding: 16, paddingBottom: 92, minHeight: 620 }}>
-        <div style={{ background: T.card, border: `1px solid ${T.greenBorder}`, borderRadius: 16, padding: 14, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div className="structure-dashboard">
+        <aside className="structure-sidebar" aria-label="Navigation Structure">
+          <div className="structure-sidebar-brand" aria-hidden="true">
+            <div style={{ color: T.green, fontSize: 10, fontWeight: 900, letterSpacing: 1.2 }}>ESPACE STRUCTURE</div>
+            <div style={{ color: T.text, fontSize: 17, fontWeight: 900, marginTop: 5 }}>Tableau de bord</div>
+          </div>
+          <BottomTabs
+            className="structure-navigation"
+            ariaLabel="Navigation de l’espace Structure"
+            tabs={[
+              ['missions', `Missions ${missions.length}`],
+              ['candidats', `Candidats ${pending.length}`, undefined, candidateUnread],
+              ['habitues', `Habitués ${regulars.length}`],
+              ['historique', 'Historique'],
+            ]}
+            current={tab}
+            onChange={(v) => changeStructureTab(v as StructureTab)}
+          />
+        </aside>
+        <main className="structure-dashboard-content" style={{ padding: 16, paddingBottom: 92, minHeight: 620 }}>
+        <header className="structure-overview">
+        <div className="structure-identity-card" style={{ background: T.card, border: `1px solid ${T.greenBorder}`, borderRadius: 16, padding: 14, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: 14, background: kind === 'asso' ? '#14532d' : '#075985', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900 }}>{initials(displayedStructureName)}</div>
           <div style={{ flex: 1 }}>
             <div style={{ color: T.text, fontSize: 16, lineHeight: 1.2, fontWeight: 900, overflowWrap: 'anywhere' }}>{displayedStructureName}</div>
@@ -2100,62 +2128,98 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
           </div>
           <button onClick={() => setKind(null)} style={{ background: T.row, color: T.mu, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 10px', fontSize: 10, fontWeight: 800, cursor: 'pointer' }}>Changer</button>
         </div>
-        <div style={{ color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 12, padding: '10px 12px', fontSize: 10.5, fontWeight: 900, marginBottom: 12 }}>
+        <div className="structure-verification-badge" style={{ color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 12, padding: '10px 12px', fontSize: 10.5, fontWeight: 900, marginBottom: 12 }}>
           ✓ Structure vérifiée · identité et SIRET confirmés (démo)
         </div>
-        {showStatsIntro && tab !== 'historique' && <StructureStats stats={seed.stats} live />}
-        <BottomTabs
-          tabs={[
-            ['missions', `Missions ${missions.length}`],
-            ['candidats', `Candidats ${pending.length}`, undefined, candidateUnread],
-            ['habitues', `Habitués ${regulars.length}`],
-            ['historique', 'Historique'],
-          ]}
-          current={tab}
-          onChange={(v) => changeStructureTab(v as StructureTab)}
-        />
+        {tab !== 'historique' && (
+          <div className={`structure-stats${showStatsIntro ? ' structure-stats-mobile-visible' : ''}`}>
+            <StructureStats stats={seed.stats} live={showStatsIntro} />
+          </div>
+        )}
+        </header>
         <div style={{ height: 12 }} />
         {tab === 'missions' && (
-          <div className="dsp-grid" style={{ display: 'grid', gap: 10 }}>
-            {cancellationNotices.map((notice) => {
-              const waitingCount = candidates.filter((candidate) => candidate.missionId === notice.missionId && candidate.status === 'pending').length;
-              return (
-                <div key={`cancel-${notice.missionId}`} className="dsp-span" role="status" style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, borderRadius: 14, padding: 13, display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: T.red, fontSize: 11, fontWeight: 900 }}>{notice.workerName} a annulé sa participation</div>
-                    <div style={{ color: T.sub, fontSize: 10, marginTop: 3 }}>{notice.missionTitle}</div>
-                    <div style={{ color: T.cyan, fontSize: 10, fontWeight: 800, marginTop: 4 }}>
-                      {waitingCount > 0
-                        ? `UROSI propose déjà la place aux ${waitingCount} candidat${waitingCount > 1 ? 's' : ''} en file d'attente.`
-                        : 'UROSI republie automatiquement la place dans le flux des travailleurs disponibles.'}
+          <div className="structure-missions-layout">
+            <div className="structure-alert-stack" aria-label="Alertes des missions">
+              {cancellationNotices.map((notice) => {
+                const waitingCount = candidates.filter((candidate) => candidate.missionId === notice.missionId && candidate.status === 'pending').length;
+                return (
+                  <div key={`cancel-${notice.missionId}`} role="status" style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, borderRadius: 14, padding: 13, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: T.red, fontSize: 11, fontWeight: 900 }}>{notice.workerName} a annulé sa participation</div>
+                      <div style={{ color: T.sub, fontSize: 10, marginTop: 3 }}>{notice.missionTitle}</div>
+                      <div style={{ color: T.cyan, fontSize: 10, fontWeight: 800, marginTop: 4 }}>
+                        {waitingCount > 0
+                          ? `UROSI propose déjà la place aux ${waitingCount} candidat${waitingCount > 1 ? 's' : ''} en file d'attente.`
+                          : 'UROSI republie automatiquement la place dans le flux des travailleurs disponibles.'}
+                      </div>
                     </div>
+                    <button onClick={() => dismissCancellation(notice.missionId)} style={{ background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 9px', fontSize: 9, fontWeight: 900, cursor: 'pointer' }}>Vu</button>
                   </div>
-                  <button onClick={() => dismissCancellation(notice.missionId)} style={{ background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 9px', fontSize: 9, fontWeight: 900, cursor: 'pointer' }}>Vu</button>
+                );
+              })}
+              {delayNotices.map((notice) => (
+                <div key={notice.missionId} role="status" style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 14, padding: 13, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: T.amber, fontSize: 11, fontWeight: 900 }}>+1 · Retard signalé : {notice.minutes}{notice.minutes === 30 ? '+' : ''} min</div>
+                    <div style={{ color: T.sub, fontSize: 10, marginTop: 3 }}>{notice.missionTitle} · Alex Démo</div>
+                  </div>
+                  <button onClick={() => dismissDelay(notice.missionId)} style={{ background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 9px', fontSize: 9, fontWeight: 900, cursor: 'pointer' }}>Vu</button>
                 </div>
-              );
-            })}
-            {delayNotices.map((notice) => (
-              <div key={notice.missionId} className="dsp-span" role="status" style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 14, padding: 13, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ color: T.amber, fontSize: 11, fontWeight: 900 }}>+1 · Retard signalé : {notice.minutes}{notice.minutes === 30 ? '+' : ''} min</div>
-                  <div style={{ color: T.sub, fontSize: 10, marginTop: 3 }}>{notice.missionTitle} · Alex Démo</div>
+              ))}
+              {structureAlertCount === 0 && (
+                <div className="structure-alert-empty" style={{ color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 14, padding: 13, fontSize: 10.5, fontWeight: 900 }}>
+                  ✓ Aucune alerte sur les missions en cours
                 </div>
-                <button onClick={() => dismissDelay(notice.missionId)} style={{ background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 9px', fontSize: 9, fontWeight: 900, cursor: 'pointer' }}>Vu</button>
+              )}
+            </div>
+
+            <div className="structure-missions-header" data-demo-tour="structure-publish">
+              <div className="structure-missions-title">
+                <div style={{ color: T.text, fontSize: 18, fontWeight: 900 }}>Missions en cours</div>
+                <div style={{ color: T.mu, fontSize: 10, marginTop: 3 }}>{missions.length} mission{missions.length > 1 ? 's' : ''} active{missions.length > 1 ? 's' : ''}</div>
               </div>
-            ))}
-            <div className="dsp-span" data-demo-tour="structure-publish">
-              <Button onClick={() => setShowPub(true)}>Publier une mission</Button>
-              <div style={{ color: T.mu, fontSize: 9.5, textAlign: 'center', marginTop: 7 }}>
-                Plusieurs missions possibles · 3 jours maximum par mission
+              <div className="structure-publish-action">
+                <Button onClick={() => setShowPub(true)}>Publier une mission</Button>
+                <div className="structure-publish-help" style={{ color: T.mu, fontSize: 9.5, textAlign: 'center', marginTop: 7 }}>
+                  Plusieurs missions possibles · 3 jours maximum par mission
+                </div>
               </div>
             </div>
-            {missions[0] && <div className="dsp-span"><Button tone="green" onClick={() => setQrMission(missions[0] ?? null)}>Tester le QR + PIN</Button></div>}
-            <div className="dsp-span" style={{ color: T.mu, fontSize: 9.5, textAlign: 'center' }}>Touche une mission ou utilise •••. Appui long ou swipe gauche disponibles sur mobile.</div>
-            {missions.map((m, i) => {
-              const allMissionCandidates = candidates.filter((candidate) => candidate.missionId === m.id);
-              const completed = demoState.completedMissionIds.includes(m.id);
-              return <DemoStructureMissionCard key={m.id} mission={m} index={i} candidateCount={allMissionCandidates.length} completed={completed} onOpen={(mode) => setManagedMission({ mission: m, mode })} onRepublish={() => duplicateMission(m, completed)} />;
-            })}
+
+            {nextMission && (
+              <aside className="structure-qr-card" aria-label="QR et PIN de la prochaine mission">
+                <div className="structure-side-card-title" style={{ color: T.text, fontSize: 13, fontWeight: 900 }}>QR + PIN</div>
+                <div className="structure-side-card-copy" style={{ color: T.mu, fontSize: 10, lineHeight: 1.45, margin: '5px 0 12px' }}>{nextMission.title} · arrivée et départ</div>
+                <Button tone="green" onClick={() => setQrMission(nextMission)}>Tester le QR + PIN</Button>
+              </aside>
+            )}
+
+            <div className="structure-missions-help" style={{ color: T.mu, fontSize: 9.5, textAlign: 'center' }}>Touche une mission ou utilise •••. Appui long ou swipe gauche disponibles sur mobile.</div>
+
+            <div className="structure-mission-grid">
+              {missions.map((m, i) => {
+                const allMissionCandidates = candidates.filter((candidate) => candidate.missionId === m.id);
+                const completed = demoState.completedMissionIds.includes(m.id);
+                return <DemoStructureMissionCard key={m.id} mission={m} index={i} candidateCount={allMissionCandidates.length} completed={completed} onOpen={(mode) => setManagedMission({ mission: m, mode })} onRepublish={() => duplicateMission(m, completed)} />;
+              })}
+            </div>
+
+            <aside className="structure-candidate-summary" aria-label="Candidatures à traiter">
+              <div style={{ color: T.text, fontSize: 13, fontWeight: 900 }}>Candidatures à traiter</div>
+              <div style={{ color: pending.length ? T.amber : T.green, fontSize: 26, fontWeight: 900, margin: '8px 0 3px' }}>{pending.length}</div>
+              <div style={{ color: T.mu, fontSize: 10, lineHeight: 1.45 }}>{pending.length ? 'Décisions en attente sur les missions actives.' : 'Toutes les candidatures sont à jour.'}</div>
+              <button onClick={() => changeStructureTab('candidats')} style={{ marginTop: 12, background: T.row, color: T.cyan, border: `1px solid ${T.cb}`, borderRadius: 9, padding: '8px 10px', fontSize: 10, fontWeight: 900, cursor: 'pointer' }}>Voir les candidats →</button>
+            </aside>
+
+            {nextMission && (
+              <aside className="structure-next-mission" aria-label="Prochaine mission">
+                <div style={{ color: T.mu, fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: .6 }}>Prochaine mission</div>
+                <div style={{ color: T.text, fontSize: 13, fontWeight: 900, marginTop: 7 }}>{nextMission.title}</div>
+                <div style={{ color: T.sub, fontSize: 10, marginTop: 5 }}>{nextMission.when} · {nextMission.duration}</div>
+                <button onClick={() => setManagedMission({ mission: nextMission })} style={{ marginTop: 12, background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 9, padding: '8px 10px', fontSize: 10, fontWeight: 900, cursor: 'pointer' }}>Ouvrir la mission</button>
+              </aside>
+            )}
           </div>
         )}
         {tab === 'historique' && (
@@ -2242,6 +2306,7 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
             ))}
           </div>
         )}
+        </main>
       </div>
       {showStructureReviews && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 195 }} onClick={() => setShowStructureReviews(false)}>
@@ -2732,7 +2797,7 @@ export function DemoExperience() {
         </button>
       )}
       {!embedded && <DemoFormatSwitch format={demoFormat} onChange={changeDemoFormat} />}
-      <DemoShell embedded={embedded} wide={!embedded && demoFormat === 'wide'}>
+      <DemoShell embedded={embedded} wide={!embedded && demoFormat === 'wide'} contentClassName={role === 'structure' ? 'demo-structure-shell' : undefined}>
         {role === 'worker' ? (
           <WorkerDemo key={`worker-${demoVersion}`} founder={displayedFounder} onBack={returnToDemoChoice} accountName={labAccount?.role === 'worker' ? labAccount.name : undefined} />
         ) : (

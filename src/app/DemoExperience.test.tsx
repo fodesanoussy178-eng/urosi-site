@@ -235,23 +235,27 @@ describe('DemoExperience founder scan', () => {
     expect(screen.getByText('Terminer la mission')).toBeInTheDocument();
   });
 
-  it('replaces internal demo tools with a compact two-mission notice', async () => {
-    const user = userEvent.setup();
-    renderStructure();
+  it('keeps the mission limit clear and exposes the dedicated desktop regions', () => {
+    const { container } = renderStructure();
 
     expect(screen.queryByText('MODE DÉMO')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Peupler le flux' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Deux missions disponibles en mode démo' }));
-    expect(screen.getByText('Vous pouvez créer deux missions en mode démo.')).toBeInTheDocument();
+    expect(screen.getByText('Plusieurs missions possibles · 3 jours maximum par mission')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Publier une mission' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tester le QR + PIN' })).toBeInTheDocument();
+    expect(container.querySelector('.structure-sidebar')).toContainElement(screen.getByRole('navigation', { name: 'Navigation de l’espace Structure' }));
+    expect(container.querySelector('.structure-dashboard-content')).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'QR et PIN de la prochaine mission' })).toBeInTheDocument();
   });
 
   it('moves the structure statistics to history after three seconds', () => {
     vi.useFakeTimers();
     renderStructure();
 
-    expect(screen.getByLabelText('Statistiques de la structure')).toBeInTheDocument();
+    const introStats = screen.getByLabelText('Statistiques de la structure');
+    expect(introStats.parentElement).toHaveClass('structure-stats-mobile-visible');
     act(() => vi.advanceTimersByTime(3000));
-    expect(screen.queryByLabelText('Statistiques de la structure')).not.toBeInTheDocument();
+    expect(introStats.parentElement).not.toHaveClass('structure-stats-mobile-visible');
 
     fireEvent.click(screen.getByRole('button', { name: 'Historique' }));
     expect(screen.getByLabelText('Statistiques de la structure')).toBeInTheDocument();
