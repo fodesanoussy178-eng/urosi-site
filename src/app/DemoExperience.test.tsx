@@ -164,8 +164,33 @@ describe('DemoExperience founder scan', () => {
     expect(sheet).toBeInTheDocument();
     expect(screen.getByText('Rush du midi, aide comptoir, salle propre et équipe déjà briefée.')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Voir les détails de la structure' }));
+    await user.click(screen.getByRole('button', { name: 'Voir le profil' }));
     expect(screen.queryByRole('dialog', { name: 'Détail de la mission Renfort service midi' })).not.toBeInTheDocument();
+  });
+
+  it('always shows at least two CV missions to the structure, even if the worker hides everything', async () => {
+    const user = userEvent.setup();
+    const allLabels = [
+      'Renfort service midi · 64 €', 'Inventaire magasin · 42 €', 'Montage festival · 91 €',
+      'Préparation commandes · 61 €', 'Accueil au stade · 112 €', 'Installation forum étudiant · 44 €',
+      'Assistant tournage · 95 €', 'Accueil spectacle · 52 €', 'Classement bibliothèque · 39 €',
+      'Accueil au musée · 78 €', 'Livraison interne · 57 €', 'Renfort association · Solidaire',
+      'Aide photographe · 46 €', 'Mise en place événement · 73 €', 'Service en salle · 48 €',
+    ];
+    localStorage.setItem('urosi_founder_demo_shared_v1', JSON.stringify({
+      workerHiddenCvLabels: allLabels,
+      candidates: [{ id: 'demo-worker-m1', missionId: 'm1', name: 'Alex Démo', city: 'Lille', note: 4.7, here: 1, history: [['x', 'y']], status: 'pending' }],
+    }));
+    renderStructure();
+
+    await user.click(screen.getByRole('button', { name: /Candidats/ }));
+    await user.click(screen.getByText('Alex Démo'));
+
+    expect(screen.getByText('Historique vérifié (CV vivant)')).toBeInTheDocument();
+    // Tout est masqué, mais deux missions restent affichées.
+    expect(screen.getByText('Renfort service midi')).toBeInTheDocument();
+    expect(screen.getByText('Inventaire magasin')).toBeInTheDocument();
+    expect(screen.queryByText('Montage festival')).not.toBeInTheDocument();
   });
 
   it('shows the worker cancellation to the structure with the waiting-list proposal', () => {
