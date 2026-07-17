@@ -1158,8 +1158,12 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
   const founderScanUrl = demoQr ? demoFounderScanUrl(demoQr.mission, demoQr.step) : '';
   const missionUnread = demoState.workerUnreadMissionIds.length;
   const walletUnread = demoState.workerUnreadWalletMissionIds.length;
+  // L'argent des missions terminées est « en route » (J+3) : il s'affiche
+  // comme virement en cours et le bloc disparaît quand il n'y a rien —
+  // jamais de montant en attente permanent.
   const completedIncome = demoState.completedMissionIds.reduce((sum, missionId) => sum + (feed.find((mission) => mission.id === missionId)?.amount ?? 0), 0);
-  const availableWallet = Math.max(0, wallet + completedIncome);
+  const availableWallet = Math.max(0, wallet);
+  const incomingWallet = completedIncome;
 
   function changeWorkerTab(next: WorkerTab) {
     setTab(next);
@@ -1170,7 +1174,7 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
       setDemoState(readDemoState());
     }
     if (next === 'wallet' && walletUnread > 0) {
-      notif(`+${walletUnread} · ${walletUnread} mission${walletUnread > 1 ? 's' : ''} terminée${walletUnread > 1 ? 's' : ''}, paiement ajouté au wallet.`);
+      notif(`+${walletUnread} · ${walletUnread} mission${walletUnread > 1 ? 's' : ''} terminée${walletUnread > 1 ? 's' : ''}, ton virement est en route.`);
       clearDemoUnread('workerUnreadWalletMissionIds', demoState.workerUnreadWalletMissionIds);
       setDemoState(readDemoState());
     }
@@ -1302,9 +1306,11 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
                 <button type="button" onClick={() => setShowEarnings((visible) => !visible)} aria-label={showEarnings ? 'Masquer le solde' : 'Afficher le solde'} style={{ background: '#ffffff12', color: '#fff', border: '1px solid #ffffff25', borderRadius: 9, padding: '6px 9px', fontSize: 9.5, fontWeight: 900, cursor: 'pointer' }}>{showEarnings ? 'Masquer' : 'Afficher'}</button>
               </div>
               <div style={{ color: '#fff', fontSize: 48, fontWeight: 900, letterSpacing: -2 }}>{showEarnings ? availableWallet : '•••'}{showEarnings && <span style={{ color: T.green, fontSize: 22 }}>€</span>}</div>
-              <div style={{ marginTop: 10 }}>
-                <div style={{ color: T.green, fontSize: 13, fontWeight: 900 }}>En attente · virement J+3<br /><span style={{ fontSize: 27 }}>{showEarnings ? '40 €' : '•••'}</span></div>
-              </div>
+              {incomingWallet > 0 && (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ color: T.green, fontSize: 13, fontWeight: 900 }}>Virement en cours · disponible sous 3 jours<br /><span style={{ fontSize: 27 }}>{showEarnings ? `${incomingWallet} €` : '•••'}</span></div>
+                </div>
+              )}
             </div>
             <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 16, padding: 16 }}>
               <label htmlFor="demo-withdraw-amount" style={{ display: 'block', color: T.sub, fontSize: 11, fontWeight: 800, marginBottom: 8 }}>Montant à retirer</label>
