@@ -298,7 +298,7 @@ export function WorkerApp() {
       await applyToMission(m.id, session.user.id);
       await load();
       setDetail(null);
-      notif('✓ Candidature envoyée. Elle apparaîtra dans Missions si la structure accepte.');
+      notif('✓ Candidature envoyée. Tu seras prévenu dès que ta mission est confirmée.');
     } catch (e) {
       notif(e instanceof Error ? e.message : 'Impossible de postuler.');
     } finally {
@@ -502,7 +502,7 @@ export function WorkerApp() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {pendingCount > 0 && (
                 <div style={{ fontSize: 10, color: T.mu, textAlign: 'center', padding: '2px 0' }}>
-                  {pendingCount} candidature{pendingCount > 1 ? 's' : ''} en attente de réponse des structures
+                  {pendingCount} candidature{pendingCount > 1 ? 's' : ''} envoyée{pendingCount > 1 ? 's' : ''} · tu seras prévenu dès confirmation
                 </div>
               )}
               {acceptedApps.length === 0 && (

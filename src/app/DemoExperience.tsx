@@ -1129,7 +1129,9 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
     if (!accepted.includes(m.id)) setAccepted(rememberAcceptedMission(m));
     setDemoState(readDemoState());
     setTab('moi');
-    notif(m.solid ? 'Candidature solidaire envoyée à la structure.' : `Candidature envoyée à ${m.structure}. En attente de son acceptation.`);
+    // Jamais de notion d'attente côté travailleur : il participe, puis il est
+    // prévenu quand c'est confirmé.
+    notif(m.solid ? 'Participation envoyée à la structure.' : `Candidature envoyée à ${m.structure}. Tu seras prévenu dès que ta mission est confirmée.`);
   }
 
   function withdraw() {
@@ -1208,7 +1210,7 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
                   <div style={{ color: T.mu, fontSize: 11, marginTop: 3 }}>{m.structure} · {m.when}</div>
                   {!confirmed ? (
                     <div style={{ color: application?.status === 'rejected' ? T.red : T.amber, background: application?.status === 'rejected' ? T.redBg : T.amberBg, border: `1px solid ${application?.status === 'rejected' ? T.redBorder : T.amberBorder}`, borderRadius: 12, padding: 12, marginTop: 12, fontSize: 11, fontWeight: 900 }}>
-                      {application?.status === 'rejected' ? 'Candidature non retenue' : 'Candidature en attente de la structure'}
+                      {application?.status === 'rejected' ? 'Candidature non retenue' : 'Candidature envoyée · tu seras prévenu dès confirmation'}
                     </div>
                   ) : (<>
                   <div style={{ background: T.row, border: `1px solid ${T.greenBorder}`, borderRadius: 12, padding: 12, marginTop: 12 }}>
