@@ -826,12 +826,16 @@ function AboutEditor({ structure, onSaved, notif }: { structure: Structure; onSa
 function PublishModal({ structure, onClose, onPublished }: { structure: Structure; onClose: () => void; onPublished: (m: Mission) => void }) {
   const [f, setF] = useState({
     t: '',
-    adr: '',
+    city: '',
+    address: '',
     category: 'renfort_service',
     rateMode: 'hourly' as RateMode,
     hourly: String(DEFAULT_HOURLY_EUR),
     fixed: '60',
     desc: '',
+    dressCode: '',
+    equipment: '',
+    instructions: '',
     positions: 1,
     solid: false,
   });
@@ -866,8 +870,10 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
   const validationMessage =
     f.t.trim().length < 2
       ? 'Renseigne le titre de la mission.'
-      : f.adr.trim().length < 2
-        ? 'Renseigne le lieu de la mission.'
+      : f.city.trim().length < 2
+        ? 'Renseigne la ville de la mission.'
+        : f.address.trim().length < 4
+          ? "Renseigne l'adresse complète de la mission."
         : slots.length === 0 || slots.some((sl) => !sl.date)
           ? 'Choisis au moins une date.'
           : invalidSlots
@@ -913,7 +919,7 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
     setError(null);
     setBusy(true);
     try {
-      const coords = geocodeMelCity(f.adr);
+      const coords = geocodeMelCity(`${f.address}, ${f.city}`);
       const start = firstSlot(slots);
       const end = lastSlot(slots);
       const startAt = start ? slotStartsAt(start) : dateTime(todayPlus(1), '09:00');
@@ -922,13 +928,14 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
         structure_id: structure.id,
         title: f.t.trim(),
         detail: f.desc.trim() || null,
-        city: f.adr.trim(),
-        address: f.adr.trim(),
-        location: f.adr.trim(),
+        city: f.city.trim(),
+        address: f.address.trim(),
+        location: f.address.trim(),
         lat: coords?.lat ?? null,
         lng: coords?.lng ?? null,
         scheduled_date: start?.date ?? todayPlus(1),
         start_time: start?.start ?? null,
+        end_time: end?.end ?? null,
         starts_at: startAt.toISOString(),
         ends_at: endAt.toISOString(),
         duration_minutes: minutes,
@@ -948,6 +955,9 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
         time_slot: inferTimeSlot(slots),
         day_of_week: dayOfWeek(start?.date ?? todayPlus(1)),
         mission_category: f.category,
+        dress_code: f.dressCode.trim() || null,
+        equipment: f.equipment.trim() || null,
+        instructions: f.instructions.trim() || null,
         is_solidaire: f.solid,
       });
       onPublished(mission);
@@ -976,8 +986,11 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
             ))}
           </select>
         </Fld>
-        <Fld label="Lieu">
-          <input aria-label="Lieu" value={f.adr} onChange={(e) => setF((x) => ({ ...x, adr: e.target.value }))} placeholder="Adresse ou ville" style={inp} />
+        <Fld label="Ville">
+          <input aria-label="Ville" value={f.city} onChange={(e) => setF((x) => ({ ...x, city: e.target.value }))} placeholder="Lille" style={inp} />
+        </Fld>
+        <Fld label="Adresse complète">
+          <input aria-label="Adresse complète" value={f.address} onChange={(e) => setF((x) => ({ ...x, address: e.target.value }))} placeholder="12 rue Nationale, 59000 Lille" style={inp} />
         </Fld>
 
         <Fld label="Horaires">
@@ -1092,6 +1105,15 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
 
         <Fld label="Descriptif">
           <textarea aria-label="Descriptif" value={f.desc} onChange={(e) => setF((x) => ({ ...x, desc: e.target.value }))} rows={3} placeholder="Ce que le travailleur fera concrètement…" style={{ ...inp, resize: 'none', lineHeight: 1.5 }} />
+        </Fld>
+        <Fld label="Tenue demandée">
+          <input aria-label="Tenue demandée" value={f.dressCode} onChange={(e) => setF((x) => ({ ...x, dressCode: e.target.value }))} placeholder="Ex. pantalon noir et chaussures fermées" style={inp} />
+        </Fld>
+        <Fld label="Équipement">
+          <input aria-label="Équipement" value={f.equipment} onChange={(e) => setF((x) => ({ ...x, equipment: e.target.value }))} placeholder="Ex. fourni sur place, gants à apporter…" style={inp} />
+        </Fld>
+        <Fld label="Consignes">
+          <textarea aria-label="Consignes" value={f.instructions} onChange={(e) => setF((x) => ({ ...x, instructions: e.target.value }))} rows={3} placeholder="Accès, personne à contacter, arrivée sur place…" style={{ ...inp, resize: 'none', lineHeight: 1.5 }} />
         </Fld>
 
         {(error || validationMessage) && <div style={{ fontSize: 11, color: T.red, marginBottom: 10 }}>{error || validationMessage}</div>}

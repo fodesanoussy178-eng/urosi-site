@@ -72,6 +72,11 @@ type DemoMission = {
   distance: string;
   solid?: boolean;
   desc: string;
+  address?: string;
+  dressCode?: string;
+  equipment?: string;
+  instructions?: string;
+  missionType?: string;
   places?: number;
   status?: 'draft' | 'published';
 };
@@ -139,6 +144,11 @@ const workerMissions: DemoMission[] = [
     reviews: 26,
     distance: '600 m',
     desc: 'Rush du midi, aide comptoir, salle propre et équipe déjà briefée.',
+    address: '12 rue Nationale, 59000 Lille',
+    dressCode: 'Pantalon noir et chaussures fermées',
+    equipment: 'Tablier et matériel fournis sur place',
+    instructions: 'Présente-toi 10 minutes avant le service au responsable de salle.',
+    missionType: 'Renfort service',
   },
   {
     id: 'm2',
@@ -910,40 +920,30 @@ function DemoFormatSwitch({ format, onChange }: { format: 'phone' | 'wide'; onCh
   );
 }
 
-function MissionCard({ mission, onAccept, onStructure, onOpen }: { mission: DemoMission; onAccept?: () => void; onStructure?: () => void; onOpen?: () => void }) {
+function MissionCard({ mission, onAccept, onOpen }: { mission: DemoMission; onAccept?: () => void; onOpen?: () => void }) {
   return (
-    <div data-demo-tour="mission-card" onClick={onOpen} style={{ background: T.card, border: `1px solid ${mission.solid ? T.greenBorder : T.cb}`, borderRadius: 16, padding: 17, cursor: onOpen ? 'pointer' : undefined }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
-        {mission.solid ? (
-          <>
-            <span style={{ color: T.green, fontSize: 27, fontWeight: 900, letterSpacing: -1 }}>Solidaire</span>
-            <span style={{ color: T.sub, fontSize: 15, fontWeight: 900 }}>0 €</span>
-          </>
-        ) : (
-          <span style={{ color: T.text, fontSize: 36, fontWeight: 900, letterSpacing: -2 }}>{mission.amount}€</span>
-        )}
+    <article
+      data-demo-tour="mission-card"
+      style={{ position: 'relative', background: T.card, border: `1px solid ${mission.solid ? T.greenBorder : T.cb}`, borderRadius: 16, padding: 14 }}
+    >
+      <button type="button" aria-label={`Voir la fiche complète de ${mission.title}`} onClick={onOpen} style={{ position: 'absolute', inset: 0, zIndex: 0, width: '100%', border: 0, borderRadius: 16, background: 'transparent', cursor: onOpen ? 'pointer' : undefined }} />
+      <div style={{ position: 'relative', zIndex: 1, pointerEvents: 'none' }}>
+        <div style={{ color: mission.solid ? T.green : T.text, fontSize: 31, fontWeight: 900, letterSpacing: -1.5, lineHeight: 1, marginBottom: 7 }}>{mission.amount} €</div>
+        <div style={{ color: T.text, fontSize: 15, fontWeight: 900, marginBottom: 5 }}>{mission.title}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+          <button onClick={onOpen} style={{ pointerEvents: 'auto', minWidth: 0, background: 'none', border: 'none', color: T.sub, fontSize: 11, fontWeight: 800, padding: 0, cursor: 'pointer', textDecoration: 'underline', textDecorationColor: T.cb, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {mission.structure}
+          </button>
+          <span aria-label={`Note moyenne ${mission.rating.toFixed(1)} sur 5`} style={{ flexShrink: 0, color: T.amber, fontSize: 10.5, fontWeight: 900 }}>⭐ {mission.rating.toFixed(1).replace('.', ',')}</span>
+        </div>
+        <div style={{ color: T.mu, fontSize: 10.5, marginTop: 5 }}>📍 {mission.city}</div>
+        <div data-demo-tour="mission-action" style={{ pointerEvents: 'auto', marginTop: 11 }}>
+          <Button onClick={onAccept} tone={mission.solid ? 'green' : 'dark'}>
+            {mission.solid ? 'Participer' : 'Accepter'}
+          </Button>
+        </div>
       </div>
-      <div style={{ color: T.text, fontSize: 15, fontWeight: 900, marginBottom: 5 }}>{mission.title}</div>
-      <button onClick={(event) => { event.stopPropagation(); onStructure?.(); }} style={{ background: 'none', border: 'none', color: T.sub, fontSize: 11, fontWeight: 800, padding: 0, cursor: 'pointer' }}>
-        {mission.structure} ›
-      </button>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginTop: 5 }}>
-        <span style={{ color: T.green, background: T.greenBg, borderRadius: 12, padding: '2px 7px', fontSize: 8.5, fontWeight: 900 }}>✓ Vérifié (démo)</span>
-        <Stars n={mission.rating} size={12} animateOnce />
-        <span style={{ color: T.mu, fontSize: 10, fontWeight: 800 }}>
-          {mission.rating.toFixed(1).replace('.', ',')}{mission.reviews ? ` · ${mission.reviews} avis` : ''}
-        </span>
-      </div>
-      <div style={{ color: T.mu, fontSize: 10.5, lineHeight: 1.5, marginTop: 7 }}>
-        {mission.city} · {mission.when} · {mission.duration} · {mission.distance}
-      </div>
-      {mission.solid && <div style={{ color: T.green, fontSize: 11, fontWeight: 800, marginTop: 7 }}>Compte dans ton CV vivant · sans rémunération</div>}
-      <div data-demo-tour="mission-action" style={{ marginTop: 13 }} onClick={(event) => event.stopPropagation()}>
-        <Button onClick={onAccept} tone={mission.solid ? 'green' : 'dark'}>
-          {mission.solid ? 'Participer' : 'Accepter'}
-        </Button>
-      </div>
-    </div>
+    </article>
   );
 }
 
@@ -963,17 +963,28 @@ function DemoMissionSheet({ mission, onClose, onAccept, onStructure }: { mission
           <button aria-label="Fermer le détail" onClick={onClose} style={{ background: T.row, border: 'none', borderRadius: 8, width: 28, height: 28, cursor: 'pointer', color: T.sub, fontSize: 14 }}>×</button>
         </div>
         <div style={{ color: T.text, fontSize: 17, fontWeight: 900, margin: '6px 0 3px' }}>{mission.title}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginBottom: 10 }}>
-          <span style={{ color: T.sub, fontSize: 11, fontWeight: 800 }}>{mission.structure}</span>
-          <Stars n={mission.rating} size={11} />
-          <span style={{ color: T.mu, fontSize: 10, fontWeight: 800 }}>{mission.rating.toFixed(1).replace('.', ',')}{mission.reviews ? ` · ${mission.reviews} avis` : ''}</span>
-        </div>
-        <div style={{ color: T.sub, fontSize: 12, lineHeight: 1.6, background: T.row, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 12, marginBottom: 10 }}>{mission.desc}</div>
-        <div style={{ color: T.mu, fontSize: 11, lineHeight: 1.7, marginBottom: 14 }}>
-          📍 {mission.city} · {mission.distance}<br />
-          🕐 {mission.when} · {mission.duration}
-          {mission.places && mission.places > 1 ? <><br />👥 {mission.places} places</> : null}
-        </div>
+        <section aria-label="Détails de la structure" style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 12, margin: '10px 0' }}>
+          <div style={{ color: T.text, fontSize: 12, fontWeight: 900 }}>{mission.structure}</div>
+          <div style={{ color: T.amber, fontSize: 10.5, fontWeight: 900, marginTop: 4 }}>⭐ {mission.rating.toFixed(1).replace('.', ',')}{mission.reviews ? ` · ${mission.reviews} avis` : ''}</div>
+          <div style={{ color: T.green, fontSize: 9.5, fontWeight: 900, marginTop: 6 }}>✓ Structure vérifiée</div>
+        </section>
+        <section aria-label="Date, horaires et durée" style={{ color: T.mu, fontSize: 11, lineHeight: 1.7, marginBottom: 10 }}>
+          🕐 {mission.when}<br />Durée : {mission.duration}
+        </section>
+        <section aria-label="Adresse complète" style={{ color: T.sub, fontSize: 11, lineHeight: 1.6, marginBottom: 10 }}>
+          📍 {mission.address || `${mission.city} · adresse communiquée par la structure`}
+        </section>
+        <section aria-label="Description de la mission" style={{ color: T.sub, fontSize: 12, lineHeight: 1.6, background: T.row, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 12, marginBottom: 10 }}>{mission.desc}</section>
+        <section aria-label="Conditions de la mission" style={{ color: T.sub, fontSize: 11, lineHeight: 1.7, marginBottom: 10 }}>
+          <strong style={{ color: T.text }}>Conditions</strong><br />
+          Type : {mission.missionType || (mission.solid ? 'Mission solidaire' : 'Mission rémunérée')}<br />
+          Tenue : {mission.dressCode || 'Aucune tenue particulière indiquée'}<br />
+          Équipement : {mission.equipment || 'Fourni ou précisé par la structure'}
+        </section>
+        <section aria-label="Informations pratiques" style={{ color: T.sub, fontSize: 11, lineHeight: 1.6, marginBottom: 14 }}>
+          <strong style={{ color: T.text }}>Informations pratiques</strong><br />
+          {mission.instructions || `Lieu à ${mission.distance}${mission.places && mission.places > 1 ? ` · ${mission.places} places` : ''}`}
+        </section>
         <div style={{ display: 'grid', gap: 8 }}>
           <Button onClick={() => { onClose(); onAccept(); }} tone={mission.solid ? 'green' : 'dark'}>{mission.solid ? 'Participer' : 'Accepter'}</Button>
           <Button tone="light" onClick={() => { onClose(); onStructure(); }}>Voir le profil</Button>
@@ -1209,7 +1220,7 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
               Flux trié autour de toi · compte fictif{founderPublishedCount ? ` · ${founderPublishedCount} mission${founderPublishedCount > 1 ? 's' : ''} lancée${founderPublishedCount > 1 ? 's' : ''} côté structure` : ''}
             </div>
             {feed.map((mission) => (
-              <MissionCard key={mission.id} mission={mission} onAccept={() => accept(mission)} onStructure={() => setProfileName(mission.structure)} onOpen={() => setMissionDetail(mission)} />
+              <MissionCard key={mission.id} mission={mission} onAccept={() => accept(mission)} onOpen={() => setMissionDetail(mission)} />
             ))}
           </div>
         )}

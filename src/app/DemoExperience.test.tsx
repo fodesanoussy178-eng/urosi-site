@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { DemoExperience } from './DemoExperience';
@@ -159,7 +159,7 @@ describe('DemoExperience founder scan', () => {
     const user = userEvent.setup();
     renderWorker();
 
-    await user.click(screen.getByText('Renfort service midi'));
+    await user.click(screen.getByRole('button', { name: 'Voir la fiche complète de Renfort service midi' }));
     const sheet = screen.getByRole('dialog', { name: 'Détail de la mission Renfort service midi' });
     expect(sheet).toBeInTheDocument();
     expect(screen.getByText('Rush du midi, aide comptoir, salle propre et équipe déjà briefée.')).toBeInTheDocument();
@@ -261,13 +261,38 @@ describe('DemoExperience founder scan', () => {
   it('uses varied structures, jobs and ratings in the worker feed', () => {
     renderWorker();
 
-    expect(screen.getByText('Décathlon Lille ›')).toBeInTheDocument();
-    expect(screen.getByText('Festival de Lille ›')).toBeInTheDocument();
-    expect(screen.getByText('Mairie de Lille ›')).toBeInTheDocument();
+    expect(screen.getByText('Décathlon Lille')).toBeInTheDocument();
+    expect(screen.getByText('Festival de Lille')).toBeInTheDocument();
+    expect(screen.getByText('Mairie de Lille')).toBeInTheDocument();
     expect(screen.getByText('📦 Inventaire magasin')).toBeInTheDocument();
     expect(screen.getByText('🎥 Assistant tournage')).toBeInTheDocument();
-    expect(screen.getByText(/4,3 · 41 avis/)).toBeInTheDocument();
-    expect(screen.getByText(/5,0 · 16 avis/)).toBeInTheDocument();
+    expect(screen.getByText('⭐ 4,3')).toBeInTheDocument();
+    expect(screen.getByText('⭐ 5,0')).toBeInTheDocument();
+  });
+
+  it('keeps only decision-critical information on a worker feed card', async () => {
+    const user = userEvent.setup();
+    renderWorker();
+
+    const cardButton = screen.getByRole('button', { name: 'Voir la fiche complète de Renfort service midi' });
+    const card = cardButton.closest('article');
+    expect(card).not.toBeNull();
+    if (!card) return;
+    expect(within(card).getByText('64 €')).toBeInTheDocument();
+    expect(within(card).getByText('Renfort service midi')).toBeInTheDocument();
+    expect(within(card).getByRole('button', { name: 'Burger Nord' })).toBeInTheDocument();
+    expect(within(card).getByText('⭐ 4,8')).toBeInTheDocument();
+    expect(within(card).getByText('📍 Lille')).toBeInTheDocument();
+    expect(within(card).getByRole('button', { name: 'Accepter' })).toBeInTheDocument();
+    expect(within(card).queryByText(/Vérifié/)).not.toBeInTheDocument();
+    expect(within(card).queryByText(/Aujourd’hui/)).not.toBeInTheDocument();
+    expect(within(card).queryByText(/Compte dans ton CV vivant/)).not.toBeInTheDocument();
+
+    await user.click(within(card).getByRole('button', { name: 'Burger Nord' }));
+    expect(screen.getByRole('dialog', { name: 'Détail de la mission Renfort service midi' })).toBeInTheDocument();
+    expect(screen.getByText(/12 rue Nationale, 59000 Lille/)).toBeInTheDocument();
+    expect(screen.getByText(/Pantalon noir et chaussures fermées/)).toBeInTheDocument();
+    expect(screen.getByText(/Tablier et matériel fournis sur place/)).toBeInTheDocument();
   });
 
   it('exposes stable targets for the step-by-step landing tutorial', () => {
@@ -294,7 +319,8 @@ describe('DemoExperience founder scan', () => {
     const user = userEvent.setup();
     renderWorker();
 
-    await user.click(screen.getByRole('button', { name: 'Burger Nord ›' }));
+    await user.click(screen.getByRole('button', { name: 'Burger Nord' }));
+    await user.click(screen.getByRole('button', { name: 'Voir le profil' }));
     expect(screen.queryByText('Photos du lieu')).not.toBeInTheDocument();
     expect(screen.queryByText(/Voir toutes les photos/)).not.toBeInTheDocument();
     expect(screen.getByText('À propos')).toBeInTheDocument();
@@ -304,7 +330,8 @@ describe('DemoExperience founder scan', () => {
     const user = userEvent.setup();
     renderWorker();
 
-    await user.click(screen.getByRole('button', { name: 'Burger Nord ›' }));
+    await user.click(screen.getByRole('button', { name: 'Burger Nord' }));
+    await user.click(screen.getByRole('button', { name: 'Voir le profil' }));
 
     expect(screen.getByLabelText('En-tête du profil structure')).toHaveStyle({ height: '58px' });
     expect(screen.getByText('12')).toBeInTheDocument();
