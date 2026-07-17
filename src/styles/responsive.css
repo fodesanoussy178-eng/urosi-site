@@ -135,3 +135,240 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* ── Composition dédiée à l’espace Structure ───────────────────────────── */
+/* Mobile reste la source de vérité : mêmes cartes, mêmes actions et même
+   navigation basse. Les éléments ci-dessous ne font qu'organiser le DOM déjà
+   partagé avec les autres formats. */
+.structure-dashboard {
+  display: block;
+}
+.structure-sidebar {
+  display: contents;
+}
+.structure-sidebar-brand,
+.structure-missions-title,
+.structure-side-card-title,
+.structure-side-card-copy,
+.structure-candidate-summary,
+.structure-next-mission,
+.structure-alert-empty {
+  display: none;
+}
+.structure-missions-layout,
+.structure-alert-stack,
+.structure-mission-grid {
+  display: grid;
+  gap: 10px;
+}
+.structure-stats {
+  display: none;
+}
+.structure-stats-mobile-visible {
+  display: block;
+}
+
+/* Tablette : une grille intermédiaire, sans transformer la navigation basse. */
+@media (min-width: 768px) {
+  .demo-wide-shell .structure-mission-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+}
+
+@media (min-width: 1024px) {
+  /* Ne te contente pas de changer les tailles ou les largeurs CSS. Modifie
+     réellement la structure de mise en page au breakpoint desktop. */
+  .demo-wide-shell {
+    padding: 22px 24px !important;
+  }
+  .demo-wide-shell > .demo-structure-shell {
+    width: min(1400px, calc(100% - 0px));
+    max-width: 1400px !important;
+    min-height: auto !important;
+    align-self: flex-start;
+  }
+  .demo-wide-shell .structure-dashboard {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    align-items: start;
+    min-height: 0;
+  }
+  .demo-wide-shell .structure-sidebar {
+    display: block;
+    position: sticky;
+    top: 44px;
+    align-self: start;
+    padding: 24px 16px;
+    border-right: 1px solid rgba(148, 163, 184, .18);
+  }
+  .demo-wide-shell .structure-sidebar-brand {
+    display: block;
+    padding: 0 8px 22px;
+  }
+  .demo-wide-shell .structure-navigation {
+    position: static !important;
+    inset: auto !important;
+    transform: none !important;
+    max-width: none !important;
+    display: flex !important;
+    flex-direction: column;
+    gap: 7px !important;
+    padding: 0 !important;
+    border-top: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .demo-wide-shell .structure-navigation > button {
+    width: 100%;
+    min-height: 46px !important;
+    display: flex !important;
+    justify-content: flex-start;
+    text-align: left;
+    padding: 10px 12px !important;
+  }
+  .demo-wide-shell .structure-navigation > button > span:last-child {
+    text-align: left;
+  }
+  .demo-wide-shell .structure-dashboard-content {
+    min-width: 0;
+    min-height: 0 !important;
+    padding: 26px 30px 34px !important;
+  }
+  .demo-wide-shell .structure-overview {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(310px, .72fr);
+    gap: 10px 18px;
+    align-items: stretch;
+  }
+  .demo-wide-shell .structure-identity-card {
+    grid-column: 1;
+    grid-row: 1;
+    margin-bottom: 0 !important;
+    min-width: 0;
+  }
+  .demo-wide-shell .structure-verification-badge {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: start;
+    width: auto;
+    margin-bottom: 0 !important;
+    padding: 6px 10px !important;
+    border-radius: 999px !important;
+  }
+  .demo-wide-shell .structure-stats {
+    display: block;
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    min-width: 0;
+  }
+  .demo-wide-shell .structure-stats > div {
+    height: 100%;
+    margin-bottom: 0 !important;
+  }
+  .demo-wide-shell .structure-stats > div > div {
+    display: grid;
+    align-content: center;
+  }
+
+  .demo-wide-shell .structure-missions-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+    gap: 14px 18px;
+    align-items: start;
+  }
+  .demo-wide-shell .structure-missions-header {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    min-width: 0;
+  }
+  .demo-wide-shell .structure-missions-title {
+    display: block;
+    min-width: 0;
+  }
+  .demo-wide-shell .structure-publish-action {
+    flex: 0 0 auto;
+    text-align: right;
+  }
+  .demo-wide-shell .structure-publish-action > button {
+    width: auto !important;
+    min-height: 40px;
+    padding-inline: 18px !important;
+  }
+  .demo-wide-shell .structure-publish-help {
+    max-width: 250px;
+    text-align: right !important;
+  }
+  .demo-wide-shell .structure-missions-help {
+    display: none;
+  }
+  .demo-wide-shell .structure-mission-grid {
+    grid-column: 1;
+    grid-row: 2 / span 3;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    min-width: 0;
+    gap: 12px;
+  }
+  .demo-wide-shell .structure-mission-grid > * {
+    min-width: 0;
+    height: 100%;
+  }
+  .demo-wide-shell .structure-qr-card,
+  .demo-wide-shell .structure-candidate-summary,
+  .demo-wide-shell .structure-next-mission,
+  .demo-wide-shell .structure-alert-stack {
+    min-width: 0;
+  }
+  .demo-wide-shell .structure-qr-card,
+  .demo-wide-shell .structure-candidate-summary,
+  .demo-wide-shell .structure-next-mission {
+    display: block;
+    padding: 16px;
+    border: 1px solid rgba(148, 163, 184, .18);
+    border-radius: 16px;
+    background: rgba(15, 23, 42, .28);
+  }
+  .demo-wide-shell .structure-qr-card {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .demo-wide-shell .structure-qr-card > button {
+    width: auto !important;
+    min-height: 38px;
+    padding-inline: 14px !important;
+  }
+  .demo-wide-shell .structure-side-card-title,
+  .demo-wide-shell .structure-side-card-copy {
+    display: block;
+  }
+  .demo-wide-shell .structure-candidate-summary {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .demo-wide-shell .structure-next-mission {
+    grid-column: 2;
+    grid-row: 3;
+  }
+  .demo-wide-shell .structure-alert-stack {
+    grid-column: 2;
+    grid-row: 4;
+  }
+  .demo-wide-shell .structure-alert-empty {
+    display: block;
+  }
+  .demo-wide-shell .structure-dashboard-content > .dsp-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+@media (min-width: 1440px) {
+  .demo-wide-shell .structure-dashboard-content {
+    padding-inline: 36px !important;
+  }
+}
