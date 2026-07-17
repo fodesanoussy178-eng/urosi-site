@@ -1,22 +1,26 @@
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/features/auth/AuthContext';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { T, FONT } from '@/components/ui/theme';
-import { EntryPage } from '@/app/EntryPage';
-import { DemoExperience } from '@/app/DemoExperience';
-import { SignInPage } from '@/features/auth/SignInPage';
-import { WorkerSignupPage } from '@/features/auth/WorkerSignupPage';
-import { StructureSignupPage } from '@/features/auth/StructureSignupPage';
-import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage';
-import { WorkerApp } from '@/features/worker/WorkerApp';
-import { StructureApp } from '@/features/structure/StructureApp';
-import { CheckinPage } from '@/features/missions/CheckinPage';
-import { ScanPage } from '@/features/missions/ScanPage';
-import { WorkerAttendancePage } from '@/features/missions/WorkerAttendancePage';
-import { ValidatorApp } from '@/features/missions/ValidatorApp';
-import { FounderAdminPage } from '@/features/founder/FounderAdminPage';
+
+// Chaque route est chargée à la demande : la démo de la landing ne télécharge
+// plus les espaces travailleur/structure/fondateur, et inversement. Aucun
+// changement visuel : le fallback est le même « Chargement… » qu'avant.
+const EntryPage = lazy(() => import('@/app/EntryPage').then((m) => ({ default: m.EntryPage })));
+const DemoExperience = lazy(() => import('@/app/DemoExperience').then((m) => ({ default: m.DemoExperience })));
+const SignInPage = lazy(() => import('@/features/auth/SignInPage').then((m) => ({ default: m.SignInPage })));
+const WorkerSignupPage = lazy(() => import('@/features/auth/WorkerSignupPage').then((m) => ({ default: m.WorkerSignupPage })));
+const StructureSignupPage = lazy(() => import('@/features/auth/StructureSignupPage').then((m) => ({ default: m.StructureSignupPage })));
+const ResetPasswordPage = lazy(() => import('@/features/auth/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })));
+const WorkerApp = lazy(() => import('@/features/worker/WorkerApp').then((m) => ({ default: m.WorkerApp })));
+const StructureApp = lazy(() => import('@/features/structure/StructureApp').then((m) => ({ default: m.StructureApp })));
+const CheckinPage = lazy(() => import('@/features/missions/CheckinPage').then((m) => ({ default: m.CheckinPage })));
+const ScanPage = lazy(() => import('@/features/missions/ScanPage').then((m) => ({ default: m.ScanPage })));
+const WorkerAttendancePage = lazy(() => import('@/features/missions/WorkerAttendancePage').then((m) => ({ default: m.WorkerAttendancePage })));
+const ValidatorApp = lazy(() => import('@/features/missions/ValidatorApp').then((m) => ({ default: m.ValidatorApp })));
+const FounderAdminPage = lazy(() => import('@/features/founder/FounderAdminPage').then((m) => ({ default: m.FounderAdminPage })));
 
 function Centered({ text }: { text: string }) {
   return (
@@ -102,7 +106,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <AppShell />
+        <Suspense fallback={<Centered text="Chargement…" />}>
+          <AppShell />
+        </Suspense>
       </AuthProvider>
     </ErrorBoundary>
   );

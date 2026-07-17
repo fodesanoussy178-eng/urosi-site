@@ -13,7 +13,7 @@ import { StatsPanel, StructureStatsSummary } from './StatsPanel';
 import { StructureHistoryPanel } from './StructureHistoryPanel';
 import { fetchMissionsForStructure, createMission } from '@/features/missions/missionsService';
 import {
-  fetchApplicationsForMission,
+  fetchApplicationsForMissions,
   updateApplicationStatus,
   type ApplicationWithApplicant,
 } from '@/features/missions/applicationsService';
@@ -165,9 +165,9 @@ export function StructureApp() {
 
   async function loadMissionData(missions: Mission[]) {
     if (!session) return;
-    const entries = await Promise.all(missions.map(async (m) => [m.id, await fetchApplicationsForMission(m.id)] as const));
-    setCands(new Map(entries));
-    const allApps = entries.flatMap(([, list]) => list);
+    const candsByMission = await fetchApplicationsForMissions(missions.map((m) => m.id));
+    setCands(candsByMission);
+    const allApps = [...candsByMission.values()].flat();
     const appIds = allApps.map((a) => a.id);
     const [delayMap, rated, unreadMap] = await Promise.all([
       fetchDelaysForApplications(appIds),

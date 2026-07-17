@@ -1,5 +1,8 @@
 // Edge Function `psp` — point d'entrée réservé au futur prestataire de paiement.
 // Aucun mouvement simulé ne doit modifier un wallet réel.
+// TODO go-live PSP (audit 2026-07-16, L3) : restreindre
+// Access-Control-Allow-Origin aux domaines https://urosi.fr et
+// https://app.urosi.fr avant d'activer le moindre effet de bord.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 Deno.serve(async (req: Request) => {

@@ -9,6 +9,11 @@
 
 > Les migrations du dossier sont la source de verite. Verifie toujours la
 > migration distante avec `supabase migration list` avant un `db push`.
+> Le seul chemin de deploiement est `supabase/migrations/` applique dans
+> l'ordre lexicographique (CLI ou SQL Editor). Ne jamais regenerer ni
+> utiliser un fichier concatene type `apply_all.sql` : un tel fichier
+> derive inevitablement des migrations et produit un schema incomplet
+> (celui du depot s'arretait a 0006 et a ete supprime le 16/07/2026).
 > La migration KYC ne doit d'abord etre appliquee que sur un environnement
 > local ou une branche Supabase de test, jamais directement en production.
 

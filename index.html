@@ -144,8 +144,16 @@
         width: 100vw; height: 100dvh; max-width: none; padding: 10px; background: #070814;
         justify-content: center; overflow: hidden;
       }
-      .phone-zone.demo-fullscreen-fallback { position: fixed; inset: 0; z-index: 9999; }
-      body.demo-fullscreen-open { overflow: hidden; }
+      .phone-zone.demo-fullscreen-fallback { position: fixed; inset: 0; z-index: 9999; overscroll-behavior: contain; }
+      /* .site-shell > * cree un contexte d'empilement (z-index: 1) sur chaque
+         section : sans le hisser, les sections suivantes (Comment ca marche,
+         FAQ) se peignent PAR-DESSUS la demo fixee en z-index 9999. */
+      body.demo-fullscreen-open .hero-stage,
+      body.demo-tour-open .hero-stage { z-index: 2147483000; }
+      /* position: fixed sur body : overflow hidden seul ne bloque pas le
+         defilement de la page sous l'overlay sur iOS Safari. Le scroll est
+         memorise/restaure par le script (pageScrollY). */
+      body.demo-fullscreen-open { overflow: hidden; position: fixed; inset: 0 auto auto 0; width: 100%; }
       .phone-zone:fullscreen::before,
       .phone-zone.demo-fullscreen-fallback::before,
       .phone-zone:fullscreen .float-card,
@@ -1116,6 +1124,7 @@
           tourRoot.classList.remove('is-open', 'is-ready');
           tourRoot.setAttribute('aria-hidden', 'true');
           if (demoZone) demoZone.classList.remove('tour-active');
+          document.body.classList.remove('demo-tour-open');
           restoreScroll();
           if (preview && (preview.getAttribute('src') || '').indexOf('tour=1') !== -1) {
             preview.classList.add('is-switching');
@@ -1154,6 +1163,7 @@
             window.setTimeout(function () {
               tourOpen = true;
               if (demoZone) demoZone.classList.add('tour-active');
+              document.body.classList.add('demo-tour-open');
               tourRoot.classList.add('is-open');
               tourRoot.setAttribute('aria-hidden', 'false');
               lockPage();
