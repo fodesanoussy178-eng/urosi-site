@@ -864,7 +864,7 @@ function TopBar({ onBack }: {
   founder?: boolean;
 }) {
   return (
-    <header style={{ height: 44, padding: '5px 12px', borderBottom: `1px solid ${T.cb}`, background: T.bg, display: 'grid', gridTemplateColumns: '40px 1fr 40px', alignItems: 'center', position: 'sticky', top: 0, zIndex: 170 }}>
+    <header style={{ height: 'calc(44px + env(safe-area-inset-top))', padding: 'calc(5px + env(safe-area-inset-top)) 12px 5px', borderBottom: `1px solid ${T.cb}`, background: T.bg, display: 'grid', gridTemplateColumns: '40px 1fr 40px', alignItems: 'center', position: 'sticky', top: 0, zIndex: 900 }}>
       {onBack ? (
         <button aria-label="Revenir au choix de la démo" onClick={onBack} style={{ width: 38, height: 38, background: 'transparent', color: T.sub, border: 'none', borderRadius: 12, fontSize: 22, cursor: 'pointer' }}>‹</button>
       ) : <span />}
@@ -889,8 +889,8 @@ function StructureStats({ stats, live = false }: { stats: [string, string][]; li
 
 function DemoShell({ children, embedded = false, wide = false }: { children: ReactNode; embedded?: boolean; wide?: boolean }) {
   return (
-    <div className={wide ? 'demo-wide-shell' : undefined} style={{ minHeight: '100vh', background: embedded ? T.bg : '#000', color: T.text, fontFamily: FONT, display: 'flex', justifyContent: 'center', padding: embedded ? 0 : '22px 14px' }}>
-      <div style={{ width: '100%', maxWidth: embedded ? 'none' : 430, minHeight: embedded ? '100vh' : 'calc(100vh - 44px)', background: T.bg, border: embedded ? 'none' : `1px solid ${T.cb}`, borderRadius: embedded ? 0 : 32, overflow: 'hidden', boxShadow: embedded ? 'none' : '0 24px 90px rgba(0,0,0,.75)' }}>{children}</div>
+    <div className={`demo-shell${wide ? ' demo-wide-shell' : ''}`} style={{ background: embedded ? T.bg : '#000', color: T.text, fontFamily: FONT, display: 'flex', justifyContent: 'center', padding: embedded ? 0 : '22px 14px' }}>
+      <div className={embedded ? 'demo-shell-viewport demo-shell-viewport--embedded' : 'demo-shell-viewport'} style={{ width: '100%', maxWidth: embedded ? 'none' : 430, background: T.bg, border: embedded ? 'none' : `1px solid ${T.cb}`, borderRadius: embedded ? 0 : 32, overflow: 'hidden', boxShadow: embedded ? 'none' : '0 24px 90px rgba(0,0,0,.75)' }}>{children}</div>
     </div>
   );
 }
@@ -1202,7 +1202,7 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
     <>
       <TopBar title="Mon espace" badge={`${completed} missions au CV`} onBack={onBack} founder={founder} />
       {toast && <div style={{ margin: '10px 14px 0', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 10, padding: '8px 12px', color: T.sub, fontSize: 11 }}>{toast}</div>}
-      <div style={{ padding: 16, paddingBottom: 92, minHeight: 620 }}>
+      <div style={{ padding: 16, paddingBottom: 'calc(92px + env(safe-area-inset-bottom))', minHeight: 620 }}>
         {tab === 'flux' && (
           <div className="dsp-grid" style={{ display: 'grid', gap: 12 }}>
             <div className="dsp-span" style={{ color: T.mu, fontSize: 10, textAlign: 'center' }}>
@@ -1462,7 +1462,7 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
 
 function BottomTabs({ tabs, current, onChange }: { tabs: [string, string, string?, number?][]; current: string; onChange: (v: string) => void }) {
   return (
-    <nav aria-label="Navigation de la démo" style={{ width: '100%', maxWidth: 430, borderTop: `1px solid ${T.cb}`, padding: '8px 10px 10px', display: 'grid', gridTemplateColumns: `repeat(${tabs.length}, 1fr)`, gap: 5, background: T.bg, position: 'fixed', zIndex: 180, bottom: 0, left: '50%', transform: 'translateX(-50%)', boxShadow: '0 -10px 28px rgba(0,0,0,.16)' }}>
+    <nav aria-label="Navigation de la démo" style={{ width: '100%', maxWidth: 430, borderTop: `1px solid ${T.cb}`, padding: '8px 10px calc(10px + env(safe-area-inset-bottom))', display: 'grid', gridTemplateColumns: `repeat(${tabs.length}, 1fr)`, gap: 5, background: T.bg, position: 'fixed', isolation: 'isolate', zIndex: 1000, bottom: 0, left: '50%', transform: 'translateX(-50%)', boxShadow: '0 -10px 28px rgba(0,0,0,.16)' }}>
       {tabs.map(([key, label, icon, unread]) => (
         <button data-demo-tab={key} aria-pressed={current === key} key={key} onClick={() => onChange(key)} style={{ position: 'relative', background: current === key ? '#fff' : 'transparent', color: current === key ? '#05060d' : T.mu, border: 'none', borderRadius: 12, minHeight: 48, padding: '6px 3px', cursor: 'pointer', fontSize: tabs.length > 3 ? 10 : 11, fontWeight: 900, display: 'grid', placeItems: 'center', gap: 1 }}>
           {!!unread && unread > 0 && <span aria-label={`${unread} nouvelle${unread > 1 ? 's' : ''} notification${unread > 1 ? 's' : ''}`} style={{ position: 'absolute', top: 3, right: '18%', minWidth: 18, height: 18, padding: '0 5px', borderRadius: 10, display: 'grid', placeItems: 'center', background: '#ef4444', color: '#fff', fontSize: 9, lineHeight: 1, boxShadow: `0 0 0 2px ${T.bg}` }}>+{unread}</span>}
@@ -2078,7 +2078,7 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
     <>
       <TopBar title="Espace structure" badge={displayedStructureName} onBack={onBack} founder={founder} />
       {toast && <div style={{ margin: '10px 14px 0', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 10, padding: '8px 12px', color: T.sub, fontSize: 11 }}>{toast}</div>}
-      <div style={{ padding: 16, paddingBottom: 92, minHeight: 620 }}>
+      <div style={{ padding: 16, paddingBottom: 'calc(92px + env(safe-area-inset-bottom))', minHeight: 620 }}>
         <div style={{ background: T.card, border: `1px solid ${T.greenBorder}`, borderRadius: 16, padding: 14, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: 14, background: kind === 'asso' ? '#14532d' : '#075985', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900 }}>{initials(displayedStructureName)}</div>
           <div style={{ flex: 1 }}>
@@ -2621,7 +2621,10 @@ export function DemoExperience() {
   const [founderByCode, setFounderByCode] = useState(() => hasDemoFounderAccess() || hasRememberedFounderAccess(session?.user.id));
   const founder = founderByCode;
   const displayedFounder = embedded ? false : founder;
-  const frozen = Boolean(role && !founder && !guidedTour && !temporarilyFree && expired);
+  // L'aperçu intégré à la landing reste toujours consultable : son compteur
+  // ne doit ni expirer en arrière-plan, ni injecter un overlay sombre dans le
+  // téléphone lorsque la landing l'agrandit.
+  const frozen = Boolean(role && !embedded && !founder && !guidedTour && !temporarilyFree && expired);
   const handleExpire = useCallback(() => setExpired(true), []);
 
   useEffect(() => {
@@ -2724,7 +2727,7 @@ export function DemoExperience() {
 
   return (
     <>
-      <DemoUsageTicker running={Boolean(role) && !founder && !expired && !guidedTour && !temporarilyFree} onExpire={handleExpire} />
+      <DemoUsageTicker running={!embedded && Boolean(role) && !founder && !expired && !guidedTour && !temporarilyFree} onExpire={handleExpire} />
       {!founder && !embedded && !temporarilyFree && <DemoPreviewBadge />}
       {!embedded && founder && (
         <button onClick={resetDemo} style={{ position: 'fixed', top: 18, right: 18, zIndex: 450, background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 18, padding: '7px 13px', fontFamily: FONT, fontSize: 12, fontWeight: 900, cursor: 'pointer' }}>

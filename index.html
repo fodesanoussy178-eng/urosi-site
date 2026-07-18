@@ -141,29 +141,54 @@
       .phone-fullscreen-hint.show { opacity: 1; transform: none; }
       .phone-zone:fullscreen,
       .phone-zone.demo-fullscreen-fallback {
-        width: 100vw; height: 100dvh; max-width: none; padding: 10px; background: #070814;
-        justify-content: center; overflow: hidden;
+        position: fixed; inset: 0; z-index: 2147483646; isolation: isolate;
+        width: 100%; max-width: none; height: 100vh; height: 100dvh;
+        padding: 10px;
+        padding-top: max(10px, env(safe-area-inset-top));
+        padding-right: max(10px, env(safe-area-inset-right));
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
+        padding-left: max(10px, env(safe-area-inset-left));
+        box-sizing: border-box; background: #070814; justify-content: center;
+        overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
       }
-      .phone-zone.demo-fullscreen-fallback { position: fixed; inset: 0; z-index: 9999; overscroll-behavior: contain; }
-      /* .site-shell > * cree un contexte d'empilement (z-index: 1) sur chaque
-         section : sans le hisser, les sections suivantes (Comment ca marche,
-         FAQ) se peignent PAR-DESSUS la demo fixee en z-index 9999. */
-      body.demo-fullscreen-open .hero-stage,
+      /* Le fallback est déplacé sous <body> pendant son ouverture. Il ne peut
+         donc plus être limité par overflow, transform, filter, opacity ou le
+         z-index d'un ancêtre de la landing. */
+      .phone-zone.demo-fullscreen-fallback { margin: 0; transform: none; filter: none; opacity: 1; }
       body.demo-tour-open .hero-stage { z-index: 2147483000; }
-      /* position: fixed sur body : overflow hidden seul ne bloque pas le
-         defilement de la page sous l'overlay sur iOS Safari. Le scroll est
-         memorise/restaure par le script (pageScrollY). */
-      body.demo-fullscreen-open { overflow: hidden; position: fixed; inset: 0 auto auto 0; width: 100%; }
+      html.demo-fullscreen-open { overflow: hidden; overscroll-behavior: none; }
+      body.demo-fullscreen-open {
+        position: fixed; top: var(--demo-fullscreen-scroll-top, 0px); left: 0; right: 0;
+        width: 100%; overflow: hidden; overscroll-behavior: none;
+      }
+      /* Le tutoriel reste utilisable, mais ses voiles noirs ne doivent jamais
+         recouvrir la démo agrandie. La règle générique couvre aussi un futur
+         backdrop de la landing portant la classe .demo-overlay. */
+      body.demo-fullscreen-open .demo-overlay,
+      body.demo-fullscreen-open .demo-tour::before,
+      .phone-zone:fullscreen .demo-overlay,
+      .phone-zone:fullscreen .demo-tour::before,
+      .phone-zone.demo-fullscreen-fallback .demo-overlay,
+      .phone-zone.demo-fullscreen-fallback .demo-tour::before { display: none !important; }
       .phone-zone:fullscreen::before,
       .phone-zone.demo-fullscreen-fallback::before,
       .phone-zone:fullscreen .float-card,
       .phone-zone.demo-fullscreen-fallback .float-card { display: none; }
       .phone-zone:fullscreen .phone,
+      .phone-zone.demo-fullscreen-fallback .phone,
+      .phone-zone:fullscreen .preview-role-switch,
+      .phone-zone.demo-fullscreen-fallback .preview-role-switch { position: relative; z-index: 1; }
+      .phone-zone:fullscreen .phone,
       .phone-zone.demo-fullscreen-fallback .phone {
-        width: min(430px, calc(100vw - 20px)); height: calc(100dvh - 78px); aspect-ratio: auto;
+        width: min(430px, calc(100vw - 20px));
+        height: calc(100vh - 78px); height: calc(100dvh - 78px);
+        max-height: 100%; min-height: 0; aspect-ratio: auto;
       }
       .phone-zone:fullscreen .phone-open-demo,
-      .phone-zone.demo-fullscreen-fallback .phone-open-demo { position: fixed; top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); }
+      .phone-zone.demo-fullscreen-fallback .phone-open-demo {
+        position: fixed; z-index: 100; top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right));
+      }
       .phone-zone:fullscreen .phone-fullscreen-hint,
       .phone-zone.demo-fullscreen-fallback .phone-fullscreen-hint { display: none; }
       .phone-zone:fullscreen .preview-role-switch,
@@ -172,9 +197,18 @@
       .phone-zone.demo-fullscreen-fallback .phone-hint { display: none; }
       @media (max-width: 520px) {
         .phone-zone:fullscreen,
-        .phone-zone.demo-fullscreen-fallback { padding: 0; }
+        .phone-zone.demo-fullscreen-fallback {
+          justify-content: flex-start; padding: 0;
+          padding-top: env(safe-area-inset-top);
+          padding-right: env(safe-area-inset-right);
+          padding-bottom: env(safe-area-inset-bottom);
+          padding-left: env(safe-area-inset-left);
+        }
         .phone-zone:fullscreen .phone,
-        .phone-zone.demo-fullscreen-fallback .phone { width: 100vw; height: 100dvh; border: 0; border-radius: 0; }
+        .phone-zone.demo-fullscreen-fallback .phone {
+          flex: 1 1 auto; width: 100%; height: 100%; min-height: 0;
+          border: 0; border-radius: 0;
+        }
         .phone-zone:fullscreen .preview-role-switch,
         .phone-zone.demo-fullscreen-fallback .preview-role-switch { display: none; }
       }
@@ -628,10 +662,10 @@
       <div class="phone-hint"><b>Fais défiler l’écran dans le téléphone</b> · <button class="phone-tour-link" type="button" data-demo-tour-start>Comment ça marche ?</button></div>
 
       <div id="demoTour" class="demo-tour" role="dialog" aria-modal="true" aria-labelledby="demoTourTitle" aria-describedby="demoTourCopy" aria-hidden="true">
-        <div class="demo-tour-shade" data-tour-shade="top"></div>
-        <div class="demo-tour-shade" data-tour-shade="right"></div>
-        <div class="demo-tour-shade" data-tour-shade="bottom"></div>
-        <div class="demo-tour-shade" data-tour-shade="left"></div>
+        <div class="demo-tour-shade demo-overlay" data-tour-shade="top"></div>
+        <div class="demo-tour-shade demo-overlay" data-tour-shade="right"></div>
+        <div class="demo-tour-shade demo-overlay" data-tour-shade="bottom"></div>
+        <div class="demo-tour-shade demo-overlay" data-tour-shade="left"></div>
         <div id="demoTourSpotlight" class="demo-tour-spotlight" aria-hidden="true"></div>
         <div id="demoTourCard" class="demo-tour-card" tabindex="-1">
           <div class="demo-tour-head">
@@ -734,7 +768,9 @@
         var fullscreenHint = document.getElementById('demoFullscreenHint');
         var fallbackFullscreen = false;
         var fallbackHistoryEntry = false;
-        var pageScrollY = 0;
+        var fallbackPlaceholder = null;
+        var fullscreenScrollState = null;
+        var nativeFullscreenWasActive = false;
 
         function nativeFullscreenActive() {
           return document.fullscreenElement === demoZone;
@@ -742,6 +778,55 @@
 
         function fullscreenActive() {
           return nativeFullscreenActive() || fallbackFullscreen;
+        }
+
+        function useFallbackFullscreen() {
+          var coarsePointer = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+          var compactViewport = window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+          var ios = /iPad|iPhone|iPod/.test(navigator.userAgent)
+            || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+          return Boolean(ios || coarsePointer || compactViewport);
+        }
+
+        function lockFullscreenScroll() {
+          if (fullscreenScrollState) return;
+          fullscreenScrollState = {
+            y: window.scrollY,
+            scrollBehavior: document.documentElement.style.scrollBehavior
+          };
+          document.body.style.setProperty('--demo-fullscreen-scroll-top', (-fullscreenScrollState.y) + 'px');
+          document.documentElement.classList.add('demo-fullscreen-open');
+          document.body.classList.add('demo-fullscreen-open');
+        }
+
+        function unlockFullscreenScroll() {
+          var state = fullscreenScrollState;
+          document.documentElement.classList.remove('demo-fullscreen-open');
+          document.body.classList.remove('demo-fullscreen-open');
+          document.body.style.removeProperty('--demo-fullscreen-scroll-top');
+          if (!state) return;
+          fullscreenScrollState = null;
+          document.documentElement.style.scrollBehavior = 'auto';
+          window.scrollTo(0, state.y);
+          window.requestAnimationFrame(function () {
+            document.documentElement.style.scrollBehavior = state.scrollBehavior;
+          });
+        }
+
+        function moveFallbackToTopLayer() {
+          if (!demoZone || fallbackPlaceholder) return;
+          fallbackPlaceholder = document.createComment('demo-fullscreen-placeholder');
+          if (demoZone.parentNode) demoZone.parentNode.insertBefore(fallbackPlaceholder, demoZone);
+          document.body.appendChild(demoZone);
+        }
+
+        function restoreFallbackParent() {
+          if (!demoZone || !fallbackPlaceholder) return;
+          if (fallbackPlaceholder.parentNode) {
+            fallbackPlaceholder.parentNode.insertBefore(demoZone, fallbackPlaceholder);
+            fallbackPlaceholder.parentNode.removeChild(fallbackPlaceholder);
+          }
+          fallbackPlaceholder = null;
         }
 
         function syncFullscreenControl() {
@@ -760,12 +845,16 @@
 
         function enterFallbackFullscreen() {
           if (!demoZone || fallbackFullscreen) return;
-          pageScrollY = window.scrollY;
+          moveFallbackToTopLayer();
           fallbackFullscreen = true;
-          fallbackHistoryEntry = true;
           demoZone.classList.add('demo-fullscreen-fallback');
-          document.body.classList.add('demo-fullscreen-open');
-          history.pushState({ urosiDemoFullscreen: true }, '', window.location.href);
+          lockFullscreenScroll();
+          try {
+            history.pushState({ urosiDemoFullscreen: true }, '', window.location.href);
+            fallbackHistoryEntry = true;
+          } catch (error) {
+            fallbackHistoryEntry = false;
+          }
           syncFullscreenControl();
         }
 
@@ -773,12 +862,21 @@
           if (!demoZone || !fallbackFullscreen) return;
           fallbackFullscreen = false;
           demoZone.classList.remove('demo-fullscreen-fallback');
-          document.body.classList.remove('demo-fullscreen-open');
-          window.scrollTo(0, pageScrollY);
+          restoreFallbackParent();
+          unlockFullscreenScroll();
           syncFullscreenControl();
           window.requestAnimationFrame(positionTour);
           if (!fromBrowserBack && fallbackHistoryEntry) history.back();
           fallbackHistoryEntry = false;
+        }
+
+        function handleNativeFullscreenChange() {
+          var active = nativeFullscreenActive();
+          if (active && !nativeFullscreenWasActive) lockFullscreenScroll();
+          if (!active && nativeFullscreenWasActive && !fallbackFullscreen) unlockFullscreenScroll();
+          nativeFullscreenWasActive = active;
+          syncFullscreenControl();
+          window.setTimeout(reflowTour, 80);
         }
 
         if (fullscreenButton && demoZone) {
@@ -799,9 +897,15 @@
               document.exitFullscreen().catch(function () {});
               return;
             }
+            if (useFallbackFullscreen()) {
+              enterFallbackFullscreen();
+              window.setTimeout(reflowTour, 80);
+              maybeAutoStartTour();
+              return;
+            }
             if (typeof demoZone.requestFullscreen === 'function') {
               demoZone.requestFullscreen()
-                .then(function () { window.setTimeout(reflowTour, 80); maybeAutoStartTour(); })
+                .then(function () { handleNativeFullscreenChange(); maybeAutoStartTour(); })
                 .catch(function () {
                   enterFallbackFullscreen();
                   window.setTimeout(reflowTour, 80);
@@ -814,12 +918,20 @@
             }
           });
 
-          document.addEventListener('fullscreenchange', syncFullscreenControl);
+          document.addEventListener('fullscreenchange', handleNativeFullscreenChange);
+          document.addEventListener('webkitfullscreenchange', handleNativeFullscreenChange);
           document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape' && fallbackFullscreen) leaveFallbackFullscreen(false);
           });
           window.addEventListener('popstate', function () {
             if (fallbackFullscreen) leaveFallbackFullscreen(true);
+          });
+          window.addEventListener('pagehide', function () {
+            if (!fallbackFullscreen) return;
+            fallbackFullscreen = false;
+            demoZone.classList.remove('demo-fullscreen-fallback');
+            restoreFallbackParent();
+            unlockFullscreenScroll();
           });
           syncFullscreenControl();
         }

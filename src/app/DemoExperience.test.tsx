@@ -299,6 +299,26 @@ describe('DemoExperience founder scan', () => {
     expect(container.querySelector('[data-demo-tour="mission-card"]')).toBeInTheDocument();
   });
 
+  it('never darkens the embedded landing preview after the free preview expires', () => {
+    localStorage.setItem('urosi_internal_demo_seconds_v1', '60');
+    const { container } = render(
+      <MemoryRouter initialEntries={['/demo?role=worker&embed=1']}>
+        <DemoExperience />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText('Fin de l’aperçu gratuit')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-demo-tour="mission-card"]')).toBeInTheDocument();
+  });
+
+  it('keeps the internal navigation above content and the iPhone home indicator', () => {
+    renderWorker();
+
+    const navigation = screen.getByRole('navigation', { name: 'Navigation de la démo' });
+    expect(navigation).toHaveStyle({ position: 'fixed', zIndex: '1000', isolation: 'isolate' });
+    expect(navigation.style.padding).toContain('env(safe-area-inset-bottom)');
+  });
+
   it('hides the structure photo gallery completely when no photo is available', async () => {
     const user = userEvent.setup();
     renderWorker();

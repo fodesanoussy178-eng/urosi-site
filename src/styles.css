@@ -58,6 +58,22 @@ body {
 
 #root {
   min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.demo-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.demo-shell-viewport {
+  min-height: calc(100vh - 44px);
+  min-height: calc(100dvh - 44px);
+}
+
+.demo-shell-viewport--embedded {
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 button,
