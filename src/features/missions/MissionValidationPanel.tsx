@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { QRBadge } from '@/components/ui/QRBadge';
 import { T, FONT, inp } from '@/components/ui/theme';
+import { useBodyScrollLock } from '@/components/ui/useBodyScrollLock';
 import {
   addStructureValidator,
   getMissionValidationCard,
@@ -14,6 +15,7 @@ import {
 } from './missionValidationService';
 
 export function MissionValidationPanel({ missionId, structureId, onClose }: { missionId: string; structureId: string; onClose: () => void }) {
+  useBodyScrollLock(true);
   const [card, setCard] = useState<MissionValidationCard | null>(null);
   const [pin, setPin] = useState<ActiveMissionPin | null>(null);
   const [validators, setValidators] = useState<StructureValidator[]>([]);
@@ -62,8 +64,8 @@ export function MissionValidationPanel({ missionId, structureId, onClose }: { mi
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', fontFamily: FONT }} onClick={onClose}>
-      <div style={{ width: '100%', maxWidth: 430, maxHeight: '92dvh', overflowY: 'auto', background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px calc(24px + env(safe-area-inset-bottom))' }} onClick={(event) => event.stopPropagation()}>
+    <div className="urosi-modal-layer urosi-bottom-sheet-layer" role="dialog" aria-modal="true" aria-label="QR et PIN de la mission" style={{ background: 'rgba(0,0,0,.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', fontFamily: FONT }} onClick={onClose}>
+      <div className="urosi-bottom-sheet" style={{ width: '100%', maxWidth: 430, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px calc(24px + env(safe-area-inset-bottom))' }} onClick={(event) => event.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
           <div><div style={{ color: T.text, fontSize: 16, fontWeight: 900 }}>QR & PIN de la mission</div><div style={{ color: T.sub, fontSize: 11, marginTop: 3 }}>{card?.title ?? 'Chargement…'}</div></div>
           <button aria-label="Fermer" onClick={onClose} style={{ width: 32, height: 32, border: 0, borderRadius: 9, background: T.row, color: T.text, cursor: 'pointer' }}>×</button>

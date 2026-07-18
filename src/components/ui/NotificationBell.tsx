@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { T } from '@/components/ui/theme';
+import { useBodyScrollLock } from '@/components/ui/useBodyScrollLock';
 import {
   fetchNotifications,
   markAllNotificationsRead,
@@ -37,6 +38,7 @@ export function NotificationBell({ profileId, onDataChanged }: { profileId: stri
   const [open, setOpen] = useState(false);
   const changed = useRef(onDataChanged);
   changed.current = onDataChanged;
+  useBodyScrollLock(open);
 
   useEffect(() => {
     let active = true;
@@ -84,11 +86,16 @@ export function NotificationBell({ profileId, onDataChanged }: { profileId: stri
 
       {open && (
         <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 600 }}
+          className="urosi-modal-layer urosi-bottom-sheet-layer"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Notifications"
+          style={{ background: 'rgba(0,0,0,.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
           onClick={() => setOpen(false)}
         >
           <div
-            style={{ width: '100%', maxWidth: 430, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 28px', maxHeight: '75vh', overflowY: 'auto' }}
+            className="urosi-bottom-sheet"
+            style={{ width: '100%', maxWidth: 430, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 28px' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>

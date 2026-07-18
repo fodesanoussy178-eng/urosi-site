@@ -10,6 +10,7 @@ import { DocModal, AideRegles, type DocKey } from '@/components/ui/DocModal';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { ChatSheet } from '@/components/ui/ChatSheet';
+import { useBodyScrollLock } from '@/components/ui/useBodyScrollLock';
 import { WalletCard } from '@/components/ui/WalletCard';
 import { PricingDetails } from '@/components/ui/PricingDetails';
 import {
@@ -56,7 +57,7 @@ function missionPriceTotalCents(mission: MissionWithStructure): number {
   return mission.worker_rate_cents;
 }
 
-const SHEET = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 50 } as const;
+const SHEET = { background: 'rgba(0,0,0,.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 1200 } as const;
 const SHEET_BODY = { width: '100%', maxWidth: 430, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 28px' } as const;
 type ProfileUpdate = Parameters<typeof updateProfile>[1];
 
@@ -185,6 +186,8 @@ export function WorkerApp() {
   const [docKey, setDocKey] = useState<DocKey | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout>>();
+
+  useBodyScrollLock(Boolean(detail || structureProfile || ratingFor || chatFor || alrt || kycFor || signal || docKey));
 
   const ville = profile?.city || (session?.user.user_metadata?.city as string | undefined) || '';
   const prenom = (profile?.full_name || session?.user.email || '').split(' ')[0] || '';
@@ -804,8 +807,8 @@ export function WorkerApp() {
 
         {/* Détail mission */}
         {detail && (
-          <div style={SHEET} onClick={() => setDetail(null)}>
-            <div role="dialog" aria-modal="true" aria-label={`Fiche complète de ${detail.title}`} style={{ ...SHEET_BODY, maxHeight: '86vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+          <div className="urosi-modal-layer urosi-bottom-sheet-layer" style={SHEET} onClick={() => setDetail(null)}>
+            <div className="urosi-bottom-sheet" role="dialog" aria-modal="true" aria-label={`Fiche complète de ${detail.title}`} style={SHEET_BODY} onClick={(e) => e.stopPropagation()}>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
                 <button onClick={() => setDetail(null)} style={{ background: T.row, border: 'none', borderRadius: 6, width: 24, height: 24, cursor: 'pointer', color: T.sub, fontSize: 13 }}>×</button>
               </div>
@@ -877,8 +880,8 @@ export function WorkerApp() {
 
         {/* Profil structure : uniquement les signaux utiles pour juger sa fiabilité. */}
         {structureProfile && (
-          <div style={SHEET} onClick={() => setStructureProfile(null)}>
-            <div role="dialog" aria-modal="true" aria-label={`Profil de ${structureProfile.structure?.name ?? 'la structure'}`} style={{ ...SHEET_BODY, maxHeight: '86vh', overflowY: 'auto' }} onClick={(event) => event.stopPropagation()}>
+          <div className="urosi-modal-layer urosi-bottom-sheet-layer" style={SHEET} onClick={() => setStructureProfile(null)}>
+            <div className="urosi-bottom-sheet" role="dialog" aria-modal="true" aria-label={`Profil de ${structureProfile.structure?.name ?? 'la structure'}`} style={SHEET_BODY} onClick={(event) => event.stopPropagation()}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                 <div>
                   <div style={{ color: T.text, fontSize: 18, fontWeight: 900 }}>{structureProfile.structure?.name ?? 'Structure'}</div>
@@ -900,8 +903,8 @@ export function WorkerApp() {
 
         {/* Retard / Annulation */}
         {alrt && (
-          <div style={SHEET} onClick={() => setAlrt(null)}>
-            <div style={SHEET_BODY} onClick={(e) => e.stopPropagation()}>
+          <div className="urosi-modal-layer urosi-bottom-sheet-layer" role="dialog" aria-modal="true" aria-label={alrt.type === 'retard' ? 'Signaler un retard' : 'Annuler la mission'} style={SHEET} onClick={() => setAlrt(null)}>
+            <div className="urosi-bottom-sheet" style={SHEET_BODY} onClick={(e) => e.stopPropagation()}>
               <div style={{ fontSize: 14, fontWeight: 800, color: alrt.type === 'retard' ? T.amber : T.red, marginBottom: 5 }}>
                 {alrt.type === 'retard' ? '⏱ Signaler un retard' : '✕ Annuler la mission'}
               </div>
@@ -934,8 +937,8 @@ export function WorkerApp() {
 
         {/* Signalement */}
         {signal && (
-          <div style={SHEET} onClick={() => { setSignal(null); setSigMotif(null); setSigNote(''); }}>
-            <div style={{ ...SHEET_BODY, maxHeight: '88vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+          <div className="urosi-modal-layer urosi-bottom-sheet-layer" role="dialog" aria-modal="true" aria-label="Signaler un problème" style={SHEET} onClick={() => { setSignal(null); setSigMotif(null); setSigNote(''); }}>
+            <div className="urosi-bottom-sheet" style={SHEET_BODY} onClick={(e) => e.stopPropagation()}>
               <div style={{ fontSize: 14, fontWeight: 900, color: '#f59e0b', marginBottom: 3 }}>⚠ Signaler un problème</div>
               <div style={{ fontSize: 11, color: T.sub, marginBottom: 4 }}>{signal.mission?.title}</div>
               <div style={{ fontSize: 10, color: T.mu, marginBottom: 13, lineHeight: 1.55 }}>
@@ -969,8 +972,8 @@ export function WorkerApp() {
 
         {/* Recap + étoiles (travailleur note la structure) */}
         {ratingFor && (
-          <div style={{ ...SHEET, background: 'rgba(0,0,0,.92)' }}>
-            <div style={SHEET_BODY} onClick={(e) => e.stopPropagation()}>
+          <div className="urosi-modal-layer urosi-bottom-sheet-layer" role="dialog" aria-modal="true" aria-label="Noter la structure" style={{ ...SHEET, background: 'rgba(0,0,0,.92)' }}>
+            <div className="urosi-bottom-sheet" style={SHEET_BODY} onClick={(e) => e.stopPropagation()}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 14 }}>
                 <div style={{ width: 34, height: 34, borderRadius: '50%', background: T.greenBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17 }}>✓</div>
                 <div>
@@ -1084,8 +1087,8 @@ function KycSheet({
   }
 
   return (
-    <div style={SHEET} onClick={onClose}>
-      <div style={SHEET_BODY} onClick={(e) => e.stopPropagation()}>
+    <div className="urosi-modal-layer urosi-bottom-sheet-layer" role="dialog" aria-modal="true" aria-label="Débloquer le pointage" style={SHEET} onClick={onClose}>
+      <div className="urosi-bottom-sheet" style={SHEET_BODY} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 13 }}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 900, color: T.text, marginBottom: 3 }}>Débloquer le pointage</div>
