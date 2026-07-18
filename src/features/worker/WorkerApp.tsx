@@ -284,7 +284,7 @@ export function WorkerApp() {
       return da - db;
     });
   const acceptedApps = apps.filter((a) => a.status === 'accepted' || a.status === 'in_progress' || a.status === 'payment_pending');
-  const pendingCount = apps.filter((a) => a.status === 'pending').length;
+  const pendingApps = apps.filter((a) => a.status === 'pending');
   const completedApps = apps.filter((a) => a.status === 'completed');
   const missionCategories = completedMissionCategories(completedApps);
   const cvCount = completedApps.length;
@@ -301,7 +301,7 @@ export function WorkerApp() {
       await applyToMission(m.id, session.user.id);
       await load();
       setDetail(null);
-      notif('✓ Candidature envoyée. Tu seras prévenu dès que ta mission est confirmée.');
+      notif('✓ Candidature envoyée');
     } catch (e) {
       notif(e instanceof Error ? e.message : 'Impossible de postuler.');
     } finally {
@@ -494,12 +494,21 @@ export function WorkerApp() {
           {/* ── MES MISSIONS + CV ── */}
           {tab === 'moi' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {pendingCount > 0 && (
-                <div style={{ fontSize: 10, color: T.mu, textAlign: 'center', padding: '2px 0' }}>
-                  {pendingCount} candidature{pendingCount > 1 ? 's' : ''} envoyée{pendingCount > 1 ? 's' : ''} · tu seras prévenu dès confirmation
+              {pendingApps.map((application) => (
+                <div key={`pending-${application.id}`} style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 15 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: T.text }}>{application.mission?.title ?? 'Mission'}</div>
+                    <span role="status" aria-label="En attente de confirmation de la structure" style={{ flexShrink: 0, color: T.amber, fontSize: 10.5, fontWeight: 900 }}>
+                      <span aria-hidden="true">⏳ </span>En attente
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 10, color: T.mu }}>
+                    {application.mission?.city ? `📍 ${application.mission.city} · ` : ''}
+                    {application.mission?.scheduled_date ?? ''}
+                  </div>
                 </div>
-              )}
-              {acceptedApps.length === 0 && (
+              ))}
+              {acceptedApps.length === 0 && pendingApps.length === 0 && (
                 <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: '24px 16px', textAlign: 'center' }}>
                   <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Aucune mission en cours</div>
                   <button onClick={() => setTab('flux')} style={{ background: '#fff', color: '#000', border: 'none', borderRadius: 9, padding: '9px 22px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>

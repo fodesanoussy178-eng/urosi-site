@@ -289,6 +289,32 @@ describe('DemoExperience founder scan', () => {
     expect(screen.getByText('⭐ 5,0')).toBeInTheDocument();
   });
 
+  it('shows a short and explicit waiting status after applying', async () => {
+    const user = userEvent.setup();
+    const first = renderWorker();
+
+    const [acceptButton] = screen.getAllByRole('button', { name: 'Accepter' });
+    expect(acceptButton).toBeDefined();
+    if (!acceptButton) return;
+    await user.click(acceptButton);
+
+    expect(screen.queryByText('Renfort service midi')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Missions/ }));
+    expect(screen.getByRole('status', { name: 'En attente de confirmation de la structure' })).toHaveTextContent('En attente');
+    expect(screen.queryByText(/Candidature envoyée · tu seras prévenu/)).not.toBeInTheDocument();
+
+    const state = JSON.parse(localStorage.getItem('urosi_founder_demo_shared_v1') || '{}') as {
+      candidates?: Array<{ id: string; status: string }>;
+    };
+    state.candidates = state.candidates?.map((candidate) => candidate.id === 'demo-worker-m1' ? { ...candidate, status: 'rejected' } : candidate);
+    localStorage.setItem('urosi_founder_demo_shared_v1', JSON.stringify(state));
+    first.unmount();
+
+    renderWorker();
+    await user.click(screen.getByRole('button', { name: /Missions/ }));
+    expect(screen.queryByRole('status', { name: 'En attente de confirmation de la structure' })).not.toBeInTheDocument();
+  });
+
   it('keeps only decision-critical information on a worker feed card', async () => {
     const user = userEvent.setup();
     renderWorker();
