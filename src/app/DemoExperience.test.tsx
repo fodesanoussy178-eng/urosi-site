@@ -99,6 +99,32 @@ describe('DemoExperience founder scan', () => {
     expect(screen.getByRole('button', { name: 'Annuler la mission' })).toBeInTheDocument();
   });
 
+  it('keeps the structure cancellation actions above the mobile navigation', async () => {
+    const user = userEvent.setup();
+    renderStructure();
+
+    await user.click(screen.getByRole('button', { name: 'Actions pour Renfort service midi' }));
+    await user.click(screen.getByRole('button', { name: 'Annuler la mission' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Gérer la mission Renfort service midi' });
+    expect(dialog).toHaveClass('urosi-modal-layer', 'urosi-bottom-sheet-layer');
+    expect(dialog.querySelector('.urosi-bottom-sheet')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retour' }).parentElement).toHaveClass('urosi-modal-actions');
+    expect(screen.getByRole('button', { name: 'Confirmer l’annulation' })).toBeVisible();
+  });
+
+  it('keeps the structure publish action sticky in a scrollable sheet', async () => {
+    const user = userEvent.setup();
+    renderStructure();
+
+    await user.click(screen.getByRole('button', { name: 'Publier une mission' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Publier une mission' });
+    expect(dialog).toHaveClass('urosi-modal-layer', 'urosi-bottom-sheet-layer');
+    expect(dialog.querySelector('.urosi-bottom-sheet')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Publier ·/ }).parentElement).toHaveClass('urosi-modal-actions');
+  });
+
   it('archives without deleting and keeps the mission restorable in history', async () => {
     const user = userEvent.setup();
     renderStructure();
@@ -340,36 +366,16 @@ describe('DemoExperience founder scan', () => {
     expect(screen.getByText(/Tablier et matériel fournis sur place/)).toBeInTheDocument();
   });
 
-  it('exposes stable targets for the step-by-step landing tutorial', () => {
-    const { container } = renderWorker();
-
-    expect(container.querySelector('[data-demo-tour="mission-card"]')).toBeInTheDocument();
-    expect(container.querySelector('[data-demo-tour="mission-action"]')).toBeInTheDocument();
-    expect(container.querySelector('[data-demo-tab="moi"]')).toHaveTextContent('Missions');
-  });
-
-  it('keeps the guided landing tutorial readable after the free preview expires', () => {
-    localStorage.setItem('urosi_internal_demo_seconds_v1', '60');
-    const { container } = render(
-      <MemoryRouter initialEntries={['/demo?role=worker&embed=1&tour=1']}>
-        <DemoExperience />
-      </MemoryRouter>,
-    );
-
-    expect(screen.queryByText('Fin de l’aperçu gratuit')).not.toBeInTheDocument();
-    expect(container.querySelector('[data-demo-tour="mission-card"]')).toBeInTheDocument();
-  });
-
   it('never darkens the embedded landing preview after the free preview expires', () => {
     localStorage.setItem('urosi_internal_demo_seconds_v1', '60');
-    const { container } = render(
+    render(
       <MemoryRouter initialEntries={['/demo?role=worker&embed=1']}>
         <DemoExperience />
       </MemoryRouter>,
     );
 
     expect(screen.queryByText('Fin de l’aperçu gratuit')).not.toBeInTheDocument();
-    expect(container.querySelector('[data-demo-tour="mission-card"]')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Voir la fiche complète de Renfort service midi' })).toBeInTheDocument();
   });
 
   it('keeps the internal navigation above content and the iPhone home indicator', () => {
@@ -378,6 +384,32 @@ describe('DemoExperience founder scan', () => {
     const navigation = screen.getByRole('navigation', { name: 'Navigation de la démo' });
     expect(navigation).toHaveStyle({ position: 'fixed', zIndex: '1000', isolation: 'isolate' });
     expect(navigation.style.padding).toContain('env(safe-area-inset-bottom)');
+  });
+
+  it('keeps every delay duration visible above the internal navigation', async () => {
+    const user = userEvent.setup();
+    const first = renderWorker();
+    const [acceptButton] = screen.getAllByRole('button', { name: 'Accepter' });
+    expect(acceptButton).toBeDefined();
+    if (!acceptButton) return;
+    await user.click(acceptButton);
+
+    const state = JSON.parse(localStorage.getItem('urosi_founder_demo_shared_v1') || '{}') as {
+      candidates?: Array<{ id: string; status: string }>;
+    };
+    state.candidates = state.candidates?.map((candidate) => candidate.id === 'demo-worker-m1' ? { ...candidate, status: 'accepted' } : candidate);
+    localStorage.setItem('urosi_founder_demo_shared_v1', JSON.stringify(state));
+    first.unmount();
+
+    renderWorker();
+    await user.click(screen.getByRole('button', { name: /Missions/ }));
+    await user.click(screen.getByRole('button', { name: 'Retard' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Signaler un retard' });
+    expect(dialog).toHaveStyle({ zIndex: '1200' });
+    ['5 min', '10 min', '15 min', '30 min+'].forEach((label) => {
+      expect(within(dialog).getByRole('button', { name: label })).toBeInTheDocument();
+    });
   });
 
   it('hides the structure photo gallery completely when no photo is available', async () => {

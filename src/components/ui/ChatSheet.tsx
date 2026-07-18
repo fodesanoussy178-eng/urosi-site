@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { T, inp } from '@/components/ui/theme';
+import { useBodyScrollLock } from '@/components/ui/useBodyScrollLock';
 import {
   fetchMessages,
   markThreadRead,
@@ -27,6 +28,8 @@ export function ChatSheet({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  useBodyScrollLock(true);
 
   useEffect(() => {
     let active = true;
@@ -72,11 +75,16 @@ export function ChatSheet({
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 500 }}
+      className="urosi-modal-layer urosi-bottom-sheet-layer"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Discussion — ${title}`}
+      style={{ background: 'rgba(0,0,0,.85)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
       onClick={onClose}
     >
       <div
-        style={{ width: '100%', maxWidth: 430, background: T.card, borderRadius: '20px 20px 0 0', padding: '16px 14px 22px', display: 'flex', flexDirection: 'column', height: '72vh' }}
+        className="urosi-bottom-sheet"
+        style={{ width: '100%', maxWidth: 430, background: T.card, borderRadius: '20px 20px 0 0', padding: '16px 14px 22px', display: 'flex', flexDirection: 'column', height: '72dvh' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>

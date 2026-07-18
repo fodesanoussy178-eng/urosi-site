@@ -156,21 +156,15 @@
          donc plus être limité par overflow, transform, filter, opacity ou le
          z-index d'un ancêtre de la landing. */
       .phone-zone.demo-fullscreen-fallback { margin: 0; transform: none; filter: none; opacity: 1; }
-      body.demo-tour-open .hero-stage { z-index: 2147483000; }
       html.demo-fullscreen-open { overflow: hidden; overscroll-behavior: none; }
       body.demo-fullscreen-open {
         position: fixed; top: var(--demo-fullscreen-scroll-top, 0px); left: 0; right: 0;
         width: 100%; overflow: hidden; overscroll-behavior: none;
       }
-      /* Le tutoriel reste utilisable, mais ses voiles noirs ne doivent jamais
-         recouvrir la démo agrandie. La règle générique couvre aussi un futur
-         backdrop de la landing portant la classe .demo-overlay. */
+      /* Aucun backdrop de la landing ne doit recouvrir la démo agrandie. */
       body.demo-fullscreen-open .demo-overlay,
-      body.demo-fullscreen-open .demo-tour::before,
       .phone-zone:fullscreen .demo-overlay,
-      .phone-zone:fullscreen .demo-tour::before,
-      .phone-zone.demo-fullscreen-fallback .demo-overlay,
-      .phone-zone.demo-fullscreen-fallback .demo-tour::before { display: none !important; }
+      .phone-zone.demo-fullscreen-fallback .demo-overlay { display: none !important; }
       .phone-zone:fullscreen::before,
       .phone-zone.demo-fullscreen-fallback::before,
       .phone-zone:fullscreen .float-card,
@@ -299,56 +293,6 @@
       .dot.on { background: var(--cyan); }
       .phone-hint { font-size: 11px; color: var(--mu); margin-top: 12px; text-align: center; }
       .phone-hint b { color: var(--sub); }
-
-      /* ── Tutoriel guidé de la démo ── */
-      .demo-tour {
-        position: fixed; inset: 0; z-index: 2147483000; width: 100vw; height: 100dvh;
-        display: none; overflow: hidden; overscroll-behavior: none; touch-action: none; box-sizing: border-box;
-        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-      }
-      .demo-tour::before {
-        content: ''; position: fixed; inset: 0; background: rgba(2, 5, 12, .9);
-        opacity: 1; visibility: visible; transition: opacity .12s ease, visibility .12s ease;
-      }
-      .demo-tour.is-ready::before { opacity: 0; visibility: hidden; }
-      .demo-tour.is-open { display: block; }
-      .demo-tour-shade { position: fixed; background: rgba(2, 5, 12, .9); transition: all .18s ease; }
-      .demo-tour-spotlight {
-        position: fixed; border: 2px solid rgba(34, 211, 238, .95); border-radius: 18px;
-        box-shadow: 0 0 0 4px rgba(34, 211, 238, .14), 0 10px 35px rgba(0, 0, 0, .35);
-        pointer-events: none; transition: all .18s ease;
-      }
-      .demo-tour-card {
-        position: fixed; width: min(320px, calc(100vw - 32px)); max-width: 340px; max-height: 45dvh; box-sizing: border-box;
-        display: flex; flex-direction: column; overflow: hidden; padding: 13px; border-radius: 15px; border: 1px solid rgba(34, 211, 238, .35);
-        background: #101827; color: #f8fafc; box-shadow: 0 18px 60px rgba(0, 0, 0, .48);
-        text-align: left; opacity: 0; transform: translateY(6px); transition: opacity .16s ease, transform .16s ease;
-      }
-      .demo-tour.is-ready .demo-tour-card { opacity: 1; transform: none; }
-      .demo-tour-head { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
-      .demo-tour-number {
-        width: 24px; height: 24px; flex: 0 0 24px; border-radius: 50%; display: grid; place-items: center;
-        background: linear-gradient(135deg, #0891b2, #16a34a); color: #fff; font-size: 11px; font-weight: 900;
-      }
-      .demo-tour-title { margin: 0; font-size: 14px; line-height: 1.25; font-weight: 900; }
-      .demo-tour-copy { min-height: 0; overflow-y: auto; margin: 0; color: #cbd5e1; font-size: 11.5px; line-height: 1.45; }
-      .demo-tour-footer { flex: 0 0 auto; display: flex; align-items: center; gap: 7px; margin-top: 11px; }
-      .demo-tour-progress { margin-right: auto; color: #94a3b8; font-size: 10px; font-weight: 800; }
-      .demo-tour-button {
-        min-height: 36px; padding: 0 10px; border-radius: 9px; border: 1px solid #334155;
-        background: transparent; color: #cbd5e1; font: inherit; font-size: 11px; font-weight: 900; cursor: pointer;
-      }
-      .demo-tour-button.primary { border-color: #0891b2; background: #0891b2; color: #fff; }
-      .demo-tour-button:focus-visible { outline: 3px solid rgba(34, 211, 238, .45); outline-offset: 2px; }
-      .phone-tour-link { border: 0; padding: 0; background: none; color: var(--cyan); font: inherit; font-weight: 900; cursor: pointer; }
-
-      @media (min-width: 421px) {
-        .demo-tour-card { width: min(330px, calc(100vw - 32px)); }
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        .demo-tour-shade, .demo-tour-spotlight, .demo-tour-card { transition: none; }
-      }
 
       section { padding: 54px 0; }
       .sec-title { font-size: 34px; font-weight: 900; letter-spacing: 0; margin-bottom: 8px; text-align: center; }
@@ -659,33 +603,9 @@
         <button class="preview-role on" type="button" data-preview-role="worker" aria-pressed="true">Travailleur</button>
         <button class="preview-role" type="button" data-preview-role="structure" aria-pressed="false">Structure</button>
       </div>
-      <div class="phone-hint"><b>Fais défiler l’écran dans le téléphone</b> · <button class="phone-tour-link" type="button" data-demo-tour-start>Comment ça marche ?</button></div>
-
-      <div id="demoTour" class="demo-tour" role="dialog" aria-modal="true" aria-labelledby="demoTourTitle" aria-describedby="demoTourCopy" aria-hidden="true">
-        <div class="demo-tour-shade demo-overlay" data-tour-shade="top"></div>
-        <div class="demo-tour-shade demo-overlay" data-tour-shade="right"></div>
-        <div class="demo-tour-shade demo-overlay" data-tour-shade="bottom"></div>
-        <div class="demo-tour-shade demo-overlay" data-tour-shade="left"></div>
-        <div id="demoTourSpotlight" class="demo-tour-spotlight" aria-hidden="true"></div>
-        <div id="demoTourCard" class="demo-tour-card" tabindex="-1">
-          <div class="demo-tour-head">
-            <span id="demoTourNumber" class="demo-tour-number">1</span>
-            <h3 id="demoTourTitle" class="demo-tour-title"></h3>
-          </div>
-          <p id="demoTourCopy" class="demo-tour-copy"></p>
-          <div class="demo-tour-footer">
-            <span id="demoTourProgress" class="demo-tour-progress">1 sur 3</span>
-            <button id="demoTourSkip" class="demo-tour-button" type="button">Passer</button>
-            <button id="demoTourNext" class="demo-tour-button primary" type="button">Suivant</button>
-          </div>
-        </div>
-      </div>
+      <div class="phone-hint"><b>Fais défiler l’écran dans le téléphone</b></div>
         </div>
       </main>
-
-    <!-- Le tutoriel guidé se lance automatiquement à l'agrandissement de la
-         démo (et reste accessible via « Comment ça marche ? » sous le
-         téléphone). L'ancienne section dédiée a été retirée. -->
 
     <!-- ── FAQ ── -->
     <section class="wrap reveal" style="max-width: 640px">
@@ -865,7 +785,6 @@
           restoreFallbackParent();
           unlockFullscreenScroll();
           syncFullscreenControl();
-          window.requestAnimationFrame(positionTour);
           if (!fromBrowserBack && fallbackHistoryEntry) history.back();
           fallbackHistoryEntry = false;
         }
@@ -876,7 +795,6 @@
           if (!active && nativeFullscreenWasActive && !fallbackFullscreen) unlockFullscreenScroll();
           nativeFullscreenWasActive = active;
           syncFullscreenControl();
-          window.setTimeout(reflowTour, 80);
         }
 
         if (fullscreenButton && demoZone) {
@@ -899,22 +817,16 @@
             }
             if (useFallbackFullscreen()) {
               enterFallbackFullscreen();
-              window.setTimeout(reflowTour, 80);
-              maybeAutoStartTour();
               return;
             }
             if (typeof demoZone.requestFullscreen === 'function') {
               demoZone.requestFullscreen()
-                .then(function () { handleNativeFullscreenChange(); maybeAutoStartTour(); })
+                .then(handleNativeFullscreenChange)
                 .catch(function () {
                   enterFallbackFullscreen();
-                  window.setTimeout(reflowTour, 80);
-                  maybeAutoStartTour();
                 });
             } else {
               enterFallbackFullscreen();
-              window.setTimeout(reflowTour, 80);
-              maybeAutoStartTour();
             }
           });
 
@@ -936,413 +848,7 @@
           syncFullscreenControl();
         }
 
-        // ── Tutoriel mobile : une cible et une seule explication à la fois.
-        var tourRoot = document.getElementById('demoTour');
-        var tourCard = document.getElementById('demoTourCard');
-        var tourSpotlight = document.getElementById('demoTourSpotlight');
-        var tourTitle = document.getElementById('demoTourTitle');
-        var tourCopy = document.getElementById('demoTourCopy');
-        var tourNumber = document.getElementById('demoTourNumber');
-        var tourProgress = document.getElementById('demoTourProgress');
-        var tourSkip = document.getElementById('demoTourSkip');
-        var tourNext = document.getElementById('demoTourNext');
-        var tourShades = {};
-        document.querySelectorAll('[data-tour-shade]').forEach(function (shade) { tourShades[shade.dataset.tourShade] = shade; });
-        // Un tutoriel par rôle : chacun se lance automatiquement quand la
-        // démo passe en plein écran, et reste toujours ignorable (Passer).
-        var tourStepsByRole = {
-          worker: [
-            {
-              selector: '[data-demo-tour="mission-card"]',
-              title: 'Tu choisis une expérience',
-              copy: 'Payée ou solidaire, près de toi, avec les informations visibles avant de postuler.'
-            },
-            {
-              selector: '[data-demo-tour="mission-action"]',
-              title: 'Ta présence est validée',
-              copy: 'Le début et la fin de la mission sont confirmés simplement.'
-            },
-            {
-              selector: '[data-demo-tab="moi"]',
-              title: 'Ton CV vivant avance',
-              copy: 'Chaque mission terminée ajoute une preuve claire à ton profil.'
-            }
-          ],
-          structure: [
-            {
-              selector: '[data-demo-tour="structure-publish"]',
-              title: 'Publie une mission',
-              copy: 'Décris le besoin, le créneau et le montant : la mission part immédiatement dans le flux des travailleurs autour de toi.'
-            },
-            {
-              selector: '[data-demo-tab="candidats"]',
-              title: 'Vois les candidats',
-              copy: 'Chaque profil montre ses missions vérifiées. Tu acceptes ou refuses en un geste.'
-            },
-            {
-              selector: '[data-demo-tab="historique"]',
-              title: 'Suis ton historique',
-              copy: 'Missions terminées, annulées ou archivées : tout reste consultable au même endroit.'
-            }
-          ]
-        };
-        var tourRole = 'worker';
-        var tourSteps = tourStepsByRole.worker;
-        var tourIndex = 0;
-        var tourOpen = false;
-        var tourTarget = null;
-        var tourPositionFrame = 0;
-        var tourNudgeAttempts = 0;
-        var tourNudgeTimer = 0;
-        var tourStartFocus = null;
-        var pageOverflow = null;
-        var frameOverflow = null;
-
-        function waitForPreviewLoad() {
-          return new Promise(function (resolve) {
-            if (!preview) { resolve(); return; }
-            var timeout = window.setTimeout(resolve, 1800);
-            preview.addEventListener('load', function loaded() {
-              window.clearTimeout(timeout);
-              resolve();
-            }, { once: true });
-          });
-        }
-
-        function previewDocument() {
-          try { return preview && preview.contentDocument; } catch (error) { return null; }
-        }
-
-        function lockPage() {
-          if (!pageOverflow) {
-            pageOverflow = {
-              html: document.documentElement.style.overflow,
-              body: document.body.style.overflow
-            };
-          }
-          document.documentElement.style.overflow = 'hidden';
-          document.body.style.overflow = 'hidden';
-          lockFrame();
-        }
-
-        function lockFrame() {
-          var frameDoc = previewDocument();
-          if (!frameDoc || !frameDoc.body) return;
-          if (!frameOverflow) {
-            frameOverflow = {
-              html: frameDoc.documentElement.style.overflow,
-              body: frameDoc.body.style.overflow
-            };
-          }
-          frameDoc.documentElement.style.overflow = 'hidden';
-          frameDoc.body.style.overflow = 'hidden';
-        }
-
-        function unlockFrame() {
-          var frameDoc = previewDocument();
-          if (!frameDoc || !frameDoc.body || !frameOverflow) return;
-          frameDoc.documentElement.style.overflow = frameOverflow.html;
-          frameDoc.body.style.overflow = frameOverflow.body;
-        }
-
-        function restoreScroll() {
-          if (pageOverflow) {
-            document.documentElement.style.overflow = pageOverflow.html;
-            document.body.style.overflow = pageOverflow.body;
-          }
-          unlockFrame();
-          pageOverflow = null;
-          frameOverflow = null;
-        }
-
-        function setBox(element, left, top, width, height) {
-          if (!element) return;
-          element.style.left = Math.max(0, left) + 'px';
-          element.style.top = Math.max(0, top) + 'px';
-          element.style.width = Math.max(0, width) + 'px';
-          element.style.height = Math.max(0, height) + 'px';
-        }
-
-        function targetViewportRect(target) {
-          if (!preview || !target) return null;
-          var frameRect = preview.getBoundingClientRect();
-          var targetRect = target.getBoundingClientRect();
-          return {
-            left: frameRect.left + targetRect.left,
-            top: frameRect.top + targetRect.top,
-            right: frameRect.left + targetRect.right,
-            bottom: frameRect.top + targetRect.bottom,
-            width: targetRect.width,
-            height: targetRect.height
-          };
-        }
-
-        function tourViewport() {
-          var viewport = window.visualViewport;
-          var rootStyle = window.getComputedStyle(tourRoot);
-          var viewLeft = viewport ? viewport.offsetLeft : 0;
-          var viewTop = viewport ? viewport.offsetTop : 0;
-          var viewWidth = viewport ? viewport.width : window.innerWidth;
-          var viewHeight = viewport ? viewport.height : window.innerHeight;
-          var margin = 16;
-          return {
-            left: viewLeft + Math.max(margin, parseFloat(rootStyle.paddingLeft) || 0),
-            top: viewTop + Math.max(margin, parseFloat(rootStyle.paddingTop) || 0),
-            right: viewLeft + viewWidth - Math.max(margin, parseFloat(rootStyle.paddingRight) || 0),
-            bottom: viewTop + viewHeight - Math.max(margin, parseFloat(rootStyle.paddingBottom) || 0),
-            viewLeft: viewLeft,
-            viewTop: viewTop,
-            viewWidth: viewWidth,
-            viewHeight: viewHeight
-          };
-        }
-
-        function rectFits(rect, bounds) {
-          return rect.left >= bounds.left && rect.top >= bounds.top && rect.right <= bounds.right && rect.bottom <= bounds.bottom;
-        }
-
-        function overlaps(a, b) {
-          return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
-        }
-
-        function centered(value, size, min, max) {
-          return Math.max(min, Math.min(value - size / 2, max - size));
-        }
-
-        function makePlacement(name, left, top, width, height) {
-          return { name: name, left: left, top: top, width: width, height: height, right: left + width, bottom: top + height };
-        }
-
-        function bestTourPlacement(target, cardWidth, cardHeight, bounds) {
-          var gap = 12;
-          var centerX = target.left + target.width / 2;
-          var centerY = target.top + target.height / 2;
-          var candidates = [
-            makePlacement('below', centered(centerX, cardWidth, bounds.left, bounds.right), target.bottom + gap, cardWidth, cardHeight),
-            makePlacement('above', centered(centerX, cardWidth, bounds.left, bounds.right), target.top - gap - cardHeight, cardWidth, cardHeight),
-            makePlacement('left', target.left - gap - cardWidth, centered(centerY, cardHeight, bounds.top, bounds.bottom), cardWidth, cardHeight),
-            makePlacement('right', target.right + gap, centered(centerY, cardHeight, bounds.top, bounds.bottom), cardWidth, cardHeight)
-          ];
-          return candidates.find(function (candidate) {
-            return rectFits(candidate, bounds) && !overlaps(candidate, target);
-          }) || null;
-        }
-
-        function nudgeTourTarget(rect, cardHeight, bounds) {
-          if (!tourTarget || tourNudgeAttempts >= 2) return false;
-          var frameDoc = previewDocument();
-          var scroller = frameDoc && (frameDoc.scrollingElement || frameDoc.documentElement);
-          if (!scroller) return false;
-          var gap = 12;
-          var targetHeight = rect.height;
-          var availableHeight = bounds.bottom - bounds.top;
-          var desiredTop;
-
-          if (targetHeight + gap + cardHeight <= availableHeight) {
-            // Premier essai : espace dessous. Second essai : espace dessus.
-            desiredTop = tourNudgeAttempts === 0 ? bounds.top : bounds.bottom - targetHeight;
-          } else if (!rectFits(rect, bounds)) {
-            desiredTop = bounds.top + Math.max(0, (availableHeight - targetHeight) / 2);
-          } else {
-            return false;
-          }
-
-          var delta = rect.top - desiredTop;
-          if (Math.abs(delta) < 2) return false;
-          tourNudgeAttempts += 1;
-          unlockFrame();
-          scroller.scrollBy({ top: delta, behavior: reduceMotion ? 'auto' : 'smooth' });
-          window.clearTimeout(tourNudgeTimer);
-          tourNudgeTimer = window.setTimeout(function () {
-            lockFrame();
-            positionTour();
-          }, reduceMotion ? 20 : 280);
-          return true;
-        }
-
-        function positionTour() {
-          if (!tourOpen || !tourTarget || !tourRoot || !tourCard || !tourSpotlight) return;
-          window.cancelAnimationFrame(tourPositionFrame);
-          tourPositionFrame = window.requestAnimationFrame(function () {
-            var rect = targetViewportRect(tourTarget);
-            if (!rect) return;
-            var bounds = tourViewport();
-            var pad = 6;
-            var targetBox = {
-              left: rect.left - pad,
-              top: rect.top - pad,
-              right: rect.right + pad,
-              bottom: rect.bottom + pad,
-              width: rect.width + pad * 2,
-              height: rect.height + pad * 2
-            };
-
-            var cardWidth = Math.min(window.innerWidth >= 421 ? 330 : 320, 340, bounds.right - bounds.left);
-            tourCard.style.width = cardWidth + 'px';
-            tourCard.style.maxHeight = Math.floor(bounds.viewHeight * .45) + 'px';
-            var cardHeight = tourCard.offsetHeight;
-            var placement = rectFits(targetBox, bounds) ? bestTourPlacement(targetBox, cardWidth, cardHeight, bounds) : null;
-            if (!placement) {
-              if (nudgeTourTarget(rect, cardHeight, bounds)) return;
-              return;
-            }
-            setBox(tourShades.top, bounds.viewLeft, bounds.viewTop, bounds.viewWidth, targetBox.top - bounds.viewTop);
-            setBox(tourShades.bottom, bounds.viewLeft, targetBox.bottom, bounds.viewWidth, bounds.viewTop + bounds.viewHeight - targetBox.bottom);
-            setBox(tourShades.left, bounds.viewLeft, targetBox.top, targetBox.left - bounds.viewLeft, targetBox.height);
-            setBox(tourShades.right, targetBox.right, targetBox.top, bounds.viewLeft + bounds.viewWidth - targetBox.right, targetBox.height);
-            setBox(tourSpotlight, targetBox.left, targetBox.top, targetBox.width, targetBox.height);
-            tourCard.dataset.placement = placement.name;
-            tourCard.style.left = placement.left + 'px';
-            tourCard.style.top = placement.top + 'px';
-            tourRoot.classList.add('is-ready');
-          });
-        }
-
-        function reflowTour() {
-          if (!tourOpen) return;
-          window.clearTimeout(tourNudgeTimer);
-          tourNudgeAttempts = 0;
-          if (tourRoot) tourRoot.classList.remove('is-ready');
-          window.requestAnimationFrame(positionTour);
-        }
-
-        function frameTarget(selector) {
-          var frameDoc = previewDocument();
-          return frameDoc ? frameDoc.querySelector(selector) : null;
-        }
-
-        function showTourStep(index) {
-          if (!tourOpen || !tourRoot) return Promise.resolve();
-          tourIndex = Math.max(0, Math.min(index, tourSteps.length - 1));
-          var step = tourSteps[tourIndex];
-          tourRoot.classList.remove('is-ready');
-          if (tourTitle) tourTitle.textContent = step.title;
-          if (tourCopy) tourCopy.textContent = step.copy;
-          if (tourNumber) tourNumber.textContent = String(tourIndex + 1);
-          if (tourProgress) tourProgress.textContent = (tourIndex + 1) + ' sur ' + tourSteps.length;
-          if (tourNext) tourNext.textContent = tourIndex === tourSteps.length - 1 ? 'Terminer' : 'Suivant';
-          tourNudgeAttempts = 0;
-
-          unlockFrame();
-          tourTarget = frameTarget(step.selector);
-          if (!tourTarget) {
-            lockFrame();
-            positionTour();
-            return Promise.resolve();
-          }
-          var frameDoc = previewDocument();
-          var frameHeight = preview ? preview.clientHeight : 0;
-          var innerRect = tourTarget.getBoundingClientRect();
-          var targetVisible = innerRect.top >= 12 && innerRect.bottom <= frameHeight - 12;
-          if (!targetVisible) tourTarget.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center', inline: 'nearest' });
-          return new Promise(function (resolve) {
-            window.setTimeout(function () {
-              lockFrame();
-              positionTour();
-              if (frameDoc) frameDoc.addEventListener('scroll', positionTour, { passive: true, capture: true });
-              resolve();
-            }, targetVisible || reduceMotion ? 20 : 360);
-          });
-        }
-
-        function stopTour() {
-          if (!tourOpen || !tourRoot) return;
-          window.clearTimeout(tourNudgeTimer);
-          tourOpen = false;
-          tourTarget = null;
-          tourRoot.classList.remove('is-open', 'is-ready');
-          tourRoot.setAttribute('aria-hidden', 'true');
-          if (demoZone) demoZone.classList.remove('tour-active');
-          document.body.classList.remove('demo-tour-open');
-          try { sessionStorage.setItem('urosi_demo_tour_seen_' + tourRole, '1'); } catch (error) { /* stockage indisponible */ }
-          restoreScroll();
-          if (preview && (preview.getAttribute('src') || '').indexOf('tour=1') !== -1) {
-            preview.classList.add('is-switching');
-            preview.src = '/demo?role=' + tourRole + '&embed=1';
-          }
-          if (tourStartFocus && typeof tourStartFocus.focus === 'function') tourStartFocus.focus();
-          tourStartFocus = null;
-        }
-
-        function currentPreviewRole() {
-          var active = document.querySelector('[data-preview-role].on');
-          return active && active.dataset.previewRole === 'structure' ? 'structure' : 'worker';
-        }
-
-        function ensurePreviewForRole(role) {
-          if (!preview) return Promise.resolve();
-          var currentSrc = preview.getAttribute('src') || '';
-          if (currentSrc.indexOf('role=' + role) !== -1 && currentSrc.indexOf('tour=1') !== -1) return Promise.resolve();
-          preview.classList.add('is-switching');
-          document.querySelectorAll('[data-preview-role]').forEach(function (item) {
-            var active = item.dataset.previewRole === role;
-            item.classList.toggle('on', active);
-            item.setAttribute('aria-pressed', active ? 'true' : 'false');
-          });
-          preview.src = '/demo?role=' + role + '&embed=1&tour=1';
-          preview.title = role === 'structure'
-            ? 'Aperçu défilable de l’espace Structure UROSI'
-            : 'Aperçu défilable de l’espace Travailleur UROSI';
-          return waitForPreviewLoad();
-        }
-
-        function startTour(event) {
-          if (!tourRoot || !preview || tourOpen) return;
-          tourRole = currentPreviewRole();
-          tourSteps = tourStepsByRole[tourRole];
-          tourStartFocus = event && event.currentTarget ? event.currentTarget : document.activeElement;
-          // Sur iPhone, le parcours occupe la démo entière.
-          if (window.matchMedia('(max-width: 520px)').matches && !fullscreenActive()) enterFallbackFullscreen();
-          ensurePreviewForRole(tourRole).then(function () {
-            var frameDoc = previewDocument();
-            var homeTab = frameDoc && frameDoc.querySelector(tourRole === 'structure' ? '[data-demo-tab="missions"]' : '[data-demo-tab="flux"]');
-            if (homeTab && homeTab.getAttribute('aria-pressed') !== 'true') homeTab.click();
-            if (!fullscreenActive() && demoZone) demoZone.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
-            window.setTimeout(function () {
-              tourOpen = true;
-              if (demoZone) demoZone.classList.add('tour-active');
-              document.body.classList.add('demo-tour-open');
-              tourRoot.classList.add('is-open');
-              tourRoot.setAttribute('aria-hidden', 'false');
-              lockPage();
-              showTourStep(0).then(function () { if (tourCard) tourCard.focus({ preventScroll: true }); });
-            }, reduceMotion ? 20 : 320);
-          });
-        }
-
-        // Le tutoriel du rôle affiché se lance automatiquement au passage en
-        // plein écran, une fois par session : l'utilisateur peut toujours
-        // l'ignorer (Passer, Échap), et il ne se réaffiche plus ensuite.
-        function maybeAutoStartTour() {
-          if (tourOpen) return;
-          var role = currentPreviewRole();
-          try {
-            if (sessionStorage.getItem('urosi_demo_tour_seen_' + role) === '1') return;
-          } catch (error) { /* stockage indisponible */ }
-          window.setTimeout(function () { startTour(null); }, 380);
-        }
-
-        if (tourRoot && preview) {
-          document.querySelectorAll('[data-demo-tour-start]').forEach(function (button) { button.addEventListener('click', startTour); });
-          if (tourSkip) tourSkip.addEventListener('click', stopTour);
-          if (tourNext) tourNext.addEventListener('click', function () {
-            if (tourIndex >= tourSteps.length - 1) stopTour();
-            else showTourStep(tourIndex + 1);
-          });
-          tourRoot.addEventListener('wheel', function (event) { event.preventDefault(); }, { passive: false });
-          tourRoot.addEventListener('touchmove', function (event) { event.preventDefault(); }, { passive: false });
-          document.addEventListener('keydown', function (event) { if (tourOpen && event.key === 'Escape') stopTour(); });
-          window.addEventListener('resize', reflowTour, { passive: true });
-          window.addEventListener('orientationchange', function () { window.setTimeout(reflowTour, 120); }, { passive: true });
-          window.addEventListener('scroll', positionTour, { passive: true });
-          document.addEventListener('fullscreenchange', reflowTour);
-          document.addEventListener('webkitfullscreenchange', reflowTour);
-          if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', reflowTour, { passive: true });
-            window.visualViewport.addEventListener('scroll', positionTour, { passive: true });
-          }
-        }
-
+        // Le mini-tutoriel a été supprimé : la démo reste directement interactive.
         if (preview) {
           var switchTimer = null;
           preview.addEventListener('load', function () {

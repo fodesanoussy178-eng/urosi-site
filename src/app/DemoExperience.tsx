@@ -4,6 +4,7 @@ import { Logo } from '@/components/ui/Logo';
 import { Fld } from '@/components/ui/Fld';
 import { QRBadge } from '@/components/ui/QRBadge';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { useBodyScrollLock } from '@/components/ui/useBodyScrollLock';
 import { T, FONT, inp } from '@/components/ui/theme';
 import { useAuth } from '@/features/auth/AuthContext';
 import { hasFounderAccess } from '@/features/auth/authService';
@@ -922,7 +923,6 @@ function DemoFormatSwitch({ format, onChange }: { format: 'phone' | 'wide'; onCh
 function MissionCard({ mission, onAccept, onOpen }: { mission: DemoMission; onAccept?: () => void; onOpen?: () => void }) {
   return (
     <article
-      data-demo-tour="mission-card"
       style={{ position: 'relative', background: T.card, border: `1px solid ${mission.solid ? T.greenBorder : T.cb}`, borderRadius: 16, padding: 14 }}
     >
       <button type="button" aria-label={`Voir la fiche complète de ${mission.title}`} onClick={onOpen} style={{ position: 'absolute', inset: 0, zIndex: 0, width: '100%', border: 0, borderRadius: 16, background: 'transparent', cursor: onOpen ? 'pointer' : undefined }} />
@@ -936,7 +936,7 @@ function MissionCard({ mission, onAccept, onOpen }: { mission: DemoMission; onAc
           <span aria-label={`Note moyenne ${mission.rating.toFixed(1)} sur 5`} style={{ flexShrink: 0, color: T.amber, fontSize: 10.5, fontWeight: 900 }}>⭐ {mission.rating.toFixed(1).replace('.', ',')}</span>
         </div>
         <div style={{ color: T.mu, fontSize: 10.5, marginTop: 5 }}>📍 {mission.city}</div>
-        <div data-demo-tour="mission-action" style={{ pointerEvents: 'auto', marginTop: 11 }}>
+        <div style={{ pointerEvents: 'auto', marginTop: 11 }}>
           <Button onClick={onAccept} tone={mission.solid ? 'green' : 'dark'}>
             {mission.solid ? 'Participer' : 'Accepter'}
           </Button>
@@ -950,8 +950,8 @@ function MissionCard({ mission, onAccept, onOpen }: { mission: DemoMission; onAc
 // immédiatement visible, les informations secondaires sont repliées.
 function DemoMissionSheet({ mission, onClose, onAccept, onStructure }: { mission: DemoMission; onClose: () => void; onAccept: () => void; onStructure: () => void }) {
   return (
-    <div role="dialog" aria-modal="true" aria-label={`Détail de la mission ${mission.title}`} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 190 }} onClick={onClose}>
-      <div style={{ width: '100%', maxWidth: 430, maxHeight: 'calc(100dvh - 60px)', overflowY: 'auto', background: T.card, borderRadius: '24px 24px 0 0', padding: '20px 18px 28px' }} onClick={(event) => event.stopPropagation()}>
+    <div className="urosi-modal-layer urosi-bottom-sheet-layer" role="dialog" aria-modal="true" aria-label={`Détail de la mission ${mission.title}`} style={{ background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+      <div className="urosi-bottom-sheet" style={{ width: '100%', maxWidth: 430, background: T.card, borderRadius: '24px 24px 0 0', padding: '20px 18px 28px' }} onClick={(event) => event.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
           {mission.solid ? (
             <span style={{ color: T.green, fontSize: 24, fontWeight: 900, letterSpacing: -1 }}>Solidaire · 0 €</span>
@@ -1110,6 +1110,8 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
   const [demoQr, setDemoQr] = useState<{ mission: DemoMission; step: DemoQrStep } | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [toast, setToast] = useState<string | null>(null);
+
+  useBodyScrollLock(Boolean(profileName || demoQr || missionAlert || missionDetail));
 
   useEffect(() => {
     function refresh(event: StorageEvent) {
@@ -1374,10 +1376,11 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
           role="dialog"
           aria-modal="true"
           aria-label={`QR fictif de ${demoQr.step === 'start' ? 'début' : 'fin'} de mission`}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 195, padding: 18 }}
+          className="urosi-modal-layer"
+          style={{ background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'calc(18px + env(safe-area-inset-top)) 18px calc(18px + env(safe-area-inset-bottom))' }}
           onClick={() => setDemoQr(null)}
         >
-          <div style={{ width: '100%', maxWidth: 350, background: T.card, border: `1px solid ${T.cb}`, borderRadius: 22, padding: 22, textAlign: 'center' }} onClick={(event) => event.stopPropagation()}>
+          <div className="urosi-dialog-scroll" style={{ width: '100%', maxWidth: 350, background: T.card, border: `1px solid ${T.cb}`, borderRadius: 22, padding: 22, textAlign: 'center' }} onClick={(event) => event.stopPropagation()}>
             <div style={{ color: T.text, fontSize: 18, fontWeight: 900 }}>QR de {demoQr.step === 'start' ? 'début' : 'fin'} · Démo</div>
             <div style={{ color: T.sub, fontSize: 11, lineHeight: 1.5, margin: '6px 0 16px' }}>
               {demoQr.mission.title}<br />{demoQr.mission.structure}
@@ -1397,8 +1400,15 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
         </div>
       )}
       {missionAlert && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 190 }} onClick={() => setMissionAlert(null)}>
-          <div style={{ width: '100%', maxWidth: 430, background: T.card, borderRadius: '24px 24px 0 0', padding: '20px 18px 28px' }} onClick={(event) => event.stopPropagation()}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={missionAlert.type === 'delay' ? 'Signaler un retard' : 'Annuler la mission'}
+          className="urosi-modal-layer urosi-bottom-sheet-layer"
+          style={{ background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 1200 }}
+          onClick={() => setMissionAlert(null)}
+        >
+          <div className="urosi-bottom-sheet" style={{ width: '100%', maxWidth: 430, background: T.card, borderRadius: '24px 24px 0 0', padding: '20px 18px 28px' }} onClick={(event) => event.stopPropagation()}>
             <div style={{ color: missionAlert.type === 'delay' ? T.amber : T.red, fontSize: 16, fontWeight: 900, marginBottom: 6 }}>
               {missionAlert.type === 'delay' ? 'Signaler un retard' : 'Annuler la mission'}
             </div>
@@ -1548,8 +1558,8 @@ function PublishDemoModal({
       : `${days.length} jours · ${demoHours(minutes)} par personne`;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.74)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 200 }} onClick={onClose}>
-      <div style={{ width: '100%', maxWidth: 430, maxHeight: '90vh', overflowY: 'auto', background: T.card, borderRadius: '24px 24px 0 0', padding: '20px 18px 28px' }} onClick={(e) => e.stopPropagation()}>
+    <div className="urosi-modal-layer urosi-bottom-sheet-layer" role="dialog" aria-modal="true" aria-label="Publier une mission" style={{ background: 'rgba(0,0,0,.74)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+      <div className="urosi-bottom-sheet" style={{ width: '100%', maxWidth: 430, background: T.card, borderRadius: '24px 24px 0 0', padding: '20px 18px 28px' }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 18 }}>
           <div style={{ fontSize: 18, color: T.text, fontWeight: 900 }}>Nouvelle mission</div>
           <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 9, background: T.row, color: T.sub, border: 'none', cursor: 'pointer' }}>×</button>
@@ -1626,10 +1636,11 @@ function PublishDemoModal({
           )}
           {f.solid && <div style={{ color: T.green, fontSize: 11, fontWeight: 800, marginTop: 8 }}>Mission solidaire : aucun coût, comptabilisée dans le CV vivant.</div>}
         </div>
-        <Button
-          disabled={!ok}
-          onClick={() =>
-            onPublish({
+        <div className="urosi-modal-actions">
+          <Button
+            disabled={!ok}
+            onClick={() =>
+              onPublish({
               id: `new-${Date.now()}`,
               structureId: isAsso ? DEMO_STRUCTURE_IDS.asso : DEMO_STRUCTURE_IDS.pme,
               title: f.title.trim(),
@@ -1642,11 +1653,12 @@ function PublishDemoModal({
               distance: 'démo',
               solid: f.solid,
               desc: f.solid ? 'Mission bénévole à 0 €. Elle enrichit le CV vivant.' : 'Mission publiée avec prix libre choisi par la structure.',
-            })
-          }
-        >
-          {f.solid ? 'Publier · Solidaire (0 €)' : `Publier · ${total} € au total`}
-        </Button>
+              })
+            }
+          >
+            {f.solid ? 'Publier · Solidaire (0 €)' : `Publier · ${total} € au total`}
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -1776,8 +1788,8 @@ function MissionManageSheet({
   const actionButton = (label: string, action: () => void, tone: 'light' | 'ghost' | 'red' | 'green' = 'light') => <Button tone={tone} onClick={action}>{label}</Button>;
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={`Gérer la mission ${mission.title}`} onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 210 }}>
-      <div onClick={(event) => event.stopPropagation()} style={{ width: '100%', maxWidth: 430, background: T.card, borderRadius: '24px 24px 0 0', padding: '20px 18px 28px' }}>
+    <div className="urosi-modal-layer urosi-bottom-sheet-layer" role="dialog" aria-modal="true" aria-label={`Gérer la mission ${mission.title}`} onClick={onClose} style={{ background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+      <div className="urosi-bottom-sheet" onClick={(event) => event.stopPropagation()} style={{ width: '100%', maxWidth: 430, background: T.card, borderRadius: '24px 24px 0 0', padding: '20px 18px 28px' }}>
         <div style={{ width: 42, height: 4, borderRadius: 3, background: T.cb, margin: '0 auto 16px' }} />
         <div style={{ color: T.text, fontSize: 17, fontWeight: 900 }}>{mission.title}</div>
         <div style={{ color: T.mu, fontSize: 10, margin: '4px 0 16px' }}>{mission.when} · {mission.city}</div>
@@ -1826,7 +1838,7 @@ function MissionManageSheet({
         {mode === 'schedule' && <div style={{ display: 'grid', gap: 8 }}><label style={{ color: T.sub, fontSize: 10 }}>Date et horaires<input value={details.when} onChange={(e) => setDetails((v) => ({ ...v, when: e.target.value }))} style={{ ...inp, marginTop: 5 }} /></label><label style={{ color: T.sub, fontSize: 10 }}>Durée<input value={details.duration} onChange={(e) => setDetails((v) => ({ ...v, duration: e.target.value }))} style={{ ...inp, marginTop: 5 }} /></label><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}><Button tone="ghost" onClick={() => setMode('menu')}>Retour</Button><Button onClick={() => onUpdateDetails({ when: details.when, duration: details.duration })}>Enregistrer</Button></div></div>}
         {mode === 'archive' && <div style={{ background: T.row, borderRadius: 13, padding: 13 }}><div style={{ color: T.text, fontSize: 14, fontWeight: 900 }}>Archiver cette mission ?</div><div style={{ color: T.sub, fontSize: 10.5, lineHeight: 1.5, margin: '6px 0 12px' }}>Elle ne sera plus affichée dans les missions actives, mais restera disponible dans ton historique.</div><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}><Button tone="ghost" onClick={() => setMode('menu')}>Annuler</Button><Button onClick={onArchive}>Archiver</Button></div></div>}
         {mode === 'delete' && <div style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, borderRadius: 13, padding: 13 }}><div style={{ color: T.red, fontSize: 14, fontWeight: 900 }}>Supprimer cette mission ?</div><div style={{ color: T.sub, fontSize: 10.5, lineHeight: 1.5, margin: '6px 0 12px' }}>Cette action est définitive. La mission ne sera plus visible dans ton espace.</div><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}><Button tone="ghost" onClick={() => setMode('menu')}>Annuler</Button><Button tone="red" onClick={onDelete}>Supprimer définitivement</Button></div></div>}
-        {mode === 'cancel' && <div style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, borderRadius: 13, padding: 13 }}><div style={{ color: T.red, fontSize: 14, fontWeight: 900 }}>Annuler cette mission ?</div><div style={{ color: T.sub, fontSize: 10.5, lineHeight: 1.5, margin: '6px 0 10px' }}>Les candidats concernés seront informés et la mission restera visible dans l’historique.</div><select value={reason} onChange={(e) => setReason(e.target.value)} aria-label="Motif de l’annulation" style={inp}><option>Besoin annulé</option><option>Changement d’horaires</option><option>Erreur de publication</option><option>Autre</option></select><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}><Button tone="ghost" onClick={() => setMode('menu')}>Retour</Button><Button tone="red" onClick={() => onCancel(reason)}>Confirmer l’annulation</Button></div></div>}
+        {mode === 'cancel' && <div style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, borderRadius: 13, padding: 13 }}><div style={{ color: T.red, fontSize: 14, fontWeight: 900 }}>Annuler cette mission ?</div><div style={{ color: T.sub, fontSize: 10.5, lineHeight: 1.5, margin: '6px 0 10px' }}>Les candidats concernés seront informés et la mission restera visible dans l’historique.</div><select value={reason} onChange={(e) => setReason(e.target.value)} aria-label="Motif de l’annulation" style={inp}><option>Besoin annulé</option><option>Changement d’horaires</option><option>Erreur de publication</option><option>Autre</option></select><div className="urosi-modal-actions" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, background: T.redBg, boxShadow: `0 -10px 18px ${T.redBg}` }}><Button tone="ghost" onClick={() => setMode('menu')}>Retour</Button><Button tone="red" onClick={() => onCancel(reason)}>Confirmer l’annulation</Button></div></div>}
       </div>
     </div>
   );
@@ -1862,8 +1874,8 @@ function DemoQrPinModal({ mission, onClose }: { mission: DemoMission; onClose: (
   }, [step]);
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Simulation QR et PIN" style={{ position: 'fixed', inset: 0, zIndex: 230, background: 'rgba(0,0,0,.78)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
-      <div style={{ width: '100%', maxWidth: 370, maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 20, padding: 18, textAlign: 'center' }} onClick={(event) => event.stopPropagation()}>
+    <div className="urosi-modal-layer" role="dialog" aria-modal="true" aria-label="Simulation QR et PIN" style={{ background: 'rgba(0,0,0,.78)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom))' }} onClick={onClose}>
+      <div className="urosi-dialog-scroll" style={{ width: '100%', maxWidth: 370, background: T.card, border: `1px solid ${T.cb}`, borderRadius: 20, padding: 18, textAlign: 'center' }} onClick={(event) => event.stopPropagation()}>
         <div style={{ color: T.amber, fontSize: 9, fontWeight: 900, letterSpacing: 1 }}>SIMULATION · AUCUNE DONNÉE RÉELLE</div>
         <div style={{ color: T.text, fontSize: 18, fontWeight: 900, margin: '6px 0 3px' }}>QR + PIN de la mission</div>
         <div style={{ color: T.sub, fontSize: 11, marginBottom: 12 }}>{mission.title} · {mission.structure}</div>
@@ -1898,6 +1910,8 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
   const [qrMission, setQrMission] = useState<DemoMission | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useBodyScrollLock(Boolean(showPub || managedMission || showStructureReviews || panel || qrMission));
 
   useEffect(() => {
     function refresh(event: StorageEvent) {
@@ -2147,7 +2161,7 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
               )}
             </div>
 
-            <div className="structure-missions-header" data-demo-tour="structure-publish">
+            <div className="structure-missions-header">
               <div className="structure-missions-title">
                 <div style={{ color: T.text, fontSize: 18, fontWeight: 900 }}>Missions en cours</div>
                 <div style={{ color: T.mu, fontSize: 10, marginTop: 3 }}>{missions.length} mission{missions.length > 1 ? 's' : ''} active{missions.length > 1 ? 's' : ''}</div>
@@ -2279,8 +2293,8 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
         </main>
       </div>
       {showStructureReviews && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 195 }} onClick={() => setShowStructureReviews(false)}>
-          <section aria-label="Avis reçus par la structure" style={{ width: '100%', maxWidth: 430, maxHeight: '82vh', overflowY: 'auto', background: T.bg, borderRadius: '24px 24px 0 0', padding: '18px 18px 26px' }} onClick={(event) => event.stopPropagation()}>
+        <div className="urosi-modal-layer urosi-bottom-sheet-layer" role="dialog" aria-modal="true" aria-label="Avis reçus par la structure" style={{ background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={() => setShowStructureReviews(false)}>
+          <section className="urosi-bottom-sheet" aria-label="Avis reçus par la structure" style={{ width: '100%', maxWidth: 430, background: T.bg, borderRadius: '24px 24px 0 0', padding: '18px 18px 26px' }} onClick={(event) => event.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
               <div>
                 <div style={{ color: T.text, fontSize: 16, fontWeight: 900 }}>Avis reçus</div>
@@ -2293,8 +2307,8 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
         </div>
       )}
       {panel && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 190 }} onClick={() => setPanel(null)}>
-          <div style={{ width: '100%', maxWidth: 430, background: T.card, borderRadius: '24px 24px 0 0', padding: '20px 18px 28px' }} onClick={(e) => e.stopPropagation()}>
+        <div className="urosi-modal-layer urosi-bottom-sheet-layer" role="dialog" aria-modal="true" aria-label={`Profil de ${panel.name}`} style={{ background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={() => setPanel(null)}>
+          <div className="urosi-bottom-sheet" style={{ width: '100%', maxWidth: 430, background: T.card, borderRadius: '24px 24px 0 0', padding: '20px 18px 28px' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', gap: 13, alignItems: 'center', marginBottom: 15 }}>
               <div style={{ width: 52, height: 52, borderRadius: 16, background: '#c56f2e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20, fontWeight: 900 }}>{panel.name.charAt(0)}</div>
               <div style={{ flex: 1 }}>

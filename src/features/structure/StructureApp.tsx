@@ -7,6 +7,7 @@ import { DocModal, AideRegles, type DocKey } from '@/components/ui/DocModal';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { ChatSheet } from '@/components/ui/ChatSheet';
+import { useBodyScrollLock } from '@/components/ui/useBodyScrollLock';
 import { WalletCard } from '@/components/ui/WalletCard';
 import { fetchMyStructures, createStructure, updateStructureAbout, subscribeStructure } from './structureService';
 import { StatsPanel, StructureStatsSummary } from './StatsPanel';
@@ -155,6 +156,8 @@ export function StructureApp() {
   const [founderAccess, setFounderAccess] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout>>();
+
+  useBodyScrollLock(Boolean(showPub || validationMissionId || panelC || ratingCand || chatFor || docKey));
 
   function notif(m: string) {
     setToast(m);
@@ -657,8 +660,8 @@ export function StructureApp() {
 
             {/* Panneau candidat */}
             {panelC && (
-              <div className="rsp-sheet" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 400 }} onClick={() => setPanelC(null)}>
-                <div className="rsp-sheet-body" style={{ width: '100%', maxWidth: 420, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 26px', fontFamily: FONT }} onClick={(e) => e.stopPropagation()}>
+              <div className="rsp-sheet urosi-modal-layer urosi-bottom-sheet-layer" role="dialog" aria-modal="true" aria-label="Profil du candidat" style={{ background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={() => setPanelC(null)}>
+                <div className="rsp-sheet-body urosi-bottom-sheet" style={{ width: '100%', maxWidth: 420, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 26px', fontFamily: FONT }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: 'flex', gap: 11, alignItems: 'center', marginBottom: 13 }}>
                     <div style={{ width: 44, height: 44, borderRadius: 12, background: 'hsl(24 58% 46%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 17, flexShrink: 0 }}>
                       {(panelC.profile?.full_name || 'C').charAt(0).toUpperCase()}
@@ -700,8 +703,8 @@ export function StructureApp() {
 
             {/* Notation du travailleur */}
             {ratingCand && (
-              <div className="rsp-sheet" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.92)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 400 }} onClick={() => setRatingCand(null)}>
-                <div className="rsp-sheet-body" style={{ width: '100%', maxWidth: 420, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 26px', fontFamily: FONT }} onClick={(e) => e.stopPropagation()}>
+              <div className="rsp-sheet urosi-modal-layer urosi-bottom-sheet-layer" role="dialog" aria-modal="true" aria-label="Noter le travailleur" style={{ background: 'rgba(0,0,0,.92)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={() => setRatingCand(null)}>
+                <div className="rsp-sheet-body urosi-bottom-sheet" style={{ width: '100%', maxWidth: 420, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 26px', fontFamily: FONT }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ fontSize: 14, fontWeight: 900, color: T.text, marginBottom: 3 }}>Noter {ratingCand.profile?.full_name || 'le travailleur'}</div>
                   <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.5, marginBottom: 12 }}>
                     Mission « {ratingCand.missionTitle} ». Ta note apparaîtra dans son CV vivant — informative, jamais bloquante (CGU).
@@ -952,8 +955,8 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
   }
 
   return (
-    <div className="rsp-sheet" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 400 }} onClick={onClose}>
-      <div className="rsp-sheet-body" style={{ width: '100%', maxWidth: 420, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 26px', fontFamily: FONT, maxHeight: '88vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+    <div className="rsp-sheet urosi-modal-layer urosi-bottom-sheet-layer" role="dialog" aria-modal="true" aria-label="Publier une mission" style={{ background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+      <div className="rsp-sheet-body urosi-bottom-sheet" style={{ width: '100%', maxWidth: 420, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 26px', fontFamily: FONT }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <span style={{ fontSize: 15, fontWeight: 900, color: T.text }}>Nouvelle mission</span>
           <button onClick={onClose} style={{ background: T.row, border: 'none', borderRadius: 6, width: 26, height: 26, cursor: 'pointer', color: T.sub, fontSize: 14 }}>×</button>
@@ -1100,9 +1103,11 @@ function PublishModal({ structure, onClose, onPublished }: { structure: Structur
         </Fld>
 
         {(error || validationMessage) && <div style={{ fontSize: 11, color: T.red, marginBottom: 10 }}>{error || validationMessage}</div>}
-        <button onClick={publish} disabled={!ok} style={{ width: '100%', background: ok ? '#fff' : T.row, color: ok ? '#000' : T.mu, border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: ok ? 'pointer' : 'not-allowed' }}>
-          {busy ? '…' : f.solid ? 'Publier · Solidaire (0 €)' : `Publier · ${formatMoney(structureTotalCents)} au total`}
-        </button>
+        <div className="urosi-modal-actions">
+          <button onClick={publish} disabled={!ok || busy} style={{ width: '100%', background: ok && !busy ? '#fff' : T.row, color: ok && !busy ? '#000' : T.mu, border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: ok && !busy ? 'pointer' : 'not-allowed' }}>
+            {busy ? 'Publication…' : f.solid ? 'Publier · Solidaire (0 €)' : `Publier · ${formatMoney(structureTotalCents)} au total`}
+          </button>
+        </div>
       </div>
     </div>
   );

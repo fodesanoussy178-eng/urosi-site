@@ -1,4 +1,5 @@
 import { T, FONT } from './theme';
+import { useBodyScrollLock } from './useBodyScrollLock';
 
 // Textes issus du prototype v0.5, completes par la clause de notation
 // bidirectionnelle non bloquante.
@@ -28,9 +29,10 @@ export type DocKey = keyof typeof DOCS;
 
 export function DocModal({ dk, onClose }: { dk: DocKey; onClose: () => void }) {
   const d = DOCS[dk];
+  useBodyScrollLock(true);
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 500, padding: 16 }} onClick={onClose}>
-      <div style={{ width: '100%', maxWidth: 380, maxHeight: '85vh', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: FONT }} onClick={(e) => e.stopPropagation()}>
+    <div className="urosi-modal-layer" role="dialog" aria-modal="true" aria-label={d.titre} style={{ background: 'rgba(0,0,0,.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom))' }} onClick={onClose}>
+      <div className="urosi-dialog-scroll" style={{ width: '100%', maxWidth: 380, background: T.card, border: `1px solid ${T.cb}`, borderRadius: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: FONT }} onClick={(e) => e.stopPropagation()}>
         <div style={{ padding: '14px 16px', borderBottom: `1px solid ${T.cb}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
           <span style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{d.titre}</span>
           <button onClick={onClose} style={{ background: T.row, border: 'none', borderRadius: 6, width: 24, height: 24, cursor: 'pointer', color: T.sub, fontSize: 13 }}>×</button>
