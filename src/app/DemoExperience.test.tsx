@@ -234,6 +234,25 @@ describe('DemoExperience founder scan', () => {
     expect(screen.getByText('Terminer la mission')).toBeInTheDocument();
   });
 
+  it('allows several missions while limiting each mission to three days', async () => {
+    const user = userEvent.setup();
+    renderStructure();
+
+    expect(screen.queryByText('MODE DÉMO')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Peupler le flux' })).not.toBeInTheDocument();
+    expect(screen.getByText('Plusieurs missions possibles · 3 jours maximum par mission')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Publier une mission' }));
+    const addDay = screen.getByRole('button', { name: /Ajouter un jour/ });
+    await user.click(addDay);
+    await user.click(addDay);
+
+    const dates = screen.getAllByLabelText(/Date du jour/) as HTMLInputElement[];
+    expect(new Set(dates.map((input) => input.value)).size).toBe(3);
+    expect(addDay).toBeDisabled();
+    expect(screen.getByText('Une mission dure 3 jours maximum.')).toBeInTheDocument();
+  });
+
   it('keeps the mission limit clear and exposes the dedicated desktop regions', () => {
     const { container } = renderStructure();
 
@@ -313,6 +332,26 @@ describe('DemoExperience founder scan', () => {
 
     expect(screen.queryByText('Fin de l’aperçu gratuit')).not.toBeInTheDocument();
     expect(container.querySelector('[data-demo-tour="mission-card"]')).toBeInTheDocument();
+  });
+
+  it('never darkens the embedded landing preview after the free preview expires', () => {
+    localStorage.setItem('urosi_internal_demo_seconds_v1', '60');
+    const { container } = render(
+      <MemoryRouter initialEntries={['/demo?role=worker&embed=1']}>
+        <DemoExperience />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText('Fin de l’aperçu gratuit')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-demo-tour="mission-card"]')).toBeInTheDocument();
+  });
+
+  it('keeps the internal navigation above content and the iPhone home indicator', () => {
+    renderWorker();
+
+    const navigation = screen.getByRole('navigation', { name: 'Navigation de la démo' });
+    expect(navigation).toHaveStyle({ position: 'fixed', zIndex: '1000', isolation: 'isolate' });
+    expect(navigation.style.padding).toContain('env(safe-area-inset-bottom)');
   });
 
   it('hides the structure photo gallery completely when no photo is available', async () => {
