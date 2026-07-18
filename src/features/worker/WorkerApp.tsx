@@ -39,13 +39,21 @@ import { fetchCommissionRates, type CommissionRates } from '@/features/pricing/p
 import { PriceSplit } from '@/components/ui/PriceSplit';
 import { splitPrice } from '@/features/pricing/priceSplit';
 import { distanceKm, formatDistance, type LatLng } from '@/lib/geo';
-import { formatDay, groupByDay, scheduleSummary } from '@/lib/slots';
+import { formatDay, groupByDay } from '@/lib/slots';
 import { formatEuros, formatHours } from '@/lib/format';
 
 type Tab = 'flux' | 'moi' | 'profil';
 
 function euros(cents: number): string {
   return formatEuros(cents).replace(' EUR', ' €');
+}
+
+function missionPriceTotalCents(mission: MissionWithStructure): number {
+  const generatedTotal = Number(mission.price_total);
+  if (Number.isFinite(generatedTotal) && (generatedTotal > 0 || mission.is_solidaire)) {
+    return Math.round(generatedTotal * 100);
+  }
+  return mission.worker_rate_cents;
 }
 
 const SHEET = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 50 } as const;
@@ -164,7 +172,6 @@ export function WorkerApp() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [detail, setDetail] = useState<MissionWithStructure | null>(null);
-  const [structSheet, setStructSheet] = useState<MissionWithStructure | null>(null);
   const [ratingFor, setRatingFor] = useState<ApplicationWithMission | null>(null);
   const [structureRatingScore, setStructureRatingScore] = useState<number | null>(null);
   const [structureRatingNote, setStructureRatingNote] = useState('');
@@ -375,61 +382,45 @@ export function WorkerApp() {
     navigate('/valider');
   }
 
-  // Carte volontairement épurée : titre, structure + étoiles, ville, date,
-  // horaires, durée, montant, « Voir la mission ». Le détail (commission,
-  // planning complet…) n'apparaît qu'après le clic.
+  // Le flux sert uniquement à décider rapidement. Toutes les informations
+  // secondaires restent disponibles dans la fiche complète ouverte au clic.
   function fluxCard(m: MissionWithStructure) {
     const sr = structRatings.get(m.structure_id);
-    const dist = missionDistance(m);
+    const isBusy = busyId === m.id;
     return (
-      <div key={m.id} onClick={() => setDetail(m)} style={{ background: T.card, border: `1px solid ${m.is_solidaire ? '#14532d' : T.cb}`, borderRadius: 14, cursor: 'pointer', overflow: 'hidden' }}>
-        <div style={{ padding: '15px 15px 12px' }}>
-          {m.is_solidaire ? (
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
-              <span style={{ fontSize: 22, fontWeight: 900, color: T.green, letterSpacing: -1 }}>Solidaire</span>
-              <span style={{ fontSize: 14, fontWeight: 800, color: T.sub }}>0 €</span>
-            </div>
-          ) : (
-            <div style={{ fontSize: 30, fontWeight: 900, color: T.text, letterSpacing: -1.5, lineHeight: 1, marginBottom: 6 }}>{euros(m.worker_rate_cents)}</div>
-          )}
-          <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 4 }}>{m.title}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, flexWrap: 'wrap' }}>
-            <span
-              onClick={(e) => {
-                e.stopPropagation();
-                setStructSheet(m);
-              }}
-              style={{ fontSize: 11, fontWeight: 700, color: T.sub, textDecoration: 'underline', textDecorationColor: T.cb, cursor: 'pointer' }}
+      <article
+        key={m.id}
+        style={{ position: 'relative', background: T.card, border: `1px solid ${m.is_solidaire ? '#14532d' : T.cb}`, borderRadius: 14, padding: 14 }}
+      >
+        <button type="button" aria-label={`Voir la fiche complète de ${m.title}`} onClick={() => setDetail(m)} style={{ position: 'absolute', inset: 0, zIndex: 0, width: '100%', border: 0, borderRadius: 14, background: 'transparent', cursor: 'pointer' }} />
+        <div style={{ position: 'relative', zIndex: 1, pointerEvents: 'none' }}>
+          <div style={{ fontSize: 31, fontWeight: 900, color: m.is_solidaire ? T.green : T.text, letterSpacing: -1.5, lineHeight: 1, marginBottom: 7 }}>
+            {m.is_solidaire ? '0 €' : euros(missionPriceTotalCents(m))}
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: T.text, marginBottom: 5 }}>{m.title}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+            <button
+              type="button"
+              onClick={() => setDetail(m)}
+              style={{ pointerEvents: 'auto', minWidth: 0, padding: 0, border: 0, background: 'none', fontSize: 11, fontWeight: 800, color: T.sub, textDecoration: 'underline', textDecorationColor: T.cb, cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
             >
               {m.structure?.name ?? 'Structure'}
-            </span>
-            {sr && (
-              <>
-                <Stars n={sr.average} size={11} />
-                <span style={{ fontSize: 10, color: T.mu }}>{sr.average.toFixed(1).replace('.', ',')}</span>
-              </>
-            )}
+            </button>
+            {sr && <span aria-label={`Note moyenne ${sr.average.toFixed(1)} sur 5`} style={{ flexShrink: 0, color: T.amber, fontSize: 10.5, fontWeight: 900 }}>⭐ {sr.average.toFixed(1).replace('.', ',')}</span>}
           </div>
-          <div style={{ fontSize: 10.5, color: T.mu }}>
-            📍 {m.city || 'MEL'}
-            {dist != null && <span style={{ color: T.cyan, fontWeight: 700 }}> · {formatDistance(dist)}</span>}
-            {' · '}
-            {scheduleSummary(m.slots, m.scheduled_date, m.start_time)} · {formatHours(m.duration_minutes)}
-            {m.places > 1 ? ` · ${m.places} places` : ''}
+          <div style={{ color: T.mu, fontSize: 10.5, marginTop: 5 }}>📍 {m.city || 'MEL'}</div>
+          <div style={{ pointerEvents: 'auto', marginTop: 11 }}>
+            <button
+              type="button"
+              disabled={isBusy}
+              onClick={() => void postuler(m)}
+              style={{ width: '100%', background: m.is_solidaire ? '#16a34a' : '#fff', color: m.is_solidaire ? '#fff' : '#000', border: 'none', borderRadius: 9, padding: '10px 0', fontSize: 13, fontWeight: 900, cursor: isBusy ? 'wait' : 'pointer', opacity: isBusy ? 0.65 : 1 }}
+            >
+              {isBusy ? 'Envoi…' : m.is_solidaire ? 'Participer' : 'Accepter'}
+            </button>
           </div>
         </div>
-        <div style={{ padding: '0 15px 13px' }}>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setDetail(m);
-            }}
-            style={{ width: '100%', background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 9, padding: '10px 0', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}
-          >
-            Voir la mission
-          </button>
-        </div>
-      </div>
+      </article>
     );
   }
 
@@ -802,7 +793,7 @@ export function WorkerApp() {
         {/* Détail mission */}
         {detail && (
           <div style={SHEET} onClick={() => setDetail(null)}>
-            <div style={{ ...SHEET_BODY, maxHeight: '76vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <div role="dialog" aria-modal="true" aria-label={`Fiche complète de ${detail.title}`} style={{ ...SHEET_BODY, maxHeight: '86vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
                 <button onClick={() => setDetail(null)} style={{ background: T.row, border: 'none', borderRadius: 6, width: 24, height: 24, cursor: 'pointer', color: T.sub, fontSize: 13 }}>×</button>
               </div>
@@ -812,7 +803,7 @@ export function WorkerApp() {
                   <span style={{ fontSize: 16, fontWeight: 800, color: T.sub }}>0 €</span>
                 </div>
               ) : (
-                <div style={{ fontSize: 30, fontWeight: 900, color: T.text, letterSpacing: -2, marginBottom: 4 }}>{euros(detail.worker_rate_cents)}</div>
+                <div style={{ fontSize: 30, fontWeight: 900, color: T.text, letterSpacing: -2, marginBottom: 4 }}>{euros(missionPriceTotalCents(detail))}</div>
               )}
               <div style={{ fontSize: 15, fontWeight: 800, color: T.text, marginBottom: 10 }}>{detail.title}</div>
               {!detail.is_solidaire && rates && (
@@ -832,31 +823,31 @@ export function WorkerApp() {
                   {detail.pricing_breakdown && detail.pricing_breakdown.adjustments.length > 0 && <PricingDetails breakdown={detail.pricing_breakdown} compact />}
                 </>
               )}
-              <div
-                onClick={() => {
-                  setStructSheet(detail);
-                  setDetail(null);
-                }}
-                style={{ background: T.row, borderRadius: 11, padding: '12px 13px', marginBottom: 11, cursor: 'pointer' }}
-              >
+              <section aria-label="Détails de la structure" style={{ background: T.row, borderRadius: 11, padding: '12px 13px', marginBottom: 11 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
                   <span style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{detail.structure?.name ?? 'Structure'}</span>
                   {(() => {
                     const sr = structRatings.get(detail.structure_id);
-                    return sr ? <Stars n={sr.average} size={11} /> : null;
+                    return sr ? <span style={{ color: T.amber, fontSize: 10.5, fontWeight: 900 }}>⭐ {sr.average.toFixed(1).replace('.', ',')} · {sr.count} avis</span> : null;
                   })()}
-                  <span style={{ marginLeft: 'auto', fontSize: 10, color: T.cyan, fontWeight: 700 }}>Voir la fiche ›</span>
                 </div>
-                <div style={{ fontSize: 11, color: T.sub }}>
-                  📍 {detail.city || 'MEL'}
+                <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.55 }}>
+                  📍 {detail.address || detail.location || detail.city || 'Adresse à confirmer'}
                   {(() => {
                     const d = missionDistance(detail);
                     return d != null ? ` (à ${formatDistance(d)})` : '';
                   })()}
                 </div>
-              </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                  <span style={{ color: detail.structure?.verification_status === 'verified' || detail.structure?.verification_status === 'founder_bypass' ? T.green : T.amber, background: detail.structure?.verification_status === 'verified' || detail.structure?.verification_status === 'founder_bypass' ? T.greenBg : T.amberBg, borderRadius: 12, padding: '3px 8px', fontSize: 9.5, fontWeight: 900 }}>
+                    {detail.structure?.verification_status === 'verified' || detail.structure?.verification_status === 'founder_bypass' ? '✓ Structure vérifiée' : 'Vérification en cours'}
+                  </span>
+                  {detail.structure?.is_ess && <span style={{ color: T.green, background: T.greenBg, borderRadius: 12, padding: '3px 8px', fontSize: 9.5, fontWeight: 900 }}>Association · ESS</span>}
+                </div>
+                {detail.structure?.about && <p style={{ color: T.sub, fontSize: 11, lineHeight: 1.55, margin: '9px 0 0' }}>{detail.structure.about}</p>}
+              </section>
               {/* Planning par journée */}
-              <div style={{ background: T.row, borderRadius: 11, padding: '12px 13px', marginBottom: 11 }}>
+              <section aria-label="Date, horaires et durée" style={{ background: T.row, borderRadius: 11, padding: '12px 13px', marginBottom: 11 }}>
                 <div style={{ fontSize: 9, fontWeight: 800, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Planning</div>
                 {detail.slots && detail.slots.length > 0 ? (
                   groupByDay(detail.slots).map((day) => (
@@ -867,69 +858,47 @@ export function WorkerApp() {
                   ))
                 ) : (
                   <div style={{ fontSize: 11.5, color: T.sub }}>
-                    {detail.scheduled_date}
+                    {formatDay(detail.scheduled_date)}
                     {detail.start_time ? ` · ${detail.start_time.slice(0, 5)}` : ''}
+                    {detail.end_time ? `–${detail.end_time.slice(0, 5)}` : ''}
                   </div>
                 )}
                 <div style={{ fontSize: 10, color: T.mu, marginTop: 5 }}>
                   Durée totale : {formatHours(detail.duration_minutes)}
                   {detail.places > 1 ? ` · ${detail.places} places` : ''}
                 </div>
-              </div>
-              {detail.detail && <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.55, marginBottom: 13 }}>{detail.detail}</div>}
+              </section>
+              <section aria-label="Description de la mission" style={{ marginBottom: 11 }}>
+                <div style={{ fontSize: 10, fontWeight: 900, color: T.text, marginBottom: 5 }}>Description</div>
+                <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.55 }}>{detail.detail || 'Les consignes détaillées seront communiquées par la structure.'}</div>
+              </section>
+              <section aria-label="Conditions de la mission" style={{ background: T.row, borderRadius: 11, padding: '11px 12px', marginBottom: 11 }}>
+                <div style={{ fontSize: 10, fontWeight: 900, color: T.text, marginBottom: 6 }}>Conditions</div>
+                <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.6 }}>
+                  Type : {detail.mission_category || 'autre'}<br />
+                  Tenue : {detail.dress_code || 'Aucune tenue particulière indiquée'}<br />
+                  Équipement : {detail.equipment || 'Aucun équipement particulier indiqué'}
+                </div>
+              </section>
+              <section aria-label="Consignes de la mission" style={{ marginBottom: 11 }}>
+                <div style={{ fontSize: 10, fontWeight: 900, color: T.text, marginBottom: 5 }}>Consignes</div>
+                <div style={{ fontSize: 11.5, color: T.sub, lineHeight: 1.55 }}>{detail.instructions || 'Les consignes complémentaires seront communiquées par la structure.'}</div>
+              </section>
+              <section aria-label="Informations pratiques" style={{ background: T.row, borderRadius: 11, padding: '11px 12px', marginBottom: 13 }}>
+                <div style={{ fontSize: 10, fontWeight: 900, color: T.text, marginBottom: 6 }}>Informations pratiques</div>
+                <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.6 }}>
+                  {SECTOR_LABELS[detail.sector ?? 'autre'] ?? detail.sector ?? 'Autre'} · difficulté {detail.difficulty || 1}<br />
+                  {detail.places > 1 ? `${detail.places} places disponibles` : '1 place disponible'}
+                  {detail.is_urgent ? ' · Mission urgente' : ''}
+                  {detail.mission_category ? ` · ${detail.mission_category}` : ''}
+                </div>
+              </section>
               <button
                 onClick={() => postuler(detail)}
                 style={{ width: '100%', background: detail.is_solidaire ? '#16a34a' : '#fff', color: detail.is_solidaire ? '#fff' : '#000', border: 'none', borderRadius: 10, padding: '12px 0', fontSize: 14, fontWeight: 900, cursor: 'pointer' }}
               >
                 {detail.is_solidaire ? '🤝 Participer à la mission' : 'Accepter la mission'}
               </button>
-            </div>
-          </div>
-        )}
-
-        {/* Fiche structure */}
-        {structSheet && (
-          <div style={SHEET} onClick={() => setStructSheet(null)}>
-            <div style={{ ...SHEET_BODY, maxHeight: '80vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
-              <div style={{ display: 'flex', gap: 11, alignItems: 'flex-start', marginBottom: 13 }}>
-                <div style={{ width: 48, height: 48, flexShrink: 0, borderRadius: 13, background: 'hsl(200 30% 18%)', border: '2px solid hsl(200 30% 30%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 14 }}>
-                  {(structSheet.structure?.name ?? 'S')
-                    .split(' ')
-                    .map((w) => w[0])
-                    .join('')
-                    .slice(0, 2)
-                    .toUpperCase()}
-                </div>
-                <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
-                  <div style={{ fontSize: 16, lineHeight: 1.2, fontWeight: 900, color: T.text, overflowWrap: 'anywhere' }}>{structSheet.structure?.name ?? 'Structure'}</div>
-                  {(() => {
-                    const sr = structRatings.get(structSheet.structure_id);
-                    return sr ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
-                        <Stars n={sr.average} size={12} />
-                        <span style={{ fontSize: 12, fontWeight: 800, color: T.text }}>{sr.average.toFixed(1).replace('.', ',')}</span>
-                        <span style={{ fontSize: 10, color: T.mu }}>({sr.count} avis)</span>
-                      </div>
-                    ) : (
-                      <span style={{ display: 'inline-block', fontSize: 9, fontWeight: 700, color: T.cyan, background: '#22d3ee15', borderRadius: 8, padding: '2px 7px', marginTop: 4 }}>Nouvelle · pas encore classée</span>
-                    );
-                  })()}
-                </div>
-                <button aria-label="Fermer le profil structure" onClick={() => setStructSheet(null)} style={{ background: T.row, border: 'none', borderRadius: 6, width: 28, height: 28, flexShrink: 0, cursor: 'pointer', color: T.sub, fontSize: 13 }}>×</button>
-              </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
-                {structSheet.structure?.is_ess && <span style={{ fontSize: 10, fontWeight: 800, color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 20, padding: '3px 10px' }}>🤝 Association · ESS</span>}
-                {structSheet.structure?.siret && <span style={{ fontSize: 10, fontWeight: 800, color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 20, padding: '3px 10px' }}>✓ SIRET {structSheet.structure.siret}</span>}
-              </div>
-              {structSheet.structure?.about && (
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: T.text, marginBottom: 5 }}>À propos</div>
-                  <div style={{ fontSize: 11.5, color: T.sub, lineHeight: 1.6 }}>{structSheet.structure.about}</div>
-                </div>
-              )}
-              <div style={{ fontSize: 10, color: T.mu, lineHeight: 1.5 }}>
-                Les notes sont données par les travailleurs après chaque mission terminée. Elles sont informatives et jamais bloquantes.
-              </div>
             </div>
           </div>
         )}

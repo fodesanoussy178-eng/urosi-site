@@ -278,6 +278,7 @@ export interface Database {
           distance_km: number | null;
           scheduled_date: string;
           start_time: string | null;
+          end_time: string | null;
           starts_at: string | null;
           ends_at: string | null;
           duration_minutes: number;
@@ -302,6 +303,10 @@ export interface Database {
           time_slot: MissionTimeSlot;
           day_of_week: MissionDayOfWeek | null;
           mission_category: string;
+          dress_code: string | null;
+          equipment: string | null;
+          instructions: string | null;
+          price_total: number;
           status: MissionStatus;
           created_at: string;
         };
@@ -318,6 +323,7 @@ export interface Database {
           distance_km?: number | null;
           scheduled_date: string;
           start_time?: string | null;
+          end_time?: string | null;
           starts_at?: string | null;
           ends_at?: string | null;
           duration_minutes: number;
@@ -342,6 +348,9 @@ export interface Database {
           time_slot?: MissionTimeSlot;
           day_of_week?: MissionDayOfWeek | null;
           mission_category?: string;
+          dress_code?: string | null;
+          equipment?: string | null;
+          instructions?: string | null;
           status?: MissionStatus;
           created_at?: string;
         };

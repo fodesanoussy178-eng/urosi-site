@@ -72,6 +72,11 @@ type DemoMission = {
   distance: string;
   solid?: boolean;
   desc: string;
+  address?: string;
+  dressCode?: string;
+  equipment?: string;
+  instructions?: string;
+  missionType?: string;
   places?: number;
   status?: 'draft' | 'published';
 };
@@ -139,6 +144,11 @@ const workerMissions: DemoMission[] = [
     reviews: 26,
     distance: '600 m',
     desc: 'Rush du midi, aide comptoir, salle propre et équipe déjà briefée.',
+    address: '12 rue Nationale, 59000 Lille',
+    dressCode: 'Pantalon noir et chaussures fermées',
+    equipment: 'Tablier et matériel fournis sur place',
+    instructions: 'Présente-toi 10 minutes avant le service au responsable de salle.',
+    missionType: 'Renfort service',
   },
   {
     id: 'm2',
@@ -887,10 +897,10 @@ function StructureStats({ stats, live = false }: { stats: [string, string][]; li
   );
 }
 
-function DemoShell({ children, embedded = false, wide = false }: { children: ReactNode; embedded?: boolean; wide?: boolean }) {
+function DemoShell({ children, embedded = false, wide = false, contentClassName }: { children: ReactNode; embedded?: boolean; wide?: boolean; contentClassName?: string }) {
   return (
     <div className={`demo-shell${wide ? ' demo-wide-shell' : ''}`} style={{ background: embedded ? T.bg : '#000', color: T.text, fontFamily: FONT, display: 'flex', justifyContent: 'center', padding: embedded ? 0 : '22px 14px' }}>
-      <div className={embedded ? 'demo-shell-viewport demo-shell-viewport--embedded' : 'demo-shell-viewport'} style={{ width: '100%', maxWidth: embedded ? 'none' : 430, background: T.bg, border: embedded ? 'none' : `1px solid ${T.cb}`, borderRadius: embedded ? 0 : 32, overflow: 'hidden', boxShadow: embedded ? 'none' : '0 24px 90px rgba(0,0,0,.75)' }}>{children}</div>
+      <div className={['demo-shell-viewport', embedded ? 'demo-shell-viewport--embedded' : '', contentClassName ?? ''].filter(Boolean).join(' ')} style={{ width: '100%', maxWidth: embedded ? 'none' : 430, background: T.bg, border: embedded ? 'none' : `1px solid ${T.cb}`, borderRadius: embedded ? 0 : 32, overflow: 'hidden', boxShadow: embedded ? 'none' : '0 24px 90px rgba(0,0,0,.75)' }}>{children}</div>
     </div>
   );
 }
@@ -910,40 +920,30 @@ function DemoFormatSwitch({ format, onChange }: { format: 'phone' | 'wide'; onCh
   );
 }
 
-function MissionCard({ mission, onAccept, onStructure, onOpen }: { mission: DemoMission; onAccept?: () => void; onStructure?: () => void; onOpen?: () => void }) {
+function MissionCard({ mission, onAccept, onOpen }: { mission: DemoMission; onAccept?: () => void; onOpen?: () => void }) {
   return (
-    <div data-demo-tour="mission-card" onClick={onOpen} style={{ background: T.card, border: `1px solid ${mission.solid ? T.greenBorder : T.cb}`, borderRadius: 16, padding: 17, cursor: onOpen ? 'pointer' : undefined }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
-        {mission.solid ? (
-          <>
-            <span style={{ color: T.green, fontSize: 27, fontWeight: 900, letterSpacing: -1 }}>Solidaire</span>
-            <span style={{ color: T.sub, fontSize: 15, fontWeight: 900 }}>0 €</span>
-          </>
-        ) : (
-          <span style={{ color: T.text, fontSize: 36, fontWeight: 900, letterSpacing: -2 }}>{mission.amount}€</span>
-        )}
+    <article
+      data-demo-tour="mission-card"
+      style={{ position: 'relative', background: T.card, border: `1px solid ${mission.solid ? T.greenBorder : T.cb}`, borderRadius: 16, padding: 14 }}
+    >
+      <button type="button" aria-label={`Voir la fiche complète de ${mission.title}`} onClick={onOpen} style={{ position: 'absolute', inset: 0, zIndex: 0, width: '100%', border: 0, borderRadius: 16, background: 'transparent', cursor: onOpen ? 'pointer' : undefined }} />
+      <div style={{ position: 'relative', zIndex: 1, pointerEvents: 'none' }}>
+        <div style={{ color: mission.solid ? T.green : T.text, fontSize: 31, fontWeight: 900, letterSpacing: -1.5, lineHeight: 1, marginBottom: 7 }}>{mission.amount} €</div>
+        <div style={{ color: T.text, fontSize: 15, fontWeight: 900, marginBottom: 5 }}>{mission.title}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+          <button onClick={onOpen} style={{ pointerEvents: 'auto', minWidth: 0, background: 'none', border: 'none', color: T.sub, fontSize: 11, fontWeight: 800, padding: 0, cursor: 'pointer', textDecoration: 'underline', textDecorationColor: T.cb, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {mission.structure}
+          </button>
+          <span aria-label={`Note moyenne ${mission.rating.toFixed(1)} sur 5`} style={{ flexShrink: 0, color: T.amber, fontSize: 10.5, fontWeight: 900 }}>⭐ {mission.rating.toFixed(1).replace('.', ',')}</span>
+        </div>
+        <div style={{ color: T.mu, fontSize: 10.5, marginTop: 5 }}>📍 {mission.city}</div>
+        <div data-demo-tour="mission-action" style={{ pointerEvents: 'auto', marginTop: 11 }}>
+          <Button onClick={onAccept} tone={mission.solid ? 'green' : 'dark'}>
+            {mission.solid ? 'Participer' : 'Accepter'}
+          </Button>
+        </div>
       </div>
-      <div style={{ color: T.text, fontSize: 15, fontWeight: 900, marginBottom: 5 }}>{mission.title}</div>
-      <button onClick={(event) => { event.stopPropagation(); onStructure?.(); }} style={{ background: 'none', border: 'none', color: T.sub, fontSize: 11, fontWeight: 800, padding: 0, cursor: 'pointer' }}>
-        {mission.structure} ›
-      </button>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginTop: 5 }}>
-        <span style={{ color: T.green, background: T.greenBg, borderRadius: 12, padding: '2px 7px', fontSize: 8.5, fontWeight: 900 }}>✓ Vérifié (démo)</span>
-        <Stars n={mission.rating} size={12} animateOnce />
-        <span style={{ color: T.mu, fontSize: 10, fontWeight: 800 }}>
-          {mission.rating.toFixed(1).replace('.', ',')}{mission.reviews ? ` · ${mission.reviews} avis` : ''}
-        </span>
-      </div>
-      <div style={{ color: T.mu, fontSize: 10.5, lineHeight: 1.5, marginTop: 7 }}>
-        {mission.city} · {mission.when} · {mission.duration} · {mission.distance}
-      </div>
-      {mission.solid && <div style={{ color: T.green, fontSize: 11, fontWeight: 800, marginTop: 7 }}>Compte dans ton CV vivant · sans rémunération</div>}
-      <div data-demo-tour="mission-action" style={{ marginTop: 13 }} onClick={(event) => event.stopPropagation()}>
-        <Button onClick={onAccept} tone={mission.solid ? 'green' : 'dark'}>
-          {mission.solid ? 'Participer' : 'Accepter'}
-        </Button>
-      </div>
-    </div>
+    </article>
   );
 }
 
@@ -963,17 +963,28 @@ function DemoMissionSheet({ mission, onClose, onAccept, onStructure }: { mission
           <button aria-label="Fermer le détail" onClick={onClose} style={{ background: T.row, border: 'none', borderRadius: 8, width: 28, height: 28, cursor: 'pointer', color: T.sub, fontSize: 14 }}>×</button>
         </div>
         <div style={{ color: T.text, fontSize: 17, fontWeight: 900, margin: '6px 0 3px' }}>{mission.title}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginBottom: 10 }}>
-          <span style={{ color: T.sub, fontSize: 11, fontWeight: 800 }}>{mission.structure}</span>
-          <Stars n={mission.rating} size={11} />
-          <span style={{ color: T.mu, fontSize: 10, fontWeight: 800 }}>{mission.rating.toFixed(1).replace('.', ',')}{mission.reviews ? ` · ${mission.reviews} avis` : ''}</span>
-        </div>
-        <div style={{ color: T.sub, fontSize: 12, lineHeight: 1.6, background: T.row, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 12, marginBottom: 10 }}>{mission.desc}</div>
-        <div style={{ color: T.mu, fontSize: 11, lineHeight: 1.7, marginBottom: 14 }}>
-          📍 {mission.city} · {mission.distance}<br />
-          🕐 {mission.when} · {mission.duration}
-          {mission.places && mission.places > 1 ? <><br />👥 {mission.places} places</> : null}
-        </div>
+        <section aria-label="Détails de la structure" style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 12, margin: '10px 0' }}>
+          <div style={{ color: T.text, fontSize: 12, fontWeight: 900 }}>{mission.structure}</div>
+          <div style={{ color: T.amber, fontSize: 10.5, fontWeight: 900, marginTop: 4 }}>⭐ {mission.rating.toFixed(1).replace('.', ',')}{mission.reviews ? ` · ${mission.reviews} avis` : ''}</div>
+          <div style={{ color: T.green, fontSize: 9.5, fontWeight: 900, marginTop: 6 }}>✓ Structure vérifiée</div>
+        </section>
+        <section aria-label="Date, horaires et durée" style={{ color: T.mu, fontSize: 11, lineHeight: 1.7, marginBottom: 10 }}>
+          🕐 {mission.when}<br />Durée : {mission.duration}
+        </section>
+        <section aria-label="Adresse complète" style={{ color: T.sub, fontSize: 11, lineHeight: 1.6, marginBottom: 10 }}>
+          📍 {mission.address || `${mission.city} · adresse communiquée par la structure`}
+        </section>
+        <section aria-label="Description de la mission" style={{ color: T.sub, fontSize: 12, lineHeight: 1.6, background: T.row, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 12, marginBottom: 10 }}>{mission.desc}</section>
+        <section aria-label="Conditions de la mission" style={{ color: T.sub, fontSize: 11, lineHeight: 1.7, marginBottom: 10 }}>
+          <strong style={{ color: T.text }}>Conditions</strong><br />
+          Type : {mission.missionType || (mission.solid ? 'Mission solidaire' : 'Mission rémunérée')}<br />
+          Tenue : {mission.dressCode || 'Aucune tenue particulière indiquée'}<br />
+          Équipement : {mission.equipment || 'Fourni ou précisé par la structure'}
+        </section>
+        <section aria-label="Informations pratiques" style={{ color: T.sub, fontSize: 11, lineHeight: 1.6, marginBottom: 14 }}>
+          <strong style={{ color: T.text }}>Informations pratiques</strong><br />
+          {mission.instructions || `Lieu à ${mission.distance}${mission.places && mission.places > 1 ? ` · ${mission.places} places` : ''}`}
+        </section>
         <div style={{ display: 'grid', gap: 8 }}>
           <Button onClick={() => { onClose(); onAccept(); }} tone={mission.solid ? 'green' : 'dark'}>{mission.solid ? 'Participer' : 'Accepter'}</Button>
           <Button tone="light" onClick={() => { onClose(); onStructure(); }}>Voir le profil</Button>
@@ -1209,7 +1220,7 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
               Flux trié autour de toi · compte fictif{founderPublishedCount ? ` · ${founderPublishedCount} mission${founderPublishedCount > 1 ? 's' : ''} lancée${founderPublishedCount > 1 ? 's' : ''} côté structure` : ''}
             </div>
             {feed.map((mission) => (
-              <MissionCard key={mission.id} mission={mission} onAccept={() => accept(mission)} onStructure={() => setProfileName(mission.structure)} onOpen={() => setMissionDetail(mission)} />
+              <MissionCard key={mission.id} mission={mission} onAccept={() => accept(mission)} onOpen={() => setMissionDetail(mission)} />
             ))}
           </div>
         )}
@@ -1460,9 +1471,15 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
   );
 }
 
-function BottomTabs({ tabs, current, onChange }: { tabs: [string, string, string?, number?][]; current: string; onChange: (v: string) => void }) {
+function BottomTabs({ tabs, current, onChange, className, ariaLabel = 'Navigation de la démo' }: {
+  tabs: [string, string, string?, number?][];
+  current: string;
+  onChange: (v: string) => void;
+  className?: string;
+  ariaLabel?: string;
+}) {
   return (
-    <nav aria-label="Navigation de la démo" style={{ width: '100%', maxWidth: 430, borderTop: `1px solid ${T.cb}`, padding: '8px 10px calc(10px + env(safe-area-inset-bottom))', display: 'grid', gridTemplateColumns: `repeat(${tabs.length}, 1fr)`, gap: 5, background: T.bg, position: 'fixed', isolation: 'isolate', zIndex: 1000, bottom: 0, left: '50%', transform: 'translateX(-50%)', boxShadow: '0 -10px 28px rgba(0,0,0,.16)' }}>
+    <nav className={className} aria-label={ariaLabel} style={{ width: '100%', maxWidth: 430, borderTop: `1px solid ${T.cb}`, padding: '8px 10px calc(10px + env(safe-area-inset-bottom))', display: 'grid', gridTemplateColumns: `repeat(${tabs.length}, 1fr)`, gap: 5, background: T.bg, position: 'fixed', isolation: 'isolate', zIndex: 1000, bottom: 0, left: '50%', transform: 'translateX(-50%)', boxShadow: '0 -10px 28px rgba(0,0,0,.16)' }}>
       {tabs.map(([key, label, icon, unread]) => (
         <button data-demo-tab={key} aria-pressed={current === key} key={key} onClick={() => onChange(key)} style={{ position: 'relative', background: current === key ? '#fff' : 'transparent', color: current === key ? '#05060d' : T.mu, border: 'none', borderRadius: 12, minHeight: 48, padding: '6px 3px', cursor: 'pointer', fontSize: tabs.length > 3 ? 10 : 11, fontWeight: 900, display: 'grid', placeItems: 'center', gap: 1 }}>
           {!!unread && unread > 0 && <span aria-label={`${unread} nouvelle${unread > 1 ? 's' : ''} notification${unread > 1 ? 's' : ''}`} style={{ position: 'absolute', top: 3, right: '18%', minWidth: 18, height: 18, padding: '0 5px', borderRadius: 10, display: 'grid', placeItems: 'center', background: '#ef4444', color: '#fff', fontSize: 9, lineHeight: 1, boxShadow: `0 0 0 2px ${T.bg}` }}>+{unread}</span>}
@@ -1980,6 +1997,8 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
     : [];
   const archivedMissions = archivedStructureMissions(kind);
   const cancelledMissions = cancelledStructureMissions(kind);
+  const nextMission = missions[0] ?? null;
+  const structureAlertCount = delayNotices.length + cancellationNotices.length;
 
   function decide(id: string, status: CandidateStatus) {
     const candidate = candidates.find((item) => item.id === id);
@@ -2078,8 +2097,28 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
     <>
       <TopBar title="Espace structure" badge={displayedStructureName} onBack={onBack} founder={founder} />
       {toast && <div style={{ margin: '10px 14px 0', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 10, padding: '8px 12px', color: T.sub, fontSize: 11 }}>{toast}</div>}
-      <div style={{ padding: 16, paddingBottom: 'calc(92px + env(safe-area-inset-bottom))', minHeight: 620 }}>
-        <div style={{ background: T.card, border: `1px solid ${T.greenBorder}`, borderRadius: 16, padding: 14, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div className="structure-dashboard">
+        <aside className="structure-sidebar" aria-label="Navigation Structure">
+          <div className="structure-sidebar-brand" aria-hidden="true">
+            <div style={{ color: T.green, fontSize: 10, fontWeight: 900, letterSpacing: 1.2 }}>ESPACE STRUCTURE</div>
+            <div style={{ color: T.text, fontSize: 17, fontWeight: 900, marginTop: 5 }}>Tableau de bord</div>
+          </div>
+          <BottomTabs
+            className="structure-navigation"
+            ariaLabel="Navigation de l’espace Structure"
+            tabs={[
+              ['missions', `Missions ${missions.length}`],
+              ['candidats', `Candidats ${pending.length}`, undefined, candidateUnread],
+              ['habitues', `Habitués ${regulars.length}`],
+              ['historique', 'Historique'],
+            ]}
+            current={tab}
+            onChange={(v) => changeStructureTab(v as StructureTab)}
+          />
+        </aside>
+        <main className="structure-dashboard-content" style={{ padding: 16, paddingBottom: 'calc(92px + env(safe-area-inset-bottom))', minHeight: 620 }}>
+        <header className="structure-overview">
+        <div className="structure-identity-card" style={{ background: T.card, border: `1px solid ${T.greenBorder}`, borderRadius: 16, padding: 14, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: 14, background: kind === 'asso' ? '#14532d' : '#075985', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900 }}>{initials(displayedStructureName)}</div>
           <div style={{ flex: 1 }}>
             <div style={{ color: T.text, fontSize: 16, lineHeight: 1.2, fontWeight: 900, overflowWrap: 'anywhere' }}>{displayedStructureName}</div>
@@ -2100,62 +2139,98 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
           </div>
           <button onClick={() => setKind(null)} style={{ background: T.row, color: T.mu, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 10px', fontSize: 10, fontWeight: 800, cursor: 'pointer' }}>Changer</button>
         </div>
-        <div style={{ color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 12, padding: '10px 12px', fontSize: 10.5, fontWeight: 900, marginBottom: 12 }}>
+        <div className="structure-verification-badge" style={{ color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 12, padding: '10px 12px', fontSize: 10.5, fontWeight: 900, marginBottom: 12 }}>
           ✓ Structure vérifiée · identité et SIRET confirmés (démo)
         </div>
-        {showStatsIntro && tab !== 'historique' && <StructureStats stats={seed.stats} live />}
-        <BottomTabs
-          tabs={[
-            ['missions', `Missions ${missions.length}`],
-            ['candidats', `Candidats ${pending.length}`, undefined, candidateUnread],
-            ['habitues', `Habitués ${regulars.length}`],
-            ['historique', 'Historique'],
-          ]}
-          current={tab}
-          onChange={(v) => changeStructureTab(v as StructureTab)}
-        />
+        {tab !== 'historique' && (
+          <div className={`structure-stats${showStatsIntro ? ' structure-stats-mobile-visible' : ''}`}>
+            <StructureStats stats={seed.stats} live={showStatsIntro} />
+          </div>
+        )}
+        </header>
         <div style={{ height: 12 }} />
         {tab === 'missions' && (
-          <div className="dsp-grid" style={{ display: 'grid', gap: 10 }}>
-            {cancellationNotices.map((notice) => {
-              const waitingCount = candidates.filter((candidate) => candidate.missionId === notice.missionId && candidate.status === 'pending').length;
-              return (
-                <div key={`cancel-${notice.missionId}`} className="dsp-span" role="status" style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, borderRadius: 14, padding: 13, display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: T.red, fontSize: 11, fontWeight: 900 }}>{notice.workerName} a annulé sa participation</div>
-                    <div style={{ color: T.sub, fontSize: 10, marginTop: 3 }}>{notice.missionTitle}</div>
-                    <div style={{ color: T.cyan, fontSize: 10, fontWeight: 800, marginTop: 4 }}>
-                      {waitingCount > 0
-                        ? `UROSI propose déjà la place aux ${waitingCount} candidat${waitingCount > 1 ? 's' : ''} en file d'attente.`
-                        : 'UROSI republie automatiquement la place dans le flux des travailleurs disponibles.'}
+          <div className="structure-missions-layout">
+            <div className="structure-alert-stack" aria-label="Alertes des missions">
+              {cancellationNotices.map((notice) => {
+                const waitingCount = candidates.filter((candidate) => candidate.missionId === notice.missionId && candidate.status === 'pending').length;
+                return (
+                  <div key={`cancel-${notice.missionId}`} role="status" style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, borderRadius: 14, padding: 13, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: T.red, fontSize: 11, fontWeight: 900 }}>{notice.workerName} a annulé sa participation</div>
+                      <div style={{ color: T.sub, fontSize: 10, marginTop: 3 }}>{notice.missionTitle}</div>
+                      <div style={{ color: T.cyan, fontSize: 10, fontWeight: 800, marginTop: 4 }}>
+                        {waitingCount > 0
+                          ? `UROSI propose déjà la place aux ${waitingCount} candidat${waitingCount > 1 ? 's' : ''} en file d'attente.`
+                          : 'UROSI republie automatiquement la place dans le flux des travailleurs disponibles.'}
+                      </div>
                     </div>
+                    <button onClick={() => dismissCancellation(notice.missionId)} style={{ background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 9px', fontSize: 9, fontWeight: 900, cursor: 'pointer' }}>Vu</button>
                   </div>
-                  <button onClick={() => dismissCancellation(notice.missionId)} style={{ background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 9px', fontSize: 9, fontWeight: 900, cursor: 'pointer' }}>Vu</button>
+                );
+              })}
+              {delayNotices.map((notice) => (
+                <div key={notice.missionId} role="status" style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 14, padding: 13, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: T.amber, fontSize: 11, fontWeight: 900 }}>+1 · Retard signalé : {notice.minutes}{notice.minutes === 30 ? '+' : ''} min</div>
+                    <div style={{ color: T.sub, fontSize: 10, marginTop: 3 }}>{notice.missionTitle} · Alex Démo</div>
+                  </div>
+                  <button onClick={() => dismissDelay(notice.missionId)} style={{ background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 9px', fontSize: 9, fontWeight: 900, cursor: 'pointer' }}>Vu</button>
                 </div>
-              );
-            })}
-            {delayNotices.map((notice) => (
-              <div key={notice.missionId} className="dsp-span" role="status" style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 14, padding: 13, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ color: T.amber, fontSize: 11, fontWeight: 900 }}>+1 · Retard signalé : {notice.minutes}{notice.minutes === 30 ? '+' : ''} min</div>
-                  <div style={{ color: T.sub, fontSize: 10, marginTop: 3 }}>{notice.missionTitle} · Alex Démo</div>
+              ))}
+              {structureAlertCount === 0 && (
+                <div className="structure-alert-empty" style={{ color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 14, padding: 13, fontSize: 10.5, fontWeight: 900 }}>
+                  ✓ Aucune alerte sur les missions en cours
                 </div>
-                <button onClick={() => dismissDelay(notice.missionId)} style={{ background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '7px 9px', fontSize: 9, fontWeight: 900, cursor: 'pointer' }}>Vu</button>
+              )}
+            </div>
+
+            <div className="structure-missions-header" data-demo-tour="structure-publish">
+              <div className="structure-missions-title">
+                <div style={{ color: T.text, fontSize: 18, fontWeight: 900 }}>Missions en cours</div>
+                <div style={{ color: T.mu, fontSize: 10, marginTop: 3 }}>{missions.length} mission{missions.length > 1 ? 's' : ''} active{missions.length > 1 ? 's' : ''}</div>
               </div>
-            ))}
-            <div className="dsp-span" data-demo-tour="structure-publish">
-              <Button onClick={() => setShowPub(true)}>Publier une mission</Button>
-              <div style={{ color: T.mu, fontSize: 9.5, textAlign: 'center', marginTop: 7 }}>
-                Plusieurs missions possibles · 3 jours maximum par mission
+              <div className="structure-publish-action">
+                <Button onClick={() => setShowPub(true)}>Publier une mission</Button>
+                <div className="structure-publish-help" style={{ color: T.mu, fontSize: 9.5, textAlign: 'center', marginTop: 7 }}>
+                  Plusieurs missions possibles · 3 jours maximum par mission
+                </div>
               </div>
             </div>
-            {missions[0] && <div className="dsp-span"><Button tone="green" onClick={() => setQrMission(missions[0] ?? null)}>Tester le QR + PIN</Button></div>}
-            <div className="dsp-span" style={{ color: T.mu, fontSize: 9.5, textAlign: 'center' }}>Touche une mission ou utilise •••. Appui long ou swipe gauche disponibles sur mobile.</div>
-            {missions.map((m, i) => {
-              const allMissionCandidates = candidates.filter((candidate) => candidate.missionId === m.id);
-              const completed = demoState.completedMissionIds.includes(m.id);
-              return <DemoStructureMissionCard key={m.id} mission={m} index={i} candidateCount={allMissionCandidates.length} completed={completed} onOpen={(mode) => setManagedMission({ mission: m, mode })} onRepublish={() => duplicateMission(m, completed)} />;
-            })}
+
+            {nextMission && (
+              <aside className="structure-qr-card" aria-label="QR et PIN de la prochaine mission">
+                <div className="structure-side-card-title" style={{ color: T.text, fontSize: 13, fontWeight: 900 }}>QR + PIN</div>
+                <div className="structure-side-card-copy" style={{ color: T.mu, fontSize: 10, lineHeight: 1.45, margin: '5px 0 12px' }}>{nextMission.title} · arrivée et départ</div>
+                <Button tone="green" onClick={() => setQrMission(nextMission)}>Tester le QR + PIN</Button>
+              </aside>
+            )}
+
+            <div className="structure-missions-help" style={{ color: T.mu, fontSize: 9.5, textAlign: 'center' }}>Touche une mission ou utilise •••. Appui long ou swipe gauche disponibles sur mobile.</div>
+
+            <div className="structure-mission-grid">
+              {missions.map((m, i) => {
+                const allMissionCandidates = candidates.filter((candidate) => candidate.missionId === m.id);
+                const completed = demoState.completedMissionIds.includes(m.id);
+                return <DemoStructureMissionCard key={m.id} mission={m} index={i} candidateCount={allMissionCandidates.length} completed={completed} onOpen={(mode) => setManagedMission({ mission: m, mode })} onRepublish={() => duplicateMission(m, completed)} />;
+              })}
+            </div>
+
+            <aside className="structure-candidate-summary" aria-label="Candidatures à traiter">
+              <div style={{ color: T.text, fontSize: 13, fontWeight: 900 }}>Candidatures à traiter</div>
+              <div style={{ color: pending.length ? T.amber : T.green, fontSize: 26, fontWeight: 900, margin: '8px 0 3px' }}>{pending.length}</div>
+              <div style={{ color: T.mu, fontSize: 10, lineHeight: 1.45 }}>{pending.length ? 'Décisions en attente sur les missions actives.' : 'Toutes les candidatures sont à jour.'}</div>
+              <button onClick={() => changeStructureTab('candidats')} style={{ marginTop: 12, background: T.row, color: T.cyan, border: `1px solid ${T.cb}`, borderRadius: 9, padding: '8px 10px', fontSize: 10, fontWeight: 900, cursor: 'pointer' }}>Voir les candidats →</button>
+            </aside>
+
+            {nextMission && (
+              <aside className="structure-next-mission" aria-label="Prochaine mission">
+                <div style={{ color: T.mu, fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: .6 }}>Prochaine mission</div>
+                <div style={{ color: T.text, fontSize: 13, fontWeight: 900, marginTop: 7 }}>{nextMission.title}</div>
+                <div style={{ color: T.sub, fontSize: 10, marginTop: 5 }}>{nextMission.when} · {nextMission.duration}</div>
+                <button onClick={() => setManagedMission({ mission: nextMission })} style={{ marginTop: 12, background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 9, padding: '8px 10px', fontSize: 10, fontWeight: 900, cursor: 'pointer' }}>Ouvrir la mission</button>
+              </aside>
+            )}
           </div>
         )}
         {tab === 'historique' && (
@@ -2242,6 +2317,7 @@ function StructureDemo({ founder, onBack, accountName }: { founder: boolean; onB
             ))}
           </div>
         )}
+        </main>
       </div>
       {showStructureReviews && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.72)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 195 }} onClick={() => setShowStructureReviews(false)}>
@@ -2735,7 +2811,7 @@ export function DemoExperience() {
         </button>
       )}
       {!embedded && <DemoFormatSwitch format={demoFormat} onChange={changeDemoFormat} />}
-      <DemoShell embedded={embedded} wide={!embedded && demoFormat === 'wide'}>
+      <DemoShell embedded={embedded} wide={!embedded && demoFormat === 'wide'} contentClassName={role === 'structure' ? 'demo-structure-shell' : undefined}>
         {role === 'worker' ? (
           <WorkerDemo key={`worker-${demoVersion}`} founder={displayedFounder} onBack={returnToDemoChoice} accountName={labAccount?.role === 'worker' ? labAccount.name : undefined} />
         ) : (
