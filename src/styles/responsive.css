@@ -150,9 +150,30 @@
 .structure-missions-title,
 .structure-side-card-title,
 .structure-side-card-copy,
-.structure-candidate-summary,
 .structure-next-mission,
 .structure-alert-empty {
+  display: none;
+}
+.structure-candidate-summary {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 2px;
+  border: 0;
+  border-bottom: 1px solid rgba(148, 163, 184, .18);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.structure-candidate-count {
+  margin-left: auto;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.structure-candidate-copy,
+.structure-candidate-action {
   display: none;
 }
 .structure-missions-layout,
@@ -237,7 +258,7 @@
   }
   .demo-wide-shell .structure-overview {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(310px, .72fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px 18px;
     align-items: stretch;
   }
@@ -349,6 +370,22 @@
   .demo-wide-shell .structure-candidate-summary {
     grid-column: 2;
     grid-row: 2;
+    width: auto;
+    text-align: left;
+    cursor: pointer;
+  }
+  .demo-wide-shell .structure-candidate-summary > * {
+    display: block;
+  }
+  .demo-wide-shell .structure-candidate-count {
+    margin: 8px 0 3px;
+    font-size: 26px;
+  }
+  .demo-wide-shell .structure-candidate-count-label {
+    display: none;
+  }
+  .demo-wide-shell .structure-candidate-action {
+    margin-top: 12px;
   }
   .demo-wide-shell .structure-next-mission {
     grid-column: 2;
