@@ -1132,10 +1132,7 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
   function accept(m: DemoMission) {
     if (!accepted.includes(m.id)) setAccepted(rememberAcceptedMission(m));
     setDemoState(readDemoState());
-    setTab('moi');
-    // Jamais de notion d'attente côté travailleur : il participe, puis il est
-    // prévenu quand c'est confirmé.
-    notif(m.solid ? 'Participation envoyée à la structure.' : `Candidature envoyée à ${m.structure}. Tu seras prévenu dès que ta mission est confirmée.`);
+    notif('✓ Candidature envoyée');
   }
 
   function withdraw() {
@@ -1156,7 +1153,11 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
     notif(`Mission « ${mission.title} » annulée. La structure est prévenue.`);
   }
 
-  const myMissions = feed.filter((m) => accepted.includes(m.id));
+  const visibleFeed = feed.filter((mission) => !accepted.includes(mission.id));
+  const myMissions = feed.filter((mission) => {
+    if (!accepted.includes(mission.id)) return false;
+    return demoState.candidates.find((candidate) => candidate.id === `demo-worker-${mission.id}`)?.status !== 'rejected';
+  });
   const completed = DEMO_WORKER_HISTORY.length;
   const founderPublishedCount = feed.filter((m) => m.id.startsWith('founder-') || m.id.startsWith('new-')).length;
   const founderScanUrl = demoQr ? demoFounderScanUrl(demoQr.mission, demoQr.step) : '';
@@ -1196,7 +1197,7 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
             <div className="dsp-span" style={{ color: T.mu, fontSize: 10, textAlign: 'center' }}>
               Flux trié autour de toi · compte fictif{founderPublishedCount ? ` · ${founderPublishedCount} mission${founderPublishedCount > 1 ? 's' : ''} lancée${founderPublishedCount > 1 ? 's' : ''} côté structure` : ''}
             </div>
-            {feed.map((mission) => (
+            {visibleFeed.map((mission) => (
               <MissionCard key={mission.id} mission={mission} onAccept={() => accept(mission)} onOpen={() => setMissionDetail(mission)} />
             ))}
           </div>
@@ -1214,13 +1215,16 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
                 const confirmed = application?.status === 'accepted';
                 return (
                 <div key={m.id} style={{ background: T.card, border: `1px solid ${confirmed ? T.greenBorder : T.cb}`, borderRadius: 16, padding: 16 }}>
-                  <div style={{ color: T.text, fontSize: 15, fontWeight: 900 }}>{m.title}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                    <div style={{ color: T.text, fontSize: 15, fontWeight: 900 }}>{m.title}</div>
+                    {!confirmed && (
+                      <span role="status" aria-label="En attente de confirmation de la structure" style={{ flexShrink: 0, color: T.amber, fontSize: 10.5, fontWeight: 900 }}>
+                        <span aria-hidden="true">⏳ </span>En attente
+                      </span>
+                    )}
+                  </div>
                   <div style={{ color: T.mu, fontSize: 11, marginTop: 3 }}>{m.structure} · {m.when}</div>
-                  {!confirmed ? (
-                    <div style={{ color: application?.status === 'rejected' ? T.red : T.amber, background: application?.status === 'rejected' ? T.redBg : T.amberBg, border: `1px solid ${application?.status === 'rejected' ? T.redBorder : T.amberBorder}`, borderRadius: 12, padding: 12, marginTop: 12, fontSize: 11, fontWeight: 900 }}>
-                      {application?.status === 'rejected' ? 'Candidature non retenue' : 'Candidature envoyée · tu seras prévenu dès confirmation'}
-                    </div>
-                  ) : (<>
+                  {confirmed && (<>
                   <div style={{ background: T.row, border: `1px solid ${T.greenBorder}`, borderRadius: 12, padding: 12, marginTop: 12 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.sub }}>
                       <span>QR début</span>
