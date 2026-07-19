@@ -44,6 +44,7 @@ automatiquement par la plateforme.
 ```bash
 supabase functions deploy stripe-connect-onboard
 supabase functions deploy stripe-connect-status
+supabase functions deploy stripe-connect-login
 supabase functions deploy stripe-connect-balance
 supabase functions deploy stripe-create-payment
 supabase functions deploy stripe-identity-start
@@ -51,6 +52,18 @@ supabase functions deploy release-due-payments
 # Le webhook ne doit PAS vérifier le JWT (appelé par Stripe) :
 supabase functions deploy stripe-webhook --no-verify-jwt
 ```
+
+### IBAN et versements automatiques (Express)
+
+- L'**IBAN** est collecté pendant l'onboarding hébergé Stripe (le compte est
+  créé en `country=FR`, `default_currency=eur`, et l'Account Link force la
+  collecte de tous les champs requis, IBAN inclus). Aucun champ IBAN maison à
+  construire.
+- Les **versements sont automatiques** : le compte Express est configuré en
+  payout `daily`. Dès qu'un Transfer arrive (libération J+3), Stripe reverse le
+  solde vers l'IBAN du travailleur sans action manuelle.
+- `stripe-connect-login` fournit un lien vers le **tableau de bord Express** où
+  le travailleur peut consulter ses versements et **mettre à jour son IBAN**.
 
 ## 4. Endpoint webhook Stripe
 

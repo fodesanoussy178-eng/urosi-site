@@ -44,7 +44,11 @@ Deno.serve(async (req: Request) => {
         country: "FR",
         email: user.email ?? undefined,
         business_type: "individual",
+        default_currency: "eur",
         capabilities: { transfers: { requested: true } },
+        // Versements automatiques : Stripe reverse le solde vers l'IBAN du
+        // travailleur chaque jour, sans action manuelle.
+        settings: { payouts: { schedule: { interval: "daily" } } },
         metadata: { profile_id: user.id },
       });
       accountId = account.id;
@@ -62,6 +66,9 @@ Deno.serve(async (req: Request) => {
       refresh_url: body.refresh_url ?? `${base}/app?stripe=refresh`,
       return_url: body.return_url ?? `${base}/app?stripe=return`,
       type: "account_onboarding",
+      // Collecte immédiate de toutes les infos requises, IBAN inclus (et pas
+      // seulement le strict minimum différé).
+      collection_options: { fields: "eventually_due" },
     });
 
     return jsonResponse({ url: link.url, account_id: accountId }, 200, origin);

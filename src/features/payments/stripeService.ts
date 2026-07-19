@@ -51,6 +51,11 @@ export function refreshConnectStatus() {
   return invoke<ConnectStatus>('stripe-connect-status');
 }
 
+/** Lien vers le tableau de bord Express (consulter versements, modifier l'IBAN). */
+export function loginToConnectDashboard() {
+  return invoke<{ url: string }>('stripe-connect-login');
+}
+
 export interface StripeBalance {
   onboarded: boolean;
   payouts_enabled?: boolean;
