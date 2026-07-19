@@ -921,22 +921,23 @@ function DemoFormatSwitch({ format, onChange }: { format: 'phone' | 'wide'; onCh
 }
 
 function MissionCard({ mission, onAccept, onOpen }: { mission: DemoMission; onAccept?: () => void; onOpen?: () => void }) {
+  // Hiérarchie de décision : combien → quoi → où → chez qui → action.
+  // La carte compacte laisse 3 missions visibles sans scroll ; le détail
+  // (description, horaires, photos, avis) reste dans la fiche ouverte au clic.
   return (
-    <article
-      style={{ position: 'relative', background: T.card, border: `1px solid ${mission.solid ? T.greenBorder : T.cb}`, borderRadius: 16, padding: 14 }}
-    >
-      <button type="button" aria-label={`Voir la fiche complète de ${mission.title}`} onClick={onOpen} style={{ position: 'absolute', inset: 0, zIndex: 0, width: '100%', border: 0, borderRadius: 16, background: 'transparent', cursor: onOpen ? 'pointer' : undefined }} />
-      <div style={{ position: 'relative', zIndex: 1, pointerEvents: 'none' }}>
-        <div style={{ color: mission.solid ? T.green : T.text, fontSize: 31, fontWeight: 900, letterSpacing: -1.5, lineHeight: 1, marginBottom: 7 }}>{mission.amount} €</div>
-        <div style={{ color: T.text, fontSize: 15, fontWeight: 900, marginBottom: 5 }}>{mission.title}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
-          <button onClick={onOpen} style={{ pointerEvents: 'auto', minWidth: 0, background: 'none', border: 'none', color: T.sub, fontSize: 11, fontWeight: 800, padding: 0, cursor: 'pointer', textDecoration: 'underline', textDecorationColor: T.cb, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {mission.structure}
+    <article className={`demo-mission-card${mission.solid ? ' demo-mission-card--solid' : ''}`}>
+      <button type="button" aria-label={`Voir la fiche complète de ${mission.title}`} onClick={onOpen} className="demo-mission-card__overlay" />
+      <div className="demo-mission-card__body">
+        <div className="demo-mission-card__price">{mission.amount} €</div>
+        <div className="demo-mission-card__title">{mission.title}</div>
+        <div className="demo-mission-card__location">📍 {mission.city}</div>
+        <div className="demo-mission-card__structure">
+          <button onClick={onOpen} className="demo-mission-card__structure-name">
+            {mission.structure}
           </button>
-          <span aria-label={`Note moyenne ${mission.rating.toFixed(1)} sur 5`} style={{ flexShrink: 0, color: T.amber, fontSize: 10.5, fontWeight: 900 }}>⭐ {mission.rating.toFixed(1).replace('.', ',')}</span>
+          <span aria-label={`Note moyenne ${mission.rating.toFixed(1)} sur 5`} className="demo-mission-card__rating">⭐ {mission.rating.toFixed(1).replace('.', ',')}</span>
         </div>
-        <div style={{ color: T.mu, fontSize: 10.5, marginTop: 5 }}>📍 {mission.city}</div>
-        <div style={{ pointerEvents: 'auto', marginTop: 11 }}>
+        <div className="demo-mission-card__action">
           <Button onClick={onAccept} tone={mission.solid ? 'green' : 'dark'}>
             {mission.solid ? 'Participer' : 'Accepter'}
           </Button>
@@ -1161,7 +1162,6 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
     return demoState.candidates.find((candidate) => candidate.id === `demo-worker-${mission.id}`)?.status !== 'rejected';
   });
   const completed = DEMO_WORKER_HISTORY.length;
-  const founderPublishedCount = feed.filter((m) => m.id.startsWith('founder-') || m.id.startsWith('new-')).length;
   const founderScanUrl = demoQr ? demoFounderScanUrl(demoQr.mission, demoQr.step) : '';
   const missionUnread = demoState.workerUnreadMissionIds.length;
   const walletUnread = demoState.workerUnreadWalletMissionIds.length;
@@ -1193,12 +1193,9 @@ function WorkerDemo({ founder, onBack, accountName }: { founder: boolean; onBack
     <>
       <TopBar title="Mon espace" badge={`${completed} missions au CV`} onBack={onBack} founder={founder} />
       {toast && <div style={{ margin: '10px 14px 0', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 10, padding: '8px 12px', color: T.sub, fontSize: 11 }}>{toast}</div>}
-      <div style={{ padding: 16, paddingBottom: 'calc(92px + env(safe-area-inset-bottom))', minHeight: 620 }}>
+      <div style={{ padding: '12px 14px', paddingBottom: 'calc(92px + env(safe-area-inset-bottom))', minHeight: 620 }}>
         {tab === 'flux' && (
-          <div className="dsp-grid" style={{ display: 'grid', gap: 12 }}>
-            <div className="dsp-span" style={{ color: T.mu, fontSize: 10, textAlign: 'center' }}>
-              Flux trié autour de toi · compte fictif{founderPublishedCount ? ` · ${founderPublishedCount} mission${founderPublishedCount > 1 ? 's' : ''} lancée${founderPublishedCount > 1 ? 's' : ''} côté structure` : ''}
-            </div>
+          <div className="dsp-grid" style={{ display: 'grid', gap: 8 }}>
             {visibleFeed.map((mission) => (
               <MissionCard key={mission.id} mission={mission} onAccept={() => accept(mission)} onOpen={() => setMissionDetail(mission)} />
             ))}
