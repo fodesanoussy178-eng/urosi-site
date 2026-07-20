@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { DemoExperience } from './DemoExperience';
@@ -492,5 +492,40 @@ describe('DemoExperience founder scan', () => {
     await user.click(screen.getByRole('button', { name: 'Masquer le solde' }));
     expect(screen.queryByText('182')).not.toBeInTheDocument();
     expect(screen.getAllByText('•••').length).toBeGreaterThan(1);
+  });
+});
+
+describe('DemoExperience auto-reset', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('restaure l’état initial toutes les 30 minutes et diffuse le reset aux onglets', () => {
+    vi.useFakeTimers();
+    try {
+      localStorage.setItem(DEMO_FOUNDER_ACCESS_KEY, '1');
+      // Modifications effectuées pendant la visite.
+      localStorage.setItem(
+        'urosi_founder_demo_shared_v1',
+        JSON.stringify({ acceptedMissionIds: ['mission-x'] }),
+      );
+      render(
+        <MemoryRouter initialEntries={['/demo?role=worker']}>
+          <DemoExperience />
+        </MemoryRouter>,
+      );
+      expect(localStorage.getItem('urosi_founder_demo_shared_v1')).not.toBeNull();
+
+      act(() => {
+        vi.advanceTimersByTime(30 * 60 * 1000);
+      });
+
+      // L’état partagé est vidé (retour aux données fictives) et un top de reset
+      // est diffusé pour resynchroniser les autres onglets.
+      expect(localStorage.getItem('urosi_founder_demo_shared_v1')).toBeNull();
+      expect(localStorage.getItem('urosi_demo_reset_tick_v1')).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

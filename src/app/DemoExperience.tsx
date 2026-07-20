@@ -15,6 +15,10 @@ const DEMO_SECONDS = 60;
 const DEMO_OPEN_ACCESS_UNTIL = Date.parse('2026-07-17T20:00:00+02:00');
 const DEMO_KEY = 'urosi_internal_demo_seconds_v1';
 const DEMO_SHARED_KEY = 'urosi_founder_demo_shared_v1';
+// Top de diffusion du reset entre onglets (vue Travailleur / Structure).
+const DEMO_RESET_KEY = 'urosi_demo_reset_tick_v1';
+// Restauration automatique de l'état initial de la démo toutes les 30 minutes.
+const DEMO_RESET_INTERVAL_MS = 30 * 60 * 1000;
 const DEMO_SERVICE_FEE_RATE = 0.18;
 const DEMO_STRUCTURE_IDS = {
   pme: 'demo-structure-burger-nord',
@@ -2714,16 +2718,46 @@ export function DemoExperience() {
     }
   }
 
-  function resetDemo() {
+  // Recharge l'état de départ : les vues WorkerDemo / StructureDemo sont
+  // remontées (clé demoVersion) et relisent un état vide, donc les données
+  // fictives (missions, CV, notifications…) sont réinjectées.
+  const applyLocalReset = useCallback(() => {
+    setExpired(false);
+    setDemoVersion((value) => value + 1);
+  }, []);
+
+  // Réinitialise la démo et diffuse le reset aux autres onglets via un top
+  // localStorage dédié (l'état partagé est vidé, ce qui supprime toutes les
+  // modifications faites pendant la visite).
+  const resetDemo = useCallback(() => {
     try {
       localStorage.removeItem(DEMO_KEY);
       localStorage.removeItem(DEMO_SHARED_KEY);
+      localStorage.setItem(DEMO_RESET_KEY, String(Date.now()));
     } catch {
       // ignore
     }
-    setExpired(false);
-    setDemoVersion((value) => value + 1);
-  }
+    applyLocalReset();
+  }, [applyLocalReset]);
+
+  // Restauration automatique toutes les 30 minutes, sans intervention
+  // manuelle : la démo revient toujours au même état de départ.
+  useEffect(() => {
+    const id = window.setInterval(resetDemo, DEMO_RESET_INTERVAL_MS);
+    return () => window.clearInterval(id);
+  }, [resetDemo]);
+
+  // Un reset déclenché dans un autre onglet est répercuté ici (l'état partagé a
+  // déjà été vidé par l'onglet émetteur) : on remonte pour réafficher les
+  // données fictives. La synchro Travailleur ↔ Structure reste active jusqu'à
+  // ce top de reset.
+  useEffect(() => {
+    function onResetBroadcast(event: StorageEvent) {
+      if (event.key === DEMO_RESET_KEY) applyLocalReset();
+    }
+    window.addEventListener('storage', onResetBroadcast);
+    return () => window.removeEventListener('storage', onResetBroadcast);
+  }, [applyLocalReset]);
 
   function returnToDemoChoice() {
     setRole(null);
