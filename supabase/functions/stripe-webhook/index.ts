@@ -13,13 +13,14 @@ import {
   serviceClient,
   assertNotLive,
   webhookSecrets,
+  effectiveEnv,
 } from "../_shared/stripe.ts";
 
 // Deux destinations Stripe pointent vers cette URL (« Comptes connectés » et
 // « Votre compte ») : chacune a son propre secret de signature. On essaie donc
 // chaque secret configuré ; l'ancien STRIPE_WEBHOOK_SECRET reste pris en compte.
-const secrets = webhookSecrets(Deno.env.toObject());
-const connectSecret = Deno.env.get("STRIPE_CONNECT_WEBHOOK_SECRET") ?? "";
+const secrets = webhookSecrets();
+const connectSecret = effectiveEnv.STRIPE_CONNECT_WEBHOOK_SECRET ?? "";
 
 async function verifyAny(
   payload: string,

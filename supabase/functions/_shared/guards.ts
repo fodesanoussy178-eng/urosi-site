@@ -40,7 +40,7 @@ export function isTestMode(env: Env): boolean {
  * garantit qu'aucune opération réelle ne peut partir d'un environnement de test.
  */
 export function assertTestModeKey(env: Env): void {
-  const key = env.STRIPE_SECRET_KEY ?? "";
+  const key = (env.STRIPE_SECRET_KEY ?? "").trim();
   if (!key) {
     throw new Error("STRIPE_SECRET_KEY absent : configurez les secrets Supabase.");
   }

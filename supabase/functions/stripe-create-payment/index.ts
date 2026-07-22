@@ -80,15 +80,21 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Mission solidaire : aucun paiement." }, 400, origin);
     }
     if (row.stripe_payment_intent_id) {
-      // Idempotence simple : réutilise le PaymentIntent existant.
-      const existing = await stripe.paymentIntents.retrieve(row.stripe_payment_intent_id);
-      assertNotLive(existing.livemode);
-      if (existing.status !== "canceled") {
-        return jsonResponse(
-          { client_secret: existing.client_secret, amount: existing.amount, reused: true },
-          200,
-          origin,
-        );
+      // Idempotence simple : réutilise le PaymentIntent existant. Un id
+      // introuvable (résidu d'un autre environnement Stripe) est ignoré et
+      // un nouveau PaymentIntent est créé à la place.
+      try {
+        const existing = await stripe.paymentIntents.retrieve(row.stripe_payment_intent_id);
+        assertNotLive(existing.livemode);
+        if (existing.status !== "canceled") {
+          return jsonResponse(
+            { client_secret: existing.client_secret, amount: existing.amount, reused: true },
+            200,
+            origin,
+          );
+        }
+      } catch (err) {
+        if ((err as { code?: string }).code !== "resource_missing") throw err;
       }
     }
 
