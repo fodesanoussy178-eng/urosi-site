@@ -19,20 +19,22 @@ import {
 // « Votre compte ») : chacune a son propre secret de signature. On essaie donc
 // chaque secret configuré ; l'ancien STRIPE_WEBHOOK_SECRET reste pris en compte.
 const secrets = webhookSecrets(Deno.env.toObject());
+const connectSecret = Deno.env.get("STRIPE_CONNECT_WEBHOOK_SECRET") ?? "";
 
 async function verifyAny(
   payload: string,
   signature: string,
-): Promise<import("npm:stripe@17.7.0").Stripe.Event | null> {
+): Promise<{ event: import("npm:stripe@17.7.0").Stripe.Event; source: "account" | "connect" } | null> {
   for (const secret of secrets) {
     try {
-      return await stripe.webhooks.constructEventAsync(
+      const event = await stripe.webhooks.constructEventAsync(
         payload,
         signature,
         secret,
         undefined,
         cryptoProvider,
       );
+      return { event, source: secret === connectSecret ? "connect" : "account" };
     } catch {
       // Essaie le secret suivant (destination différente).
     }
@@ -51,11 +53,12 @@ Deno.serve(async (req: Request) => {
   }
 
   const payload = await req.text();
-  const event = await verifyAny(payload, signature);
-  if (!event) {
+  const verified = await verifyAny(payload, signature);
+  if (!verified) {
     console.error("Signature webhook invalide (aucun secret ne correspond)");
     return new Response(JSON.stringify({ error: "Signature invalide." }), { status: 400 });
   }
+  const { event, source } = verified;
 
   // Refuse un événement live rejoué vers l'environnement de test.
   try {
@@ -71,6 +74,7 @@ Deno.serve(async (req: Request) => {
   const { data: isNew, error: markErr } = await supabase.rpc("mark_stripe_webhook_event", {
     p_id: event.id,
     p_type: event.type,
+    p_source: source,
   });
   if (markErr) {
     console.error("mark_stripe_webhook_event", markErr);
