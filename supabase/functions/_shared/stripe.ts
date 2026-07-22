@@ -9,8 +9,16 @@
 
 import Stripe from "npm:stripe@17.7.0";
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
+import {
+  assertNotLiveObject as assertNotLiveObjectPure,
+  assertTestModeKey,
+  isAllowedOrigin,
+} from "./guards.ts";
 
 export { Stripe };
+export { isAllowedOrigin, isTestMode, webhookSecrets, isAuthorizedCron } from "./guards.ts";
+
+const env = (): Record<string, string | undefined> => Deno.env.toObject();
 
 const secretKey = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 
@@ -28,23 +36,34 @@ export function assertStripeConfigured(): void {
   }
 }
 
-// CORS : origines autorisées uniquement (audit L3 sur l'ancienne fonction psp).
-const ALLOWED_ORIGINS = new Set([
-  "https://urosi.fr",
-  "https://www.urosi.fr",
-  "https://app.urosi.fr",
-  "http://localhost:5173",
-  "http://localhost:4173",
-]);
+// Garde-fou central : clé présente ET conforme au mode test (refuse sk_live).
+// Toutes les fonctions initiées par un utilisateur l'appellent en préambule.
+export function assertTestMode(): void {
+  assertTestModeKey(env());
+}
 
+// Refuse tout objet Stripe livemode=true reçu alors que le mode test est actif.
+export function assertNotLive(livemode: boolean | undefined): void {
+  assertNotLiveObjectPure(livemode, env());
+}
+
+// CORS : origines autorisées uniquement (audit L3 sur l'ancienne fonction psp).
+// L'origine effective renvoyée dans l'en-tête n'est jamais une origine inconnue.
 export function corsHeaders(origin: string | null): Record<string, string> {
-  const allowed = origin && ALLOWED_ORIGINS.has(origin) ? origin : "https://app.urosi.fr";
+  const allowed = isAllowedOrigin(origin, env()) && origin ? origin : "https://app.urosi.fr";
   return {
     "Access-Control-Allow-Origin": allowed,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin",
   };
+}
+
+// Refuse explicitement une origine non autorisée (renvoie 403), à appeler juste
+// après la gestion du OPTIONS dans chaque fonction exposée au navigateur.
+export function denyDisallowedOrigin(origin: string | null): Response | null {
+  if (isAllowedOrigin(origin, env())) return null;
+  return jsonResponse({ error: "Origine non autorisée." }, 403, origin);
 }
 
 export function jsonResponse(

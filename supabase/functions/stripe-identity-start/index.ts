@@ -8,7 +8,9 @@
 
 import {
   stripe,
-  assertStripeConfigured,
+  assertTestMode,
+  assertNotLive,
+  denyDisallowedOrigin,
   serviceClient,
   getAuthedUser,
   jsonResponse,
@@ -19,9 +21,11 @@ Deno.serve(async (req: Request) => {
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(origin) });
   if (req.method !== "POST") return jsonResponse({ error: "Méthode non autorisée." }, 405, origin);
+  const deny = denyDisallowedOrigin(origin);
+  if (deny) return deny;
 
   try {
-    assertStripeConfigured();
+    assertTestMode();
 
     const user = await getAuthedUser(req);
     if (!user) return jsonResponse({ error: "Connexion requise." }, 401, origin);
@@ -47,6 +51,7 @@ Deno.serve(async (req: Request) => {
       },
       { idempotencyKey: `identity_${user.id}` },
     );
+    assertNotLive(session.livemode);
 
     await supabase.rpc("set_worker_identity_status", {
       p_profile_id: user.id,

@@ -16,7 +16,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { stripe } from "../_shared/stripe.ts";
+import { stripe, assertTestMode, assertNotLive, isAuthorizedCron } from "../_shared/stripe.ts";
 
 Deno.serve(async (req: Request) => {
   const headers = { "Content-Type": "application/json" };
@@ -25,12 +25,19 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: "Méthode non autorisée." }), { status: 405, headers });
   }
 
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  const provided = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
-  if (!serviceRoleKey || provided !== serviceRoleKey) {
+  // Accès réservé au backend : clé service_role OU STRIPE_CRON_SECRET dédié.
+  if (!isAuthorizedCron(req.headers.get("Authorization"), Deno.env.toObject())) {
     return new Response(JSON.stringify({ error: "Accès réservé au backend UROSI." }), { status: 401, headers });
   }
 
+  // Aucune libération ne part avec une clé live tant que le mode test est actif.
+  try {
+    assertTestMode();
+  } catch (err) {
+    return new Response(JSON.stringify({ error: (err as Error).message }), { status: 403, headers });
+  }
+
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", serviceRoleKey, {
     auth: { persistSession: false },
   });
@@ -92,6 +99,7 @@ Deno.serve(async (req: Request) => {
       let chargeId: string | null = a.stripe_charge_id ?? null;
       if (!chargeId) {
         const pi = await stripe.paymentIntents.retrieve(a.stripe_payment_intent_id);
+        assertNotLive(pi.livemode);
         if (pi.status !== "succeeded") {
           skipped.push({ id: a.id, reason: `payment_${pi.status}` });
           continue;
@@ -110,6 +118,7 @@ Deno.serve(async (req: Request) => {
         },
         { idempotencyKey: `transfer_mission_${a.id}` },
       );
+      assertNotLive(transfer.livemode);
 
       const { error: recordErr } = await supabase.rpc("record_stripe_mission_payment", {
         p_application_id: a.id,

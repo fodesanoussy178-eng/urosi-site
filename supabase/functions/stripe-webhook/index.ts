@@ -11,9 +11,34 @@ import {
   stripe,
   cryptoProvider,
   serviceClient,
+  assertNotLive,
+  webhookSecrets,
 } from "../_shared/stripe.ts";
 
-const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "";
+// Deux destinations Stripe pointent vers cette URL (« Comptes connectés » et
+// « Votre compte ») : chacune a son propre secret de signature. On essaie donc
+// chaque secret configuré ; l'ancien STRIPE_WEBHOOK_SECRET reste pris en compte.
+const secrets = webhookSecrets(Deno.env.toObject());
+
+async function verifyAny(
+  payload: string,
+  signature: string,
+): Promise<import("npm:stripe@17.7.0").Stripe.Event | null> {
+  for (const secret of secrets) {
+    try {
+      return await stripe.webhooks.constructEventAsync(
+        payload,
+        signature,
+        secret,
+        undefined,
+        cryptoProvider,
+      );
+    } catch {
+      // Essaie le secret suivant (destination différente).
+    }
+  }
+  return null;
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
@@ -21,23 +46,23 @@ Deno.serve(async (req: Request) => {
   }
 
   const signature = req.headers.get("stripe-signature");
-  if (!signature || !webhookSecret) {
+  if (!signature || secrets.length === 0) {
     return new Response(JSON.stringify({ error: "Signature manquante." }), { status: 400 });
   }
 
   const payload = await req.text();
-  let event: import("npm:stripe@17.7.0").Stripe.Event;
-  try {
-    event = await stripe.webhooks.constructEventAsync(
-      payload,
-      signature,
-      webhookSecret,
-      undefined,
-      cryptoProvider,
-    );
-  } catch (err) {
-    console.error("Signature webhook invalide", err);
+  const event = await verifyAny(payload, signature);
+  if (!event) {
+    console.error("Signature webhook invalide (aucun secret ne correspond)");
     return new Response(JSON.stringify({ error: "Signature invalide." }), { status: 400 });
+  }
+
+  // Refuse un événement live rejoué vers l'environnement de test.
+  try {
+    assertNotLive(event.livemode);
+  } catch (err) {
+    console.error("Événement live refusé en mode test", (err as Error).message);
+    return new Response(JSON.stringify({ error: "Événement live refusé." }), { status: 403 });
   }
 
   const supabase = serviceClient();

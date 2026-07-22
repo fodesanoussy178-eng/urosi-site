@@ -9,7 +9,9 @@
 
 import {
   stripe,
-  assertStripeConfigured,
+  assertTestMode,
+  assertNotLive,
+  denyDisallowedOrigin,
   serviceClient,
   getAuthedUser,
   jsonResponse,
@@ -20,9 +22,11 @@ Deno.serve(async (req: Request) => {
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(origin) });
   if (req.method !== "POST") return jsonResponse({ error: "Méthode non autorisée." }, 405, origin);
+  const deny = denyDisallowedOrigin(origin);
+  if (deny) return deny;
 
   try {
-    assertStripeConfigured();
+    assertTestMode();
 
     const user = await getAuthedUser(req);
     if (!user) return jsonResponse({ error: "Connexion requise." }, 401, origin);
@@ -78,6 +82,7 @@ Deno.serve(async (req: Request) => {
     if (row.stripe_payment_intent_id) {
       // Idempotence simple : réutilise le PaymentIntent existant.
       const existing = await stripe.paymentIntents.retrieve(row.stripe_payment_intent_id);
+      assertNotLive(existing.livemode);
       if (existing.status !== "canceled") {
         return jsonResponse(
           { client_secret: existing.client_secret, amount: existing.amount, reused: true },
@@ -92,7 +97,7 @@ Deno.serve(async (req: Request) => {
       .select("commission_pct")
       .eq("id", true)
       .maybeSingle();
-    const pct = Number(settings?.commission_pct ?? 15);
+    const pct = Number(settings?.commission_pct ?? 18);
     const brut = mission.worker_rate_cents as number;
     const commission = Math.round((brut * pct) / 100);
     const total = brut + commission;
@@ -130,6 +135,7 @@ Deno.serve(async (req: Request) => {
       },
       { idempotencyKey: `pi_mission_${row.id}` },
     );
+    assertNotLive(intent.livemode);
 
     await supabase.rpc("attach_mission_payment_intent", {
       p_application_id: row.id,
