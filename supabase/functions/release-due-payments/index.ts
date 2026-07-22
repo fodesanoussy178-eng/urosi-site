@@ -16,7 +16,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { stripe } from "../_shared/stripe.ts";
+import { stripe, assertTestMode, assertNotLive, isAuthorizedCron } from "../_shared/stripe.ts";
 
 Deno.serve(async (req: Request) => {
   const headers = { "Content-Type": "application/json" };
@@ -25,12 +25,19 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: "Méthode non autorisée." }), { status: 405, headers });
   }
 
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  const provided = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
-  if (!serviceRoleKey || provided !== serviceRoleKey) {
+  // Accès réservé au backend : clé service_role OU STRIPE_CRON_SECRET dédié.
+  if (!isAuthorizedCron(req.headers.get("Authorization"))) {
     return new Response(JSON.stringify({ error: "Accès réservé au backend UROSI." }), { status: 401, headers });
   }
 
+  // Aucune libération ne part avec une clé live tant que le mode test est actif.
+  try {
+    assertTestMode();
+  } catch (err) {
+    return new Response(JSON.stringify({ error: (err as Error).message }), { status: 403, headers });
+  }
+
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", serviceRoleKey, {
     auth: { persistSession: false },
   });
@@ -39,6 +46,7 @@ Deno.serve(async (req: Request) => {
     .from("applications")
     .select(
       "id, worker_id, stripe_payment_intent_id, stripe_charge_id, stripe_payment_status, " +
+        "attendance_status, actual_end_at, " +
         "missions!inner(worker_rate_cents, is_solidaire), " +
         "profiles!applications_worker_id_fkey(stripe_account_id, stripe_payouts_enabled, stripe_identity_status)",
     )
@@ -56,6 +64,8 @@ Deno.serve(async (req: Request) => {
     stripe_payment_intent_id: string | null;
     stripe_charge_id: string | null;
     stripe_payment_status: string | null;
+    attendance_status: string | null;
+    actual_end_at: string | null;
     missions: { worker_rate_cents: number; is_solidaire: boolean };
     profiles:
       | { stripe_account_id: string | null; stripe_payouts_enabled: boolean; stripe_identity_status: string }
@@ -75,6 +85,14 @@ Deno.serve(async (req: Request) => {
         skipped.push({ id: a.id, reason: "mission_solidaire" });
         continue;
       }
+      // Aucun transfert ne part avant la preuve de fin de mission : ces mêmes
+      // conditions sont réexigées par record_stripe_mission_payment, mais les
+      // vérifier ICI évite de créer un Transfer Stripe qui échouerait ensuite
+      // à s'enregistrer (argent parti sans écriture comptable).
+      if (a.attendance_status !== "end_confirmed" || !a.actual_end_at) {
+        skipped.push({ id: a.id, reason: "attendance_not_confirmed" });
+        continue;
+      }
       if (!worker?.stripe_account_id || !worker.stripe_payouts_enabled) {
         skipped.push({ id: a.id, reason: "worker_not_onboarded" });
         continue;
@@ -92,6 +110,7 @@ Deno.serve(async (req: Request) => {
       let chargeId: string | null = a.stripe_charge_id ?? null;
       if (!chargeId) {
         const pi = await stripe.paymentIntents.retrieve(a.stripe_payment_intent_id);
+        assertNotLive(pi.livemode);
         if (pi.status !== "succeeded") {
           skipped.push({ id: a.id, reason: `payment_${pi.status}` });
           continue;
@@ -110,6 +129,7 @@ Deno.serve(async (req: Request) => {
         },
         { idempotencyKey: `transfer_mission_${a.id}` },
       );
+      assertNotLive(transfer.livemode);
 
       const { error: recordErr } = await supabase.rpc("record_stripe_mission_payment", {
         p_application_id: a.id,

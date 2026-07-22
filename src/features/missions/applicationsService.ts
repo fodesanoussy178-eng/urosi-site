@@ -1,3 +1,4 @@
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import type { Database, ApplicationStatus } from '@/types/database.types';
 import type { Mission } from './types';
@@ -30,7 +31,11 @@ export async function fetchMyApplications(workerId: string): Promise<Application
 export async function fetchApplicationsForMission(missionId: string): Promise<ApplicationWithApplicant[]> {
   const { data, error } = await supabase
     .from('applications')
-    .select('*, profile:profiles(full_name)')
+    // FK explicite requise : applications a 5 FK vers profiles (worker_id,
+    // delay_confirmed_by, delay_reported_by, start_validated_by,
+    // end_validated_by). Sans le nom de contrainte, PostgREST renvoie
+    // PGRST201 (« more than one relationship was found ») et la requête échoue.
+    .select('*, profile:profiles!applications_worker_id_fkey(full_name)')
     .eq('mission_id', missionId)
     .order('created_at', { ascending: true });
   if (error) throw error;
@@ -44,7 +49,8 @@ export async function fetchApplicationsForMissions(missionIds: string[]): Promis
   if (missionIds.length === 0) return map;
   const { data, error } = await supabase
     .from('applications')
-    .select('*, profile:profiles(full_name)')
+    // Même garde que fetchApplicationsForMission : FK explicite obligatoire.
+    .select('*, profile:profiles!applications_worker_id_fkey(full_name)')
     .in('mission_id', missionIds)
     .order('created_at', { ascending: true });
   if (error) throw error;
@@ -55,6 +61,28 @@ export async function fetchApplicationsForMissions(missionIds: string[]): Promis
     else map.set(row.mission_id, [row]);
   }
   return map;
+}
+
+// Flux en direct côté structure : une nouvelle candidature (ou un changement
+// de statut) sur l'une de ses missions rafraîchit l'onglet Candidats sans
+// recharger la page. La table `applications` n'a pas de colonne structure_id
+// directe, donc le filtre Realtime porte sur les missions déjà chargées.
+export function subscribeToApplicationsFeed(missionIds: string[], onChange: () => void): RealtimeChannel | null {
+  if (missionIds.length === 0) return null;
+  const channel = supabase.channel(`applications-feed:${missionIds.join(',').slice(0, 200)}`);
+  for (const missionId of missionIds) {
+    channel.on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'applications', filter: `mission_id=eq.${missionId}` },
+      () => onChange(),
+    );
+  }
+  channel.subscribe();
+  return channel;
+}
+
+export function unsubscribeApplicationsFeed(channel: RealtimeChannel | null): void {
+  if (channel) supabase.removeChannel(channel);
 }
 
 export async function updateApplicationStatus(applicationId: string, status: ApplicationStatus): Promise<void> {
@@ -77,7 +105,8 @@ export interface CheckinTarget {
 export async function fetchCheckinTarget(applicationId: string, token: string): Promise<CheckinTarget | null> {
   const { data, error } = await supabase
     .from('applications')
-    .select('id, worker_id, status, checked_in_at, mission:missions(id, title, city, scheduled_date), profile:profiles(full_name)')
+    // FK explicite obligatoire (voir fetchApplicationsForMission).
+    .select('id, worker_id, status, checked_in_at, mission:missions(id, title, city, scheduled_date), profile:profiles!applications_worker_id_fkey(full_name)')
     .eq('id', applicationId)
     .eq('checkin_token', token)
     .maybeSingle();

@@ -11,9 +11,37 @@ import {
   stripe,
   cryptoProvider,
   serviceClient,
+  assertNotLive,
+  webhookSecrets,
+  effectiveEnv,
 } from "../_shared/stripe.ts";
 
-const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "";
+// Deux destinations Stripe pointent vers cette URL (« Comptes connectés » et
+// « Votre compte ») : chacune a son propre secret de signature. On essaie donc
+// chaque secret configuré ; l'ancien STRIPE_WEBHOOK_SECRET reste pris en compte.
+const secrets = webhookSecrets();
+const connectSecret = effectiveEnv.STRIPE_CONNECT_WEBHOOK_SECRET ?? "";
+
+async function verifyAny(
+  payload: string,
+  signature: string,
+): Promise<{ event: import("npm:stripe@17.7.0").Stripe.Event; source: "account" | "connect" } | null> {
+  for (const secret of secrets) {
+    try {
+      const event = await stripe.webhooks.constructEventAsync(
+        payload,
+        signature,
+        secret,
+        undefined,
+        cryptoProvider,
+      );
+      return { event, source: secret === connectSecret ? "connect" : "account" };
+    } catch {
+      // Essaie le secret suivant (destination différente).
+    }
+  }
+  return null;
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
@@ -21,23 +49,24 @@ Deno.serve(async (req: Request) => {
   }
 
   const signature = req.headers.get("stripe-signature");
-  if (!signature || !webhookSecret) {
+  if (!signature || secrets.length === 0) {
     return new Response(JSON.stringify({ error: "Signature manquante." }), { status: 400 });
   }
 
   const payload = await req.text();
-  let event: import("npm:stripe@17.7.0").Stripe.Event;
-  try {
-    event = await stripe.webhooks.constructEventAsync(
-      payload,
-      signature,
-      webhookSecret,
-      undefined,
-      cryptoProvider,
-    );
-  } catch (err) {
-    console.error("Signature webhook invalide", err);
+  const verified = await verifyAny(payload, signature);
+  if (!verified) {
+    console.error("Signature webhook invalide (aucun secret ne correspond)");
     return new Response(JSON.stringify({ error: "Signature invalide." }), { status: 400 });
+  }
+  const { event, source } = verified;
+
+  // Refuse un événement live rejoué vers l'environnement de test.
+  try {
+    assertNotLive(event.livemode);
+  } catch (err) {
+    console.error("Événement live refusé en mode test", (err as Error).message);
+    return new Response(JSON.stringify({ error: "Événement live refusé." }), { status: 403 });
   }
 
   const supabase = serviceClient();
@@ -46,6 +75,7 @@ Deno.serve(async (req: Request) => {
   const { data: isNew, error: markErr } = await supabase.rpc("mark_stripe_webhook_event", {
     p_id: event.id,
     p_type: event.type,
+    p_source: source,
   });
   if (markErr) {
     console.error("mark_stripe_webhook_event", markErr);
@@ -59,11 +89,12 @@ Deno.serve(async (req: Request) => {
     switch (event.type) {
       case "account.updated": {
         const account = event.data.object as import("npm:stripe@17.7.0").Stripe.Account;
-        await supabase.rpc("set_worker_stripe_capabilities", {
+        const { error } = await supabase.rpc("set_worker_stripe_capabilities", {
           p_account_id: account.id,
           p_charges_enabled: account.charges_enabled,
           p_payouts_enabled: account.payouts_enabled,
         });
+        if (error) throw error;
         break;
       }
 
@@ -76,11 +107,12 @@ Deno.serve(async (req: Request) => {
         const profileId = session.metadata?.profile_id;
         if (profileId) {
           const status = event.type.split(".").pop()!; // verified | processing | requires_input | canceled
-          await supabase.rpc("set_worker_identity_status", {
+          const { error } = await supabase.rpc("set_worker_identity_status", {
             p_profile_id: profileId,
             p_status: status,
             p_session_id: session.id,
           });
+          if (error) throw error;
         }
         break;
       }
@@ -89,12 +121,13 @@ Deno.serve(async (req: Request) => {
         const pi = event.data.object as import("npm:stripe@17.7.0").Stripe.PaymentIntent;
         const applicationId = pi.metadata?.application_id;
         if (applicationId) {
-          await supabase.rpc("attach_mission_payment_intent", {
+          const { error } = await supabase.rpc("attach_mission_payment_intent", {
             p_application_id: applicationId,
             p_payment_intent_id: pi.id,
             p_status: "succeeded",
             p_charge_id: typeof pi.latest_charge === "string" ? pi.latest_charge : null,
           });
+          if (error) throw error;
         }
         break;
       }
@@ -103,19 +136,43 @@ Deno.serve(async (req: Request) => {
         const pi = event.data.object as import("npm:stripe@17.7.0").Stripe.PaymentIntent;
         const applicationId = pi.metadata?.application_id;
         if (applicationId) {
-          await supabase.rpc("attach_mission_payment_intent", {
+          const { error } = await supabase.rpc("attach_mission_payment_intent", {
             p_application_id: applicationId,
             p_payment_intent_id: pi.id,
             p_status: "payment_failed",
           });
+          if (error) throw error;
         }
         break;
       }
 
+      case "charge.refunded": {
+        // Remboursement (total ou partiel) du paiement de la structure.
+        const charge = event.data.object as import("npm:stripe@17.7.0").Stripe.Charge;
+        const { error } = await supabase.rpc("record_stripe_refund", {
+          p_payment_intent_id:
+            typeof charge.payment_intent === "string" ? charge.payment_intent : null,
+          p_charge_id: charge.id,
+          p_amount_refunded: charge.amount_refunded,
+          p_fully_refunded: charge.refunded === true,
+        });
+        if (error) throw error;
+        break;
+      }
+
       case "charge.dispute.created": {
-        // Litige/chargeback : à traiter côté opérations (Radar / support).
+        // Litige/chargeback : marque paiement et candidature, notifie la structure.
         const dispute = event.data.object as import("npm:stripe@17.7.0").Stripe.Dispute;
         console.warn("Litige Stripe ouvert", dispute.id, dispute.payment_intent);
+        const { error } = await supabase.rpc("record_stripe_dispute", {
+          p_dispute_id: dispute.id,
+          p_payment_intent_id:
+            typeof dispute.payment_intent === "string" ? dispute.payment_intent : null,
+          p_charge_id: typeof dispute.charge === "string" ? dispute.charge : null,
+          p_amount: dispute.amount,
+          p_reason: dispute.reason ?? null,
+        });
+        if (error) throw error;
         break;
       }
 
@@ -125,6 +182,9 @@ Deno.serve(async (req: Request) => {
     }
   } catch (err) {
     console.error(`Traitement webhook ${event.type} échoué`, err);
+    // Libère le verrou d'idempotence : le retry Stripe doit pouvoir retraiter
+    // l'événement, sinon il serait acquitté comme doublon et la mise à jour perdue.
+    await supabase.from("stripe_webhook_events").delete().eq("id", event.id);
     return new Response(JSON.stringify({ error: "Traitement échoué." }), { status: 500 });
   }
 

@@ -61,10 +61,3 @@ export async function updateStructureAbout(structureId: string, about: string): 
   const { error } = await supabase.from('structures').update({ about: about || null }).eq('id', structureId);
   if (error) throw error;
 }
-
-// Active l'abonnement de la structure (requis pour publier des missions).
-// MVP : activation immediate ; le paiement recurrent passera par le PSP.
-export async function subscribeStructure(structureId: string): Promise<void> {
-  const { error } = await supabase.rpc('subscribe_structure', { p_structure_id: structureId });
-  if (error) throw error;
-}

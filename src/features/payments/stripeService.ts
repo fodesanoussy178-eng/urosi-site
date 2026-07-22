@@ -8,13 +8,15 @@
 import type { Stripe } from '@stripe/stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { supabase } from '@/lib/supabase';
-import { stripePublishableKey } from '@/lib/env';
+import { isStripeConfigured, stripePublishableKey } from '@/lib/env';
 
 let stripePromise: Promise<Stripe | null> | null = null;
 
 /** Charge Stripe.js une seule fois (pour Elements / Identity). */
 export function getStripe(): Promise<Stripe | null> {
-  if (!stripePublishableKey) return Promise.resolve(null);
+  // isStripeConfigured impose VITE_STRIPE_ENABLED=true et, en environnement
+  // test, une clé publishable pk_test_… (miroir client du garde serveur).
+  if (!isStripeConfigured || !stripePublishableKey) return Promise.resolve(null);
   if (!stripePromise) stripePromise = loadStripe(stripePublishableKey);
   return stripePromise;
 }

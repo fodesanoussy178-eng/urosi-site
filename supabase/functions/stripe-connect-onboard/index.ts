@@ -6,7 +6,9 @@
 
 import {
   stripe,
-  assertStripeConfigured,
+  assertTestMode,
+  assertNotLive,
+  denyDisallowedOrigin,
   serviceClient,
   getAuthedUser,
   jsonResponse,
@@ -18,9 +20,11 @@ Deno.serve(async (req: Request) => {
   const origin = req.headers.get("Origin");
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(origin) });
   if (req.method !== "POST") return jsonResponse({ error: "Méthode non autorisée." }, 405, origin);
+  const deny = denyDisallowedOrigin(origin);
+  if (deny) return deny;
 
   try {
-    assertStripeConfigured();
+    assertTestMode();
 
     const user = await getAuthedUser(req);
     if (!user) return jsonResponse({ error: "Connexion requise." }, 401, origin);
@@ -51,6 +55,7 @@ Deno.serve(async (req: Request) => {
         settings: { payouts: { schedule: { interval: "daily" } } },
         metadata: { profile_id: user.id },
       });
+      assertNotLive(account.livemode);
       accountId = account.id;
       const { error: rpcErr } = await supabase.rpc("set_worker_stripe_account", {
         p_profile_id: user.id,
