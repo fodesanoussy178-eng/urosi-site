@@ -16,6 +16,8 @@ import { fetchMissionsForStructure, createMission } from '@/features/missions/mi
 import {
   fetchApplicationsForMissions,
   updateApplicationStatus,
+  subscribeToApplicationsFeed,
+  unsubscribeApplicationsFeed,
   type ApplicationWithApplicant,
 } from '@/features/missions/applicationsService';
 import { rate, fetchRatedApplicationIds, fetchWorkerReputation, type WorkerReputation } from '@/features/missions/ratingsService';
@@ -187,6 +189,27 @@ export function StructureApp() {
     setMis(missions);
     await loadMissionData(missions);
   }
+
+  // Flux en direct : une nouvelle candidature (ou un changement de statut)
+  // sur une mission de la structure met à jour l'onglet Candidats sans
+  // recharger la page. Sans cet abonnement, seule la cloche de notifications
+  // (canal séparé sur `notifications`) réagissait en direct.
+  const missionIdsKey = mis.map((m) => m.id).sort().join(',');
+  useEffect(() => {
+    const missionIds = missionIdsKey ? missionIdsKey.split(',') : [];
+    let reloadTimer: ReturnType<typeof setTimeout> | undefined;
+    const channel = subscribeToApplicationsFeed(missionIds, () => {
+      clearTimeout(reloadTimer);
+      reloadTimer = setTimeout(() => {
+        loadMissionData(mis).catch(() => notif('Erreur de mise à jour des candidatures.'));
+      }, 500);
+    });
+    return () => {
+      clearTimeout(reloadTimer);
+      unsubscribeApplicationsFeed(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [missionIdsKey]);
 
   useEffect(() => {
     (async () => {
