@@ -9,7 +9,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { ChatSheet } from '@/components/ui/ChatSheet';
 import { useBodyScrollLock } from '@/components/ui/useBodyScrollLock';
 import { WalletCard } from '@/components/ui/WalletCard';
-import { fetchMyStructures, createStructure, updateStructureAbout, subscribeStructure } from './structureService';
+import { fetchMyStructures, createStructure, updateStructureAbout } from './structureService';
 import { StatsPanel, StructureStatsSummary } from './StatsPanel';
 import { StructureHistoryPanel } from './StructureHistoryPanel';
 import { fetchMissionsForStructure, createMission } from '@/features/missions/missionsService';
@@ -153,7 +153,6 @@ export function StructureApp() {
   const [ratingCand, setRatingCand] = useState<CandWithMission | null>(null);
   const [chatFor, setChatFor] = useState<CandWithMission | null>(null);
   const [docKey, setDocKey] = useState<DocKey | null>(null);
-  const [subBusy, setSubBusy] = useState(false);
   const [vf, setVf] = useState({ nom: '', siret: '' });
   const [founderAccess, setFounderAccess] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -273,20 +272,6 @@ export function StructureApp() {
       notif(founder ? '✓ Structure enregistrée avec accès fondateur.' : '✓ Structure enregistrée, SIRET vérifié.');
     } catch (e) {
       notif(e instanceof Error ? e.message : 'Création impossible.');
-    }
-  }
-
-  async function activateSubscription() {
-    if (!structure || subBusy) return;
-    setSubBusy(true);
-    try {
-      await subscribeStructure(structure.id);
-      setStructure((s) => (s ? { ...s, subscription_active: true, subscribed_at: new Date().toISOString() } : s));
-      notif('✓ Abonnement activé — tu peux publier des missions.');
-    } catch (e) {
-      notif(e instanceof Error ? e.message : 'Activation impossible.');
-    } finally {
-      setSubBusy(false);
     }
   }
 
@@ -431,7 +416,6 @@ export function StructureApp() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
                     {structure.is_ess && <span style={{ fontSize: 8, fontWeight: 700, color: T.green, background: T.greenBg, borderRadius: 8, padding: '1px 6px' }}>🤝 Association · ESS</span>}
                     <span style={{ fontSize: 8, fontWeight: 700, color: verificationBadge(structure).color, background: verificationBadge(structure).bg, borderRadius: 8, padding: '1px 6px' }}>{verificationBadge(structure).label}</span>
-                    {structure.subscription_active && <span style={{ fontSize: 8, fontWeight: 700, color: T.cyan, background: '#22d3ee15', borderRadius: 8, padding: '1px 6px' }}>✓ Abonnée</span>}
                   </div>
                 </div>
               </div>
@@ -440,19 +424,6 @@ export function StructureApp() {
                 <AboutEditor structure={structure} onSaved={(about) => setStructure((s) => (s ? { ...s, about } : s))} notif={notif} />
               </details>
             </div>
-
-            {/* Abonnement requis pour publier */}
-            {!structure.subscription_active && (
-              <div style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 12, padding: '12px 15px', marginBottom: 12 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: T.amber, marginBottom: 4 }}>Abonnement requis pour publier</div>
-                <div style={{ fontSize: 10.5, color: T.sub, lineHeight: 1.5, marginBottom: 10 }}>
-                  L'abonnement UROSI donne accès à la publication illimitée de missions, aux règles de rémunération intelligente et aux statistiques.
-                </div>
-                <button onClick={activateSubscription} disabled={subBusy} style={{ width: '100%', background: T.grad, color: '#fff', border: 'none', borderRadius: 9, padding: '11px 0', fontSize: 12.5, fontWeight: 900, cursor: 'pointer' }}>
-                  {subBusy ? '…' : "Activer l'abonnement"}
-                </button>
-              </div>
-            )}
 
             {/* Onglets */}
             <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
