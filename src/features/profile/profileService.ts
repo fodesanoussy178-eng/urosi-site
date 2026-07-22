@@ -44,7 +44,13 @@ export async function uploadIdentityDocument(userId: string, file: File): Promis
     contentType: file.type,
     upsert: false,
   });
-  if (error) throw error;
+  if (error) {
+    // Erreur brute Storage (StorageApiError/StorageUnknownError) : loguée ici
+    // pour le diagnostic, propagée telle quelle à l'appelant (jamais remplacée
+    // par un message générique).
+    console.error('uploadIdentityDocument: storage.upload() a échoué', { path, error });
+    throw error;
+  }
   return { path, name: file.name.slice(0, 160) };
 }
 
