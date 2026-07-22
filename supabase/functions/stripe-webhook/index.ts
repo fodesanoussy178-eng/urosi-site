@@ -88,11 +88,12 @@ Deno.serve(async (req: Request) => {
     switch (event.type) {
       case "account.updated": {
         const account = event.data.object as import("npm:stripe@17.7.0").Stripe.Account;
-        await supabase.rpc("set_worker_stripe_capabilities", {
+        const { error } = await supabase.rpc("set_worker_stripe_capabilities", {
           p_account_id: account.id,
           p_charges_enabled: account.charges_enabled,
           p_payouts_enabled: account.payouts_enabled,
         });
+        if (error) throw error;
         break;
       }
 
@@ -105,11 +106,12 @@ Deno.serve(async (req: Request) => {
         const profileId = session.metadata?.profile_id;
         if (profileId) {
           const status = event.type.split(".").pop()!; // verified | processing | requires_input | canceled
-          await supabase.rpc("set_worker_identity_status", {
+          const { error } = await supabase.rpc("set_worker_identity_status", {
             p_profile_id: profileId,
             p_status: status,
             p_session_id: session.id,
           });
+          if (error) throw error;
         }
         break;
       }
@@ -118,12 +120,13 @@ Deno.serve(async (req: Request) => {
         const pi = event.data.object as import("npm:stripe@17.7.0").Stripe.PaymentIntent;
         const applicationId = pi.metadata?.application_id;
         if (applicationId) {
-          await supabase.rpc("attach_mission_payment_intent", {
+          const { error } = await supabase.rpc("attach_mission_payment_intent", {
             p_application_id: applicationId,
             p_payment_intent_id: pi.id,
             p_status: "succeeded",
             p_charge_id: typeof pi.latest_charge === "string" ? pi.latest_charge : null,
           });
+          if (error) throw error;
         }
         break;
       }
@@ -132,11 +135,12 @@ Deno.serve(async (req: Request) => {
         const pi = event.data.object as import("npm:stripe@17.7.0").Stripe.PaymentIntent;
         const applicationId = pi.metadata?.application_id;
         if (applicationId) {
-          await supabase.rpc("attach_mission_payment_intent", {
+          const { error } = await supabase.rpc("attach_mission_payment_intent", {
             p_application_id: applicationId,
             p_payment_intent_id: pi.id,
             p_status: "payment_failed",
           });
+          if (error) throw error;
         }
         break;
       }
@@ -154,6 +158,9 @@ Deno.serve(async (req: Request) => {
     }
   } catch (err) {
     console.error(`Traitement webhook ${event.type} échoué`, err);
+    // Libère le verrou d'idempotence : le retry Stripe doit pouvoir retraiter
+    // l'événement, sinon il serait acquitté comme doublon et la mise à jour perdue.
+    await supabase.from("stripe_webhook_events").delete().eq("id", event.id);
     return new Response(JSON.stringify({ error: "Traitement échoué." }), { status: 500 });
   }
 
