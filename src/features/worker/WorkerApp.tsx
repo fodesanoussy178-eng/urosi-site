@@ -1080,7 +1080,16 @@ function KycSheet({
       saved = true;
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Envoi impossible.');
+      // Toujours logger l'erreur brute (Storage/Postgrest) en console pour le
+      // diagnostic, en plus du message affiché à l'utilisateur.
+      console.error('Soumission KYC échouée', e);
+      const message =
+        e instanceof Error
+          ? e.message
+          : typeof e === 'object' && e !== null && 'message' in e && typeof (e as { message: unknown }).message === 'string'
+            ? (e as { message: string }).message
+            : 'Envoi impossible.';
+      setError(message);
     } finally {
       if (!saved) setBusy(false);
     }
