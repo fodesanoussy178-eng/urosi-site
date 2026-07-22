@@ -23,8 +23,9 @@ import {
   assertTestModeKey,
   isAllowedOrigin as isAllowedOriginPure,
   isAuthorizedCron as isAuthorizedCronPure,
-  isTestMode,
-  isTestSecretKey,
+  mergeStripeConfig,
+  plausibleEnvValue,
+  STRIPE_CONFIG_KEYS,
   webhookSecrets as webhookSecretsPure,
   type Env,
 } from "./guards.ts";
@@ -43,14 +44,20 @@ export function serviceClient(): SupabaseClient {
 
 async function loadEffectiveEnv(): Promise<Env> {
   const env = Deno.env.toObject() as Env;
-  const key = (env.STRIPE_SECRET_KEY ?? "").trim();
-  if (key && (!isTestMode(env) || isTestSecretKey(key))) return env;
+  // Fusion PAR CLÉ : chaque variable d'env plausible est retenue telle
+  // quelle ; toute valeur absente ou mal formée est remplacée par la config
+  // DB. Si tout l'env est sain, aucun aller-retour base n'est nécessaire.
+  const needsDb = STRIPE_CONFIG_KEYS.some(
+    (k) =>
+      k !== "STRIPE_TEST_MODE" &&
+      k !== "STRIPE_WEBHOOK_SECRET" && // legacy, facultatif
+      plausibleEnvValue(k, env[k], env) === undefined,
+  );
+  if (!needsDb) return env;
   try {
     const { data, error } = await serviceClient().rpc("get_stripe_config");
     if (!error && data && typeof data === "object") {
-      // L'env Stripe est jugé non fiable : la config posée en base par
-      // l'opérateur backend prime pour les clés qu'elle définit.
-      return { ...env, ...(data as Record<string, string>) };
+      return mergeStripeConfig(env, data as Record<string, string>);
     }
   } catch (err) {
     console.error("get_stripe_config fallback indisponible", err);

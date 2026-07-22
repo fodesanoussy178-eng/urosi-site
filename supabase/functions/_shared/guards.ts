@@ -108,6 +108,57 @@ export function webhookSecrets(env: Env): string[] {
   ].filter((s): s is string => typeof s === "string" && s.length > 0);
 }
 
+/** Clés de configuration Stripe gérées par la fusion env/DB. */
+export const STRIPE_CONFIG_KEYS = [
+  "STRIPE_SECRET_KEY",
+  "STRIPE_TEST_MODE",
+  "STRIPE_CRON_SECRET",
+  "STRIPE_CONNECT_WEBHOOK_SECRET",
+  "STRIPE_ACCOUNT_WEBHOOK_SECRET",
+  "STRIPE_WEBHOOK_SECRET",
+] as const;
+
+/**
+ * Valeur d'environnement plausible pour une clé donnée, sinon undefined
+ * (→ fallback config DB). Détecte les erreurs de collage constatées en
+ * staging : secret webhook dans STRIPE_SECRET_KEY, commande shell dans
+ * STRIPE_CRON_SECRET, secret manquant.
+ */
+export function plausibleEnvValue(name: string, value: string | undefined, env: Env): string | undefined {
+  const v = (value ?? "").trim();
+  if (!v) return undefined;
+  switch (name) {
+    case "STRIPE_SECRET_KEY":
+      if (isTestMode(env)) return isTestSecretKey(v) ? v : undefined;
+      return isTestSecretKey(v) || isLiveSecretKey(v) ? v : undefined;
+    case "STRIPE_CONNECT_WEBHOOK_SECRET":
+    case "STRIPE_ACCOUNT_WEBHOOK_SECRET":
+    case "STRIPE_WEBHOOK_SECRET":
+      return /^whsec_\S+$/.test(v) ? v : undefined;
+    case "STRIPE_CRON_SECRET":
+      // Un vrai secret : suffisamment long, sans espace (refuse une commande collée).
+      return v.length >= 16 && !/\s/.test(v) ? v : undefined;
+    default:
+      return v;
+  }
+}
+
+/**
+ * Fusion PAR CLÉ : la valeur d'environnement est retenue si elle est
+ * plausible, sinon la valeur de la config DB prend le relais. Une clé mal
+ * collée ne casse donc jamais les autres, et corriger une seule variable
+ * d'environnement ne réactive pas des voisines invalides.
+ */
+export function mergeStripeConfig(env: Env, dbCfg: Record<string, string | undefined>): Env {
+  const out: Env = { ...env };
+  for (const k of STRIPE_CONFIG_KEYS) {
+    const fromEnv = k === "STRIPE_TEST_MODE" ? (env[k] ?? "").trim() || undefined : plausibleEnvValue(k, env[k], env);
+    const fromDb = (dbCfg[k] ?? "").trim() || undefined;
+    out[k] = fromEnv ?? fromDb;
+  }
+  return out;
+}
+
 /**
  * Le déclenchement de `release-due-payments` est réservé au backend. On accepte
  * la clé `service_role` (planificateur historique) OU le `STRIPE_CRON_SECRET`

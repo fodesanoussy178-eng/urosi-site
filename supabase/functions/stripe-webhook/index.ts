@@ -146,10 +146,33 @@ Deno.serve(async (req: Request) => {
         break;
       }
 
+      case "charge.refunded": {
+        // Remboursement (total ou partiel) du paiement de la structure.
+        const charge = event.data.object as import("npm:stripe@17.7.0").Stripe.Charge;
+        const { error } = await supabase.rpc("record_stripe_refund", {
+          p_payment_intent_id:
+            typeof charge.payment_intent === "string" ? charge.payment_intent : null,
+          p_charge_id: charge.id,
+          p_amount_refunded: charge.amount_refunded,
+          p_fully_refunded: charge.refunded === true,
+        });
+        if (error) throw error;
+        break;
+      }
+
       case "charge.dispute.created": {
-        // Litige/chargeback : à traiter côté opérations (Radar / support).
+        // Litige/chargeback : marque paiement et candidature, notifie la structure.
         const dispute = event.data.object as import("npm:stripe@17.7.0").Stripe.Dispute;
         console.warn("Litige Stripe ouvert", dispute.id, dispute.payment_intent);
+        const { error } = await supabase.rpc("record_stripe_dispute", {
+          p_dispute_id: dispute.id,
+          p_payment_intent_id:
+            typeof dispute.payment_intent === "string" ? dispute.payment_intent : null,
+          p_charge_id: typeof dispute.charge === "string" ? dispute.charge : null,
+          p_amount: dispute.amount,
+          p_reason: dispute.reason ?? null,
+        });
+        if (error) throw error;
         break;
       }
 

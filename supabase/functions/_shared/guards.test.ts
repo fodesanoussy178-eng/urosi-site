@@ -12,6 +12,8 @@ import {
   isLiveSecretKey,
   isTestMode,
   isTestSecretKey,
+  mergeStripeConfig,
+  plausibleEnvValue,
   webhookSecrets,
 } from './guards.ts';
 
@@ -154,5 +156,51 @@ describe('isAuthorizedCron', () => {
   it("refuse tout quand aucun secret n'est configuré (pas de laissez-passer)", () => {
     expect(isAuthorizedCron('Bearer nimporte', {})).toBe(false);
     expect(isAuthorizedCron('Bearer ', { STRIPE_CRON_SECRET: '' })).toBe(false);
+  });
+});
+
+describe('plausibleEnvValue / mergeStripeConfig', () => {
+  const testEnv = { STRIPE_TEST_MODE: 'true' };
+
+  it('refuse une valeur de la mauvaise famille (erreurs de collage réelles)', () => {
+    // Secret webhook collé dans la clé API
+    expect(plausibleEnvValue('STRIPE_SECRET_KEY', 'whsec_abc123', testEnv)).toBeUndefined();
+    // Commande shell collée à la place du secret cron
+    expect(plausibleEnvValue('STRIPE_CRON_SECRET', 'openssl rand -hex 24', testEnv)).toBeUndefined();
+    // Clé API collée dans un secret webhook
+    expect(plausibleEnvValue('STRIPE_ACCOUNT_WEBHOOK_SECRET', 'sk_test_faux', testEnv)).toBeUndefined();
+    // Secret trop court
+    expect(plausibleEnvValue('STRIPE_CRON_SECRET', 'court', testEnv)).toBeUndefined();
+  });
+
+  it('accepte les valeurs bien formées (avec trim)', () => {
+    expect(plausibleEnvValue('STRIPE_SECRET_KEY', ' sk_test_faux123 ', testEnv)).toBe('sk_test_faux123');
+    expect(plausibleEnvValue('STRIPE_CONNECT_WEBHOOK_SECRET', 'whsec_faux', testEnv)).toBe('whsec_faux');
+    expect(plausibleEnvValue('STRIPE_CRON_SECRET', 'a1b2c3d4e5f6a7b8c9d0', testEnv)).toBe('a1b2c3d4e5f6a7b8c9d0');
+  });
+
+  it('refuse une clé live en mode test, l’accepte hors mode test', () => {
+    expect(plausibleEnvValue('STRIPE_SECRET_KEY', 'sk_live_faux', testEnv)).toBeUndefined();
+    expect(plausibleEnvValue('STRIPE_SECRET_KEY', 'sk_live_faux', { STRIPE_TEST_MODE: 'false' })).toBe('sk_live_faux');
+  });
+
+  it('fusionne par clé : env plausible prioritaire, DB en secours', () => {
+    const env = {
+      STRIPE_TEST_MODE: 'true',
+      STRIPE_SECRET_KEY: 'whsec_collé_par_erreur',
+      STRIPE_CONNECT_WEBHOOK_SECRET: 'whsec_env_ok',
+      STRIPE_CRON_SECRET: 'openssl rand -hex 24',
+    };
+    const db = {
+      STRIPE_SECRET_KEY: 'sk_test_db',
+      STRIPE_CONNECT_WEBHOOK_SECRET: 'whsec_db_connect',
+      STRIPE_ACCOUNT_WEBHOOK_SECRET: 'whsec_db_account',
+      STRIPE_CRON_SECRET: 'secret-cron-db-0123456789',
+    };
+    const merged = mergeStripeConfig(env, db);
+    expect(merged.STRIPE_SECRET_KEY).toBe('sk_test_db'); // env invalide → DB
+    expect(merged.STRIPE_CONNECT_WEBHOOK_SECRET).toBe('whsec_env_ok'); // env valide conservée
+    expect(merged.STRIPE_ACCOUNT_WEBHOOK_SECRET).toBe('whsec_db_account'); // absent env → DB
+    expect(merged.STRIPE_CRON_SECRET).toBe('secret-cron-db-0123456789'); // env invalide → DB
   });
 });
