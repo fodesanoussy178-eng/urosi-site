@@ -4,6 +4,7 @@ import { Fld } from '@/components/ui/Fld';
 import { T, inp } from '@/components/ui/theme';
 import { isDemoFounderCode, rememberDemoFounderAccess } from '@/lib/founder';
 import { isUnconfirmedEmailError, requestPasswordReset, resendConfirmationEmail, signIn } from './authService';
+import { consumeStoredAuthRedirect } from './authRedirect';
 
 export function SignInForm() {
   const nav = useNavigate();
@@ -49,8 +50,12 @@ export function SignInForm() {
     }
     const requested = params.get('next');
     const safeRequested = requested?.startsWith('/') && !requested.startsWith('//') ? requested : null;
-    const attendanceDestination = location.pathname.startsWith('/valider/') ? location.pathname : null;
-    nav(wantsFounderDemo || founderDestination ? '/fondateur' : safeRequested ?? attendanceDestination ?? '/app', { replace: true });
+    // Un lien public (QR /scan/:token, /valider/:qrCode) doit rouvrir la
+    // meme page apres connexion, jamais /app : sessionStorage a la priorite
+    // sur le fallback /valider/ et sur /app.
+    const storedRedirect = consumeStoredAuthRedirect();
+    const attendanceDestination = location.pathname.startsWith('/valider/') || location.pathname.startsWith('/scan/') ? location.pathname : null;
+    nav(wantsFounderDemo || founderDestination ? '/fondateur' : storedRedirect ?? safeRequested ?? attendanceDestination ?? '/app', { replace: true });
     setBusy(false);
   }
 

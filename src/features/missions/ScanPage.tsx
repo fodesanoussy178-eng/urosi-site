@@ -3,7 +3,8 @@ import { useParams } from 'react-router-dom';
 import { Logo } from '@/components/ui/Logo';
 import { T, FONT, inp } from '@/components/ui/theme';
 import { SignInForm } from '@/features/auth/SignInForm';
-import { useAuth } from '@/features/auth/AuthContext';
+import { setStoredAuthRedirect } from '@/features/auth/authRedirect';
+import { supabase } from '@/lib/supabase';
 import { confirmAttendanceQR, fetchScanContext, type ScanContext } from './attendanceService';
 import { formatHours } from '@/lib/format';
 
@@ -31,15 +32,59 @@ const stateCopy: Record<ScanContext['state'], { title: string; body: string; ton
 
 export function ScanPage() {
   const { token } = useParams<{ token: string }>();
-  const { session, loading: authLoading } = useAuth();
+  const [authReady, setAuthReady] = useState(false);
+  const [authedUserId, setAuthedUserId] = useState<string | null>(null);
   const [ctx, setCtx] = useState<ScanContext | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pin, setPin] = useState('');
 
+  // Route publique : ne se fie pas seulement au contexte d'auth partagé
+  // (susceptible d'être encore en cours de résolution ailleurs dans l'app).
+  // On vérifie explicitement getSession() PUIS getUser() (validation serveur
+  // du jeton) dès le montage, pour ne jamais afficher la connexion à tort à
+  // une structure déjà connectée sur son téléphone. onAuthStateChange couvre
+  // le cas où la connexion aboutit pendant que cette page reste montée
+  // (redirection post-connexion vers la même URL /scan/:token).
   useEffect(() => {
-    if (!session || !token) {
+    let active = true;
+
+    async function check() {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!active) return;
+      if (!sessionData.session) {
+        setAuthedUserId(null);
+        setAuthReady(true);
+        return;
+      }
+      const { data: userData } = await supabase.auth.getUser();
+      if (!active) return;
+      setAuthedUserId(userData.user?.id ?? null);
+      setAuthReady(true);
+    }
+    check();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!active) return;
+      setAuthedUserId(nextSession?.user.id ?? null);
+      setAuthReady(true);
+    });
+
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  // Aucune session valide : on conserve l'URL du QR pour y revenir
+  // automatiquement une fois connecté (jamais vers /app ou l'accueil).
+  useEffect(() => {
+    if (authReady && !authedUserId) setStoredAuthRedirect(window.location.pathname);
+  }, [authReady, authedUserId]);
+
+  useEffect(() => {
+    if (!authedUserId || !token) {
       setLoading(false);
       return;
     }
@@ -48,7 +93,7 @@ export function ScanPage() {
       .then(setCtx)
       .catch((e) => setError(e instanceof Error ? e.message : 'Lecture du QR impossible.'))
       .finally(() => setLoading(false));
-  }, [session, token]);
+  }, [authedUserId, token]);
 
   async function confirm() {
     if (!token || busy) return;
@@ -77,9 +122,9 @@ export function ScanPage() {
     </div>
   );
 
-  if (authLoading) return shell(<div style={{ color: T.mu, fontSize: 12, textAlign: 'center' }}>Chargement…</div>);
+  if (!authReady) return shell(<div style={{ color: T.mu, fontSize: 12, textAlign: 'center' }}>Chargement…</div>);
 
-  if (!session) {
+  if (!authedUserId) {
     return shell(
       <>
         <div style={{ fontSize: 15, fontWeight: 900, color: T.text, marginBottom: 4 }}>Validation UROSI</div>
