@@ -25,7 +25,7 @@ import {
   fetchMyApplications,
   type ApplicationWithMission,
 } from '@/features/missions/applicationsService';
-import { rate, fetchStructureRatings, fetchStructureReviews, fetchWorkerReceivedRatings, type StructureRating, type StructureReview } from '@/features/missions/ratingsService';
+import { rate, fetchStructureRatings, fetchStructureReviews, fetchWorkerReceivedRatings, fetchRatedApplicationIds, type StructureRating, type StructureReview } from '@/features/missions/ratingsService';
 import { notifyDelay } from '@/features/missions/feedbackService';
 import {
   attendanceEventLabel,
@@ -161,6 +161,7 @@ export function WorkerApp() {
   const [apps, setApps] = useState<ApplicationWithMission[]>([]);
   const [attendance, setAttendance] = useState<Map<string, AttendanceEvent[]>>(new Map());
   const [receivedRatings, setReceivedRatings] = useState<Map<string, number>>(new Map());
+  const [ratedStructureIds, setRatedStructureIds] = useState<Set<string>>(new Set());
   const [structRatings, setStructRatings] = useState<Map<string, StructureRating>>(new Map());
   const [unread, setUnread] = useState<Map<string, number>>(new Map());
   const [stats, setStats] = useState<WorkerStats | null>(null);
@@ -216,12 +217,15 @@ export function WorkerApp() {
       const structureIds = [...new Set(missions.map((m) => m.structure_id))];
       setStructRatings(await fetchStructureRatings(structureIds));
       const activeIds = myApps.filter((a) => ['accepted', 'in_progress', 'payment_pending', 'completed'].includes(a.status)).map((a) => a.id);
-      const [unreadMap, attendanceMap] = await Promise.all([
+      const completedIds = myApps.filter((a) => a.status === 'completed').map((a) => a.id);
+      const [unreadMap, attendanceMap, ratedStructure] = await Promise.all([
         fetchUnreadCounts(activeIds, session.user.id),
         fetchAttendanceEvents(myApps.map((a) => a.id)).catch(() => new Map<string, AttendanceEvent[]>()),
+        fetchRatedApplicationIds(completedIds, 'worker_to_structure').catch(() => new Set<string>()),
       ]);
       setUnread(unreadMap);
       setAttendance(attendanceMap);
+      setRatedStructureIds(ratedStructure);
     } catch {
       notif('Impossible de charger les missions.');
     } finally {
@@ -703,6 +707,14 @@ export function WorkerApp() {
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         {score ? <Stars n={score} size={10} /> : <span style={{ fontSize: 9, color: T.mu }}>pas encore notée</span>}
+                        {!ratedStructureIds.has(a.id) && (
+                          <button
+                            onClick={() => setRatingFor(a)}
+                            style={{ fontSize: 9, fontWeight: 800, color: T.cyan, background: '#22d3ee15', border: 'none', borderRadius: 8, padding: '4px 8px', cursor: 'pointer' }}
+                          >
+                            Noter la structure
+                          </button>
+                        )}
                         <span style={{ fontSize: 9, fontWeight: 800, color: T.green }}>✓</span>
                       </div>
                     </div>
