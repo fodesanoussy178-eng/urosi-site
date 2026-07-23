@@ -51,6 +51,60 @@ export function StructureStatsSummary({ structureId, acceptedCount, decidedCount
   );
 }
 
+function StarRow({ score }: { score: number | null }) {
+  const rounded = score == null ? 0 : Math.round(score);
+  return (
+    <span aria-hidden="true" style={{ fontSize: 22, letterSpacing: 2, color: '#f59e0b', lineHeight: 1 }}>
+      {[1, 2, 3, 4, 5].map((n) => (n <= rounded ? '★' : '☆')).join('')}
+    </span>
+  );
+}
+
+// Bloc « Performances » de l'accueil Structure : les étoiles sont l'élément
+// principal, la note numérique juste dessous, le nombre d'avis toujours
+// visible. Reste compact — jamais plus imposant que les missions.
+export function StructurePerformances({
+  structureId,
+  favoris,
+  avisADonner,
+}: {
+  structureId: string;
+  favoris: number;
+  avisADonner: number;
+}) {
+  const { stats, error } = useStructureStats(structureId);
+
+  if (error) return <div style={{ fontSize: 11, color: T.mu, textAlign: 'center', padding: 12 }}>Performances indisponibles.</div>;
+  if (!stats) return <div style={{ fontSize: 11, color: T.mu, textAlign: 'center', padding: 12 }}>Chargement…</div>;
+
+  const note = stats.avg_rating == null ? '—' : stats.avg_rating.toFixed(1).replace('.', ',');
+  const tiles: [string, string][] = [
+    ['Missions réalisées', String(stats.missions_completed)],
+    ['Dépenses', euros(stats.total_paid_cents)],
+    ['Travailleurs favoris', String(favoris)],
+    ['Avis à donner', String(avisADonner)],
+  ];
+
+  return (
+    <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: '15px 14px' }}>
+      <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>Performances</div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, marginBottom: 14 }}>
+        <StarRow score={stats.avg_rating} />
+        <div style={{ fontSize: 26, fontWeight: 900, color: T.text, lineHeight: 1.1 }}>{note}</div>
+        <div style={{ fontSize: 10.5, color: T.mu }}>{stats.ratings_count} avis</div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
+        {tiles.map(([l, v]) => (
+          <div key={l} style={{ background: T.row, borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+            <div style={{ fontSize: 16, fontWeight: 900, color: T.text }}>{v}</div>
+            <div style={{ fontSize: 8.5, color: T.mu, marginTop: 3 }}>{l}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Statistiques de la structure : activite, taux de remplissage, flux payes.
 export function StatsPanel({ structureId }: { structureId: string }) {
   const { stats, error } = useStructureStats(structureId);
