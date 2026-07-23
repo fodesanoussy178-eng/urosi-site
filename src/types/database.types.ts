@@ -67,6 +67,10 @@ export type ReliabilityEventType =
   | 'report_resolved';
 export type ReliabilityEventStatus = 'pending' | 'confirmed' | 'disputed' | 'dismissed';
 export type QRTokenType = 'start' | 'end';
+export type ConversationStatus = 'open' | 'closed';
+export type CvStatus = 'pending_verification' | 'verified' | 'disputed' | 'rejected';
+export type RatingRequestStatus = 'pending' | 'completed' | 'dismissed';
+export type RatingVisibilityStatus = 'pending' | 'published';
 export type PayRuleKind =
   | 'day_of_week'
   | 'holiday'
@@ -418,6 +422,10 @@ export interface Database {
           delay_reported_by: string | null;
           delay_confirmed_by: string | null;
           payment_ready_at: string | null;
+          conversation_status: ConversationStatus;
+          cv_status: CvStatus | null;
+          cv_status_reason: string | null;
+          cv_verified_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -442,6 +450,10 @@ export interface Database {
           delay_reported_by?: string | null;
           delay_confirmed_by?: string | null;
           payment_ready_at?: string | null;
+          conversation_status?: ConversationStatus;
+          cv_status?: CvStatus | null;
+          cv_status_reason?: string | null;
+          cv_verified_at?: string | null;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['applications']['Insert']>;
@@ -760,21 +772,27 @@ export interface Database {
         Row: {
           id: string;
           application_id: string;
+          mission_id: string | null;
           structure_id: string;
           worker_id: string;
+          reviewer_id: string | null;
           score: number;
           direction: RatingDirection;
           comment: string | null;
+          status: RatingVisibilityStatus;
           created_at: string;
         };
         Insert: {
           id?: string;
           application_id: string;
+          mission_id?: string | null;
           structure_id: string;
           worker_id: string;
+          reviewer_id?: string | null;
           score: number;
           direction?: RatingDirection;
           comment?: string | null;
+          status?: RatingVisibilityStatus;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['ratings']['Insert']>;
@@ -798,6 +816,40 @@ export interface Database {
             columns: ['worker_id'];
             isOneToOne: false;
             referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      rating_requests: {
+        Row: {
+          id: string;
+          application_id: string;
+          mission_id: string;
+          direction: RatingDirection;
+          reviewer_id: string;
+          status: RatingRequestStatus;
+          created_at: string;
+          last_reminded_at: string | null;
+          reminder_stage: number;
+        };
+        Insert: {
+          id?: string;
+          application_id: string;
+          mission_id: string;
+          direction: RatingDirection;
+          reviewer_id: string;
+          status?: RatingRequestStatus;
+          created_at?: string;
+          last_reminded_at?: string | null;
+          reminder_stage?: number;
+        };
+        Update: Partial<Database['public']['Tables']['rating_requests']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'rating_requests_application_id_fkey';
+            columns: ['application_id'];
+            isOneToOne: false;
+            referencedRelation: 'applications';
             referencedColumns: ['id'];
           },
         ];
@@ -1225,8 +1277,24 @@ export interface Database {
         Returns: Json;
       };
       confirm_attendance_qr: {
-        Args: { p_token: string };
+        Args: { p_token: string; p_pin?: string | null };
         Returns: Json;
+      };
+      verify_mission_cv_entry: {
+        Args: { p_application_id: string };
+        Returns: undefined;
+      };
+      dispute_mission_cv_entry: {
+        Args: { p_application_id: string; p_reason: string };
+        Returns: undefined;
+      };
+      reject_mission_cv_entry: {
+        Args: { p_application_id: string; p_reason: string };
+        Returns: undefined;
+      };
+      snooze_rating_request: {
+        Args: { p_id: string };
+        Returns: undefined;
       };
       list_validator_missions: {
         Args: Record<string, never>;

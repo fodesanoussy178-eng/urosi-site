@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { RatingDirection } from '@/types/database.types';
+import type { RatingDirection, RatingRequestStatus } from '@/types/database.types';
 
 export interface StructureRating {
   average: number;
@@ -91,4 +91,60 @@ export async function fetchWorkerReputation(workerId: string): Promise<WorkerRep
   if (error) throw error;
   const summary = data as { average: number | null; count: number } | null;
   return { average: summary?.average == null ? null : Number(summary.average), count: Number(summary?.count ?? 0) };
+}
+
+// Demandes de note automatiquement creees a la fin de mission (une par
+// direction). L'appelant recoupe application_id avec les missions/candidatures
+// deja chargees pour afficher le titre de la mission et le nom de la
+// contrepartie : pas de jointure lourde ici.
+export interface RatingRequest {
+  id: string;
+  applicationId: string;
+  missionId: string;
+  direction: RatingDirection;
+  status: RatingRequestStatus;
+  createdAt: string;
+  lastRemindedAt: string | null;
+  reminderStage: number;
+}
+
+export async function fetchPendingRatingRequests(reviewerId: string): Promise<RatingRequest[]> {
+  const { data, error } = await supabase
+    .from('rating_requests')
+    .select('id, application_id, mission_id, direction, status, created_at, last_reminded_at, reminder_stage')
+    .eq('reviewer_id', reviewerId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    applicationId: r.application_id,
+    missionId: r.mission_id,
+    direction: r.direction,
+    status: r.status,
+    createdAt: r.created_at,
+    lastRemindedAt: r.last_reminded_at,
+    reminderStage: r.reminder_stage,
+  }));
+}
+
+// "Me le rappeler plus tard" : ne supprime jamais la demande, avance juste
+// son horodatage et son etage de rappel (cadence lue cote client, voir
+// shouldPromptRatingRequest).
+export async function snoozeRatingRequest(id: string): Promise<void> {
+  const { error } = await supabase.rpc('snooze_rating_request', { p_id: id });
+  if (error) throw error;
+}
+
+// Cadence de rappel : prochaine connexion, puis 24h, puis 72h apres la
+// creation. Au-dela, la demande reste accessible depuis l'historique sans
+// popup force (reminder_stage plafonne a 3 cote serveur).
+export function shouldPromptRatingRequest(request: Pick<RatingRequest, 'createdAt' | 'lastRemindedAt' | 'reminderStage'>): boolean {
+  if (request.reminderStage >= 3) return false;
+  if (!request.lastRemindedAt) return true;
+  const hoursSinceLastPrompt = (Date.now() - new Date(request.lastRemindedAt).getTime()) / 3_600_000;
+  const hoursSinceCreated = (Date.now() - new Date(request.createdAt).getTime()) / 3_600_000;
+  if (request.reminderStage === 1) return hoursSinceLastPrompt >= 24;
+  if (request.reminderStage === 2) return hoursSinceCreated >= 72 && hoursSinceLastPrompt >= 24;
+  return false;
 }

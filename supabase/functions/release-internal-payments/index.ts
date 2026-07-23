@@ -1,6 +1,13 @@
-// Edge Function `release-internal-payments` — libère à J+3, sans intervention
-// du travailleur, les paiements internes (wallet simulé, hors Stripe) dont
-// l'échéance est atteinte.
+// Edge Function `release-internal-payments` — maintenance périodique de fin
+// de mission, sans intervention de l'utilisateur :
+//   1. libère à J+3 les paiements internes (wallet simulé, hors Stripe) dont
+//      l'échéance est atteinte ;
+//   2. vérifie automatiquement (auto_verify_ready_missions) les entrées CV
+//      en 'pending_verification' depuis plus de 48h sans contestation
+//      bloquante -> passage en 'verified' (points vert du CV vivant) ;
+//   3. publie (auto_publish_stale_ratings) les avis encore 'pending' depuis
+//      plus de 7 jours (anti-représailles : les deux parties ont eu le temps
+//      de se noter, on ne bloque pas indéfiniment un avis solitaire).
 //
 // Le mouvement 'pending' est créé IMMÉDIATEMENT à la confirmation de fin de
 // mission (trigger applications_pending_wallet_earning). Cette fonction ne
@@ -62,8 +69,17 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  const { data: verified, error: verifyError } = await supabase.rpc("auto_verify_ready_missions");
+  const { data: publishedCount, error: publishError } = await supabase.rpc("auto_publish_stale_ratings");
+
   return new Response(
-    JSON.stringify({ checked: (due ?? []).length, released, skipped }),
+    JSON.stringify({
+      checked: (due ?? []).length,
+      released,
+      skipped,
+      cv_verified: verifyError ? { error: verifyError.message } : (verified ?? []).length,
+      ratings_published: publishError ? { error: publishError.message } : publishedCount ?? 0,
+    }),
     { status: 200, headers },
   );
 });

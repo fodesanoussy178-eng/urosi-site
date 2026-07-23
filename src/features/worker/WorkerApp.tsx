@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth/AuthContext';
 import { signOut } from '@/features/auth/authService';
 import { submitWorkerKyc, updateProfile, uploadIdentityDocument, type Profile } from '@/features/profile/profileService';
@@ -23,9 +22,23 @@ import {
   applyToMission,
   updateApplicationStatus,
   fetchMyApplications,
+  subscribeToMyApplicationsFeed,
+  unsubscribeApplicationsFeed,
   type ApplicationWithMission,
 } from '@/features/missions/applicationsService';
-import { rate, fetchStructureRatings, fetchStructureReviews, fetchWorkerReceivedRatings, fetchRatedApplicationIds, type StructureRating, type StructureReview } from '@/features/missions/ratingsService';
+import {
+  rate,
+  fetchStructureRatings,
+  fetchStructureReviews,
+  fetchWorkerReceivedRatings,
+  fetchRatedApplicationIds,
+  fetchPendingRatingRequests,
+  snoozeRatingRequest,
+  shouldPromptRatingRequest,
+  type StructureRating,
+  type StructureReview,
+  type RatingRequest,
+} from '@/features/missions/ratingsService';
 import { notifyDelay } from '@/features/missions/feedbackService';
 import {
   attendanceEventLabel,
@@ -33,6 +46,8 @@ import {
   reportMissionIssue,
   type AttendanceEvent,
 } from '@/features/missions/attendanceService';
+import { WorkerQrPointageSheet } from '@/features/missions/WorkerQrPointageSheet';
+import type { QRTokenType, CvStatus } from '@/types/database.types';
 import { fetchUnreadCounts } from '@/features/messages/messagesService';
 import { fetchMySpotOffers, respondToSpotOffer, type SpotOffer } from '@/features/missions/spotOffersService';
 import { fetchWorkerStats, type WorkerStats } from '@/features/stats/statsService';
@@ -154,7 +169,6 @@ function SpotOfferBanner({ offer, busy, onRespond }: { offer: SpotOffer; busy: b
 }
 
 export function WorkerApp() {
-  const navigate = useNavigate();
   const { session, profile, refreshProfile } = useAuth();
   const [tab, setTab] = useState<Tab>('flux');
   const [flux, setFlux] = useState<MissionWithStructure[]>([]);
@@ -178,6 +192,10 @@ export function WorkerApp() {
   const [ratingFor, setRatingFor] = useState<ApplicationWithMission | null>(null);
   const [structureRatingScore, setStructureRatingScore] = useState<number | null>(null);
   const [structureRatingNote, setStructureRatingNote] = useState('');
+  const [ratingRequests, setRatingRequests] = useState<RatingRequest[]>([]);
+  const [autoRatingRequestId, setAutoRatingRequestId] = useState<string | null>(null);
+  const [snoozedThisSession, setSnoozedThisSession] = useState<Set<string>>(new Set());
+  const [qrFor, setQrFor] = useState<{ app: ApplicationWithMission; step: QRTokenType } | null>(null);
   const [chatFor, setChatFor] = useState<ApplicationWithMission | null>(null);
   const [alrt, setAlrt] = useState<{ app: ApplicationWithMission; type: 'retard' | 'annulation' } | null>(null);
   const [kycFor, setKycFor] = useState<ApplicationWithMission | null>(null);
@@ -188,7 +206,7 @@ export function WorkerApp() {
   const [toast, setToast] = useState<string | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout>>();
 
-  useBodyScrollLock(Boolean(detail || structureProfile || ratingFor || chatFor || alrt || kycFor || signal || docKey));
+  useBodyScrollLock(Boolean(detail || structureProfile || ratingFor || chatFor || alrt || kycFor || signal || docKey || qrFor));
 
   const ville = profile?.city || (session?.user.user_metadata?.city as string | undefined) || '';
   const prenom = (profile?.full_name || session?.user.email || '').split(' ')[0] || '';
@@ -202,26 +220,28 @@ export function WorkerApp() {
   async function load() {
     if (!session) return;
     try {
-      const [missions, myApps, received, myStats, offers] = await Promise.all([
+      const [missions, myApps, received, myStats, offers, pendingRatingRequests] = await Promise.all([
         fetchOpenMissions(),
         fetchMyApplications(session.user.id),
         fetchWorkerReceivedRatings(session.user.id),
         fetchWorkerStats().catch(() => null),
         fetchMySpotOffers().catch(() => [] as SpotOffer[]),
+        fetchPendingRatingRequests(session.user.id).catch(() => [] as RatingRequest[]),
       ]);
       setFlux(missions);
       setApps(myApps);
       setReceivedRatings(received);
       setSpotOffers(offers);
+      setRatingRequests(pendingRatingRequests);
       if (myStats) setStats(myStats);
       const structureIds = [...new Set(missions.map((m) => m.structure_id))];
       setStructRatings(await fetchStructureRatings(structureIds));
       const activeIds = myApps.filter((a) => ['accepted', 'in_progress', 'payment_pending', 'completed'].includes(a.status)).map((a) => a.id);
-      const completedIds = myApps.filter((a) => a.status === 'completed').map((a) => a.id);
+      const cvIds = myApps.filter((a) => a.cv_status != null || a.status === 'completed').map((a) => a.id);
       const [unreadMap, attendanceMap, ratedStructure] = await Promise.all([
         fetchUnreadCounts(activeIds, session.user.id),
         fetchAttendanceEvents(myApps.map((a) => a.id)).catch(() => new Map<string, AttendanceEvent[]>()),
-        fetchRatedApplicationIds(completedIds, 'worker_to_structure').catch(() => new Set<string>()),
+        fetchRatedApplicationIds(cvIds, 'worker_to_structure').catch(() => new Set<string>()),
       ]);
       setUnread(unreadMap);
       setAttendance(attendanceMap);
@@ -255,6 +275,30 @@ export function WorkerApp() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
+
+  // Mes candidatures en direct : la structure confirme le pointage (scan du
+  // QR) depuis un autre appareil — la carte "mission en cours" doit
+  // disparaître automatiquement, sans rechargement manuel de la page.
+  useEffect(() => {
+    if (!session) return;
+    const channel = subscribeToMyApplicationsFeed(session.user.id, () => load());
+    return () => unsubscribeApplicationsFeed(channel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
+
+  // Demande de note automatique : premiere connexion, puis rappels a 24h et
+  // 72h (shouldPromptRatingRequest). "Me le rappeler plus tard" ne supprime
+  // jamais la demande — elle reste accessible depuis l'historique.
+  useEffect(() => {
+    if (ratingFor || !session) return;
+    const due = ratingRequests.find((r) => !snoozedThisSession.has(r.id) && shouldPromptRatingRequest(r));
+    if (!due) return;
+    const app = apps.find((a) => a.id === due.applicationId);
+    if (!app) return;
+    setAutoRatingRequestId(due.id);
+    setRatingFor(app);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ratingRequests, apps, ratingFor, session]);
 
   // Taux de commission (configurés dans Supabase) pour « Tu recevras ».
   useEffect(() => {
@@ -290,12 +334,20 @@ export function WorkerApp() {
       if (db == null) return -1;
       return da - db;
     });
-  const acceptedApps = apps.filter((a) => a.status === 'accepted' || a.status === 'in_progress' || a.status === 'payment_pending');
+  // La carte "mission en cours" quitte l'ecran des que la fin est confirmee :
+  // payment_pending n'y figure plus (elle bascule aussitot dans le CV, avec
+  // le statut de verification adequat).
+  const acceptedApps = apps.filter((a) => a.status === 'accepted' || a.status === 'in_progress');
   const pendingApps = apps.filter((a) => a.status === 'pending');
-  const completedApps = apps.filter((a) => a.status === 'completed');
-  const missionCategories = completedMissionCategories(completedApps);
-  const cvCount = completedApps.length;
-  const receivedScores = completedApps.map((a) => receivedRatings.get(a.id)).filter((s): s is number => Boolean(s));
+  // CV vivant : toute mission dont la fin est confirmee (cv_status renseigne),
+  // plus les anciennes lignes 'completed' d'avant ce correctif (cv_status
+  // alors null, traitees comme deja verifiees).
+  const cvApps = apps.filter((a) => a.cv_status != null || a.status === 'completed');
+  const cvStatusOf = (a: ApplicationWithMission): CvStatus => a.cv_status ?? 'verified';
+  const verifiedCvApps = cvApps.filter((a) => cvStatusOf(a) === 'verified');
+  const missionCategories = completedMissionCategories(verifiedCvApps);
+  const cvCount = verifiedCvApps.length;
+  const receivedScores = verifiedCvApps.map((a) => receivedRatings.get(a.id)).filter((s): s is number => Boolean(s));
   const receivedAvg = receivedScores.length ? receivedScores.reduce((s, v) => s + v, 0) / receivedScores.length : null;
   const unreadTotal = [...unread.values()].reduce((s, v) => s + v, 0);
   const kycIsReady = isKycReady(profile);
@@ -316,6 +368,17 @@ export function WorkerApp() {
     }
   }
 
+  function closeRatingModal(snooze: boolean) {
+    if (snooze && autoRatingRequestId) {
+      setSnoozedThisSession((prev) => new Set(prev).add(autoRatingRequestId));
+      snoozeRatingRequest(autoRatingRequestId).catch(() => undefined);
+    }
+    setRatingFor(null);
+    setAutoRatingRequestId(null);
+    setStructureRatingScore(null);
+    setStructureRatingNote('');
+  }
+
   async function noterStructure() {
     if (!session || !ratingFor?.mission || structureRatingScore == null) return;
     try {
@@ -327,12 +390,14 @@ export function WorkerApp() {
         direction: 'worker_to_structure',
         comment: structureRatingNote.slice(0, 280),
       });
+      if (autoRatingRequestId) setSnoozedThisSession((prev) => new Set(prev).add(autoRatingRequestId));
       await load();
-      notif('Avis enregistré anonymement. Il sera publié un lundi dès qu’un lot de 3 avis sera constitué.');
+      notif('Avis enregistré. Il sera visible une fois que les deux parties auront répondu (ou après quelques jours).');
     } catch (e) {
       notif(e instanceof Error ? e.message : 'Notation impossible.');
     } finally {
       setRatingFor(null);
+      setAutoRatingRequestId(null);
       setStructureRatingScore(null);
       setStructureRatingNote('');
     }
@@ -376,13 +441,13 @@ export function WorkerApp() {
     }
   }
 
-  function ouvrirPointage(app: ApplicationWithMission) {
+  function ouvrirPointage(app: ApplicationWithMission, step: QRTokenType) {
     if (!isKycReady(profile)) {
       setKycFor(app);
       notif('Ajoute ton IBAN et ta pièce pour débloquer le pointage.');
       return;
     }
-    navigate('/valider');
+    setQrFor({ app, step });
   }
 
   function openStructureProfile(mission: MissionWithStructure) {
@@ -527,8 +592,6 @@ export function WorkerApp() {
                 const unreadCount = unread.get(a.id) ?? 0;
                 const events = attendance.get(a.id) ?? [];
                 const startDone = Boolean(a.actual_start_at || a.checked_in_at);
-                const endDone = Boolean(a.actual_end_at);
-                const paymentPending = a.status === 'payment_pending';
                 return (
                   <div key={a.id} style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 15 }}>
                     <div style={{ fontSize: 14, fontWeight: 800, color: T.text, marginBottom: 2 }}>{a.mission?.title ?? 'Mission'}</div>
@@ -552,28 +615,24 @@ export function WorkerApp() {
                         <div>
                           <div style={{ fontSize: 11, fontWeight: 900, color: startDone ? T.green : T.text }}>Début de mission</div>
                           <div style={{ fontSize: 9.5, color: T.mu, marginTop: 2 }}>
-                            {startDone ? `Confirmé à ${new Date(a.actual_start_at || a.checked_in_at || '').toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : 'Scanne le QR de la structure puis saisis le PIN'}
+                            {startDone ? `Confirmé à ${new Date(a.actual_start_at || a.checked_in_at || '').toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : 'Affiche ton QR, la structure le scanne et confirme'}
                           </div>
                         </div>
                         {!startDone && (
-                          <button onClick={() => ouvrirPointage(a)} style={{ background: '#fff', color: '#000', border: 'none', borderRadius: 8, padding: '8px 10px', fontSize: 11, fontWeight: 900, cursor: 'pointer' }}>
+                          <button onClick={() => ouvrirPointage(a, 'start')} style={{ background: '#fff', color: '#000', border: 'none', borderRadius: 8, padding: '8px 10px', fontSize: 11, fontWeight: 900, cursor: 'pointer' }}>
                             {kycIsReady ? 'Démarrer' : 'Ajouter IBAN + pièce'}
                           </button>
                         )}
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
                         <div>
-                          <div style={{ fontSize: 11, fontWeight: 900, color: endDone ? T.green : startDone ? T.text : T.mu }}>Fin de mission</div>
+                          <div style={{ fontSize: 11, fontWeight: 900, color: startDone ? T.text : T.mu }}>Fin de mission</div>
                           <div style={{ fontSize: 9.5, color: T.mu, marginTop: 2 }}>
-                            {endDone
-                              ? `Confirmée à ${new Date(a.actual_end_at || '').toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
-                              : startDone
-                                ? 'Disponible depuis la confirmation du début'
-                                : 'Disponible après le début'}
+                            {startDone ? 'Disponible depuis la confirmation du début' : 'Disponible après le début'}
                           </div>
                         </div>
-                        {startDone && !endDone && (
-                          <button onClick={() => ouvrirPointage(a)} style={{ background: T.grad, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 10px', fontSize: 11, fontWeight: 900, cursor: 'pointer' }}>
+                        {startDone && (
+                          <button onClick={() => ouvrirPointage(a, 'end')} style={{ background: T.grad, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 10px', fontSize: 11, fontWeight: 900, cursor: 'pointer' }}>
                             Terminer
                           </button>
                         )}
@@ -581,11 +640,6 @@ export function WorkerApp() {
                       {a.delay_minutes > 0 && (
                         <div style={{ marginTop: 8, fontSize: 9.5, color: a.delay_minutes <= 5 ? T.amber : T.red }}>
                           Retard calculé : {a.delay_minutes} min · {a.delay_status === 'tolerated' ? 'toléré' : a.delay_status}
-                        </div>
-                      )}
-                      {paymentPending && (
-                        <div style={{ marginTop: 8, fontSize: 9.5, color: T.cyan }}>
-                          Mission terminée · paiement préparé pour J+3.
                         </div>
                       )}
                     </div>
@@ -600,17 +654,19 @@ export function WorkerApp() {
                         ))}
                       </div>
                     )}
-                    <button
-                      onClick={() => setChatFor(a)}
-                      style={{ position: 'relative', width: '100%', background: '#1d4ed815', color: '#93c5fd', border: '1px solid #1e40af', borderRadius: 8, padding: '9px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer', marginBottom: 7 }}
-                    >
-                      💬 Discuter avec la structure
-                      {unreadCount > 0 && (
-                        <span style={{ position: 'absolute', top: -6, right: -4, minWidth: 15, height: 15, borderRadius: 8, background: '#dc2626', color: '#fff', fontSize: 9, fontWeight: 900, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>
-                          {unreadCount}
-                        </span>
-                      )}
-                    </button>
+                    {a.conversation_status === 'open' && (
+                      <button
+                        onClick={() => setChatFor(a)}
+                        style={{ position: 'relative', width: '100%', background: '#1d4ed815', color: '#93c5fd', border: '1px solid #1e40af', borderRadius: 8, padding: '9px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer', marginBottom: 7 }}
+                      >
+                        💬 Discuter avec la structure
+                        {unreadCount > 0 && (
+                          <span style={{ position: 'absolute', top: -6, right: -4, minWidth: 15, height: 15, borderRadius: 8, background: '#dc2626', color: '#fff', fontSize: 9, fontWeight: 900, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>
+                            {unreadCount}
+                          </span>
+                        )}
+                      </button>
+                    )}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 7 }}>
                       <button onClick={() => setAlrt({ app: a, type: 'retard' })} style={{ background: T.amberBg, color: T.amber, border: `1px solid ${T.amberBorder}`, borderRadius: 8, padding: '8px 0', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
                         ⏱ Retard
@@ -619,18 +675,12 @@ export function WorkerApp() {
                         ✕ Annuler
                       </button>
                     </div>
-                    {endDone ? (
-                      <div style={{ width: '100%', background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 900, textAlign: 'center', marginBottom: 6 }}>
-                        Fin enregistrée · paiement en préparation
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => ouvrirPointage(a)}
-                        style={{ width: '100%', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 9, padding: '11px 0', fontSize: 13, fontWeight: 900, cursor: 'pointer', marginBottom: 6 }}
-                      >
-                        {kycIsReady ? (startDone ? 'Terminer la mission' : 'Démarrer la mission') : 'Ajouter IBAN + pièce pour pointer'}
-                      </button>
-                    )}
+                    <button
+                      onClick={() => ouvrirPointage(a, startDone ? 'end' : 'start')}
+                      style={{ width: '100%', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 9, padding: '11px 0', fontSize: 13, fontWeight: 900, cursor: 'pointer', marginBottom: 6 }}
+                    >
+                      {kycIsReady ? (startDone ? 'Terminer la mission' : 'Démarrer la mission') : 'Ajouter IBAN + pièce pour pointer'}
+                    </button>
                     <button onClick={() => setSignal(a)} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#f59e0b', textDecoration: 'underline' }}>
                       ⚠ Signaler un problème
                     </button>
@@ -693,9 +743,11 @@ export function WorkerApp() {
                   </div>
                 )}
                 <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Historique vérifié</div>
-                {completedApps.length === 0 && <div style={{ fontSize: 11, color: T.mu }}>Tes missions terminées apparaîtront ici, avec la note donnée par la structure.</div>}
-                {completedApps.map((a, i) => {
+                {cvApps.length === 0 && <div style={{ fontSize: 11, color: T.mu }}>Tes missions terminées apparaîtront ici, avec la note donnée par la structure.</div>}
+                <style>{`@keyframes urosiCvDot{0%,100%{opacity:.25}50%{opacity:1}} .urosi-cv-dots span{animation:urosiCvDot 1.3s ease-in-out infinite} .urosi-cv-dots span:nth-child(2){animation-delay:.18s} .urosi-cv-dots span:nth-child(3){animation-delay:.36s}`}</style>
+                {cvApps.map((a, i) => {
                   const score = receivedRatings.get(a.id);
+                  const status = cvStatusOf(a);
                   return (
                     <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderTop: i > 0 ? `1px solid ${T.cb}` : 'none' }}>
                       <div style={{ minWidth: 0, flex: 1 }}>
@@ -706,8 +758,8 @@ export function WorkerApp() {
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                        {score ? <Stars n={score} size={10} /> : <span style={{ fontSize: 9, color: T.mu }}>pas encore notée</span>}
-                        {!ratedStructureIds.has(a.id) && (
+                        {status === 'verified' && (score ? <Stars n={score} size={10} /> : <span style={{ fontSize: 9, color: T.mu }}>pas encore notée</span>)}
+                        {status === 'verified' && !ratedStructureIds.has(a.id) && (
                           <button
                             onClick={() => setRatingFor(a)}
                             style={{ fontSize: 9, fontWeight: 800, color: T.cyan, background: '#22d3ee15', border: 'none', borderRadius: 8, padding: '4px 8px', cursor: 'pointer' }}
@@ -715,7 +767,28 @@ export function WorkerApp() {
                             Noter la structure
                           </button>
                         )}
-                        <span style={{ fontSize: 9, fontWeight: 800, color: T.green }}>✓</span>
+                        {status === 'pending_verification' && (
+                          <span aria-label="Vérification en cours" title="Mission terminée, vérification en cours" className="urosi-cv-dots" style={{ fontSize: 13, fontWeight: 900, color: T.mu, letterSpacing: 2 }}>
+                            <span>•</span><span>•</span><span>•</span>
+                          </span>
+                        )}
+                        {status === 'verified' && <span style={{ fontSize: 9, fontWeight: 800, color: T.green }}>✓</span>}
+                        {status === 'disputed' && (
+                          <button
+                            onClick={() => notif(a.cv_status_reason ? `Contestée : ${a.cv_status_reason}` : 'Mission contestée par la structure.')}
+                            style={{ fontSize: 9, fontWeight: 800, color: T.amber, background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 8, padding: '4px 8px', cursor: 'pointer' }}
+                          >
+                            ⚠ Contestée
+                          </button>
+                        )}
+                        {status === 'rejected' && (
+                          <button
+                            onClick={() => notif(a.cv_status_reason ? `Rejetée : ${a.cv_status_reason}` : 'Mission rejetée par le support UROSI.')}
+                            style={{ fontSize: 9, fontWeight: 800, color: T.red, background: T.redBg, border: `1px solid ${T.redBorder}`, borderRadius: 8, padding: '4px 8px', cursor: 'pointer' }}
+                          >
+                            ✕ Rejetée
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -984,19 +1057,18 @@ export function WorkerApp() {
 
         {/* Recap + étoiles (travailleur note la structure) */}
         {ratingFor && (
-          <div className="urosi-modal-layer urosi-bottom-sheet-layer" role="dialog" aria-modal="true" aria-label="Noter la structure" style={{ ...SHEET, background: 'rgba(0,0,0,.92)' }}>
+          <div className="urosi-modal-layer urosi-bottom-sheet-layer" role="dialog" aria-modal="true" aria-label="Mission terminée" style={{ ...SHEET, background: 'rgba(0,0,0,.92)' }}>
             <div className="urosi-bottom-sheet" style={SHEET_BODY} onClick={(e) => e.stopPropagation()}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 14 }}>
                 <div style={{ width: 34, height: 34, borderRadius: '50%', background: T.greenBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17 }}>✓</div>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 900, color: T.green }}>Mission terminée !</div>
+                  <div style={{ fontSize: 14, fontWeight: 900, color: T.green }}>Mission terminée</div>
                   <div style={{ fontSize: 10, color: T.mu }}>{ratingFor.mission?.title}</div>
                 </div>
               </div>
-              <div style={{ fontSize: 11, color: T.sub, marginBottom: 4 }}>
-                Cette mission rejoint ton CV vivant et ton paiement est crédité sur ton wallet. La structure te notera de son côté — sa note apparaîtra dans ton historique (informative, jamais bloquante).
+              <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>
+                Comment s'est passée votre expérience avec la structure ?
               </div>
-              <div style={{ fontSize: 12, color: T.text, fontWeight: 700, marginBottom: 9 }}>Note la structure :</div>
               <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
                 {[1, 2, 3, 4, 5].map((n) => (
                   <button key={n} aria-label={`${n} étoile${n > 1 ? 's' : ''}`} onClick={() => setStructureRatingScore(n)} style={{ flex: 1, padding: '12px 0', fontSize: 22, background: structureRatingScore === n ? T.amberBg : T.row, border: `1px solid ${structureRatingScore === n ? T.amberBorder : T.cb}`, borderRadius: 10, cursor: 'pointer', color: '#f59e0b' }}>
@@ -1005,22 +1077,38 @@ export function WorkerApp() {
                 ))}
               </div>
               <textarea
-                aria-label="Commentaire anonyme"
+                aria-label="Commentaire (facultatif)"
                 value={structureRatingNote}
                 onChange={(event) => setStructureRatingNote(event.target.value.slice(0, 280))}
                 rows={3}
                 placeholder="Ajoute une courte note facultative…"
                 style={{ ...inp, resize: 'none', lineHeight: 1.5, marginBottom: 5 }}
               />
-              <div style={{ color: T.mu, fontSize: 9, marginBottom: 10 }}>{structureRatingNote.length}/280 · Publication anonyme un lundi, uniquement par lots de 3 avis.</div>
+              <div style={{ color: T.mu, fontSize: 9, marginBottom: 10 }}>
+                {structureRatingNote.length}/280 · Visible une fois que les deux parties auront répondu (ou après quelques jours).
+              </div>
               <button onClick={noterStructure} disabled={structureRatingScore == null} style={{ width: '100%', background: structureRatingScore == null ? T.row : '#fff', color: structureRatingScore == null ? T.mu : '#000', border: 'none', borderRadius: 9, padding: '11px 0', fontSize: 12, fontWeight: 900, cursor: structureRatingScore == null ? 'not-allowed' : 'pointer', marginBottom: 6 }}>
-                Envoyer anonymement
+                Envoyer mon avis
               </button>
-              <button onClick={() => { setRatingFor(null); setStructureRatingScore(null); setStructureRatingNote(''); }} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: T.mu, padding: '4px 0' }}>
-                Passer
+              <button onClick={() => closeRatingModal(true)} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: T.mu, padding: '4px 0' }}>
+                Me le rappeler plus tard
               </button>
             </div>
           </div>
+        )}
+
+        {qrFor && (
+          <WorkerQrPointageSheet
+            applicationId={qrFor.app.id}
+            step={qrFor.step}
+            missionTitle={qrFor.app.mission?.title}
+            onClose={() => setQrFor(null)}
+            onConfirmed={() => {
+              setQrFor(null);
+              notif(qrFor.step === 'start' ? 'Début de mission confirmé.' : 'Fin de mission confirmée.');
+              load();
+            }}
+          />
         )}
 
         {/* Chat avec la structure */}
