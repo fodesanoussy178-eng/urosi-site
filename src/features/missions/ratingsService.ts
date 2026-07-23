@@ -151,14 +151,21 @@ export async function snoozeRatingRequest(id: string): Promise<void> {
   if (error) throw error;
 }
 
-// Cadence de rappel : prochaine connexion, puis 24h, puis 72h apres la
+// Les avis ne sont jamais demandes immediatement a la fin de la mission :
+// on laisse quelques minutes s'ecouler (le pointage de fin vient a peine
+// d'etre valide). Passe ce delai, la demande est proposee a la prochaine
+// occasion, puis rappelee a 24h et 72h.
+export const RATING_FIRST_PROMPT_DELAY_MINUTES = 5;
+
+// Cadence de rappel : ~5 min apres la fin, puis 24h, puis 72h apres la
 // creation. Au-dela, la demande reste accessible depuis l'historique sans
 // popup force (reminder_stage plafonne a 3 cote serveur).
 export function shouldPromptRatingRequest(request: Pick<RatingRequest, 'createdAt' | 'lastRemindedAt' | 'reminderStage'>): boolean {
   if (request.reminderStage >= 3) return false;
-  if (!request.lastRemindedAt) return true;
+  const minutesSinceCreated = (Date.now() - new Date(request.createdAt).getTime()) / 60_000;
+  if (!request.lastRemindedAt) return minutesSinceCreated >= RATING_FIRST_PROMPT_DELAY_MINUTES;
   const hoursSinceLastPrompt = (Date.now() - new Date(request.lastRemindedAt).getTime()) / 3_600_000;
-  const hoursSinceCreated = (Date.now() - new Date(request.createdAt).getTime()) / 3_600_000;
+  const hoursSinceCreated = minutesSinceCreated / 60;
   if (request.reminderStage === 1) return hoursSinceLastPrompt >= 24;
   if (request.reminderStage === 2) return hoursSinceCreated >= 72 && hoursSinceLastPrompt >= 24;
   return false;
