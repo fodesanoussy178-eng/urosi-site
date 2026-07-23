@@ -1,0 +1,12 @@
+-- Bug reel decouvert en testant la refonte StructureApp : la migration
+-- 20260723050000 a ajoute p_critical a public.notify() via CREATE OR REPLACE,
+-- mais changer la liste de parametres cree une SECONDE surcharge au lieu de
+-- remplacer l'ancienne (Postgres distingue les fonctions par signature).
+-- Resultat : tout appel a 5 arguments (candidature, message, note, pointage,
+-- paiement...) echoue depuis avec "function notify(...) is not unique" —
+-- silencieusement casse en staging ET production depuis cette migration.
+--
+-- La version a 6 arguments est un sur-ensemble strict (p_critical default
+-- false = comportement identique a l'ancienne) : on supprime simplement la
+-- surcharge obsolete a 5 arguments.
+drop function if exists public.notify(uuid, text, text, text, jsonb);

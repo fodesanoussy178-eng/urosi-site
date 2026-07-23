@@ -53,3 +53,32 @@ export async function closeMission(missionId: string): Promise<void> {
   const { error } = await supabase.from('missions').update({ status: 'closed' }).eq('id', missionId);
   if (error) throw error;
 }
+
+export interface MissionNonSensitivePatch {
+  title?: string;
+  detail?: string | null;
+  dress_code?: string | null;
+  equipment?: string | null;
+  instructions?: string | null;
+}
+
+// Modification volontairement limitee aux champs sans impact financier ou
+// d'engagement (prix, horaires, places restent figes une fois publies) :
+// evite qu'une modification apres candidature change les conditions sur
+// lesquelles un travailleur s'est engage.
+export async function updateMission(missionId: string, patch: MissionNonSensitivePatch): Promise<void> {
+  const { error } = await supabase.from('missions').update(patch).eq('id', missionId);
+  if (error) throw error;
+}
+
+// Annule la mission et, en cascade, toute candidature encore active dessus
+// (en attente, acceptee ou en cours) : le travailleur est notifie via le
+// trigger de statut deja en place, sans sanction automatique de son cote.
+export async function cancelMission(missionId: string, activeApplicationIds: string[]): Promise<void> {
+  const { error: missionError } = await supabase.from('missions').update({ status: 'cancelled' }).eq('id', missionId);
+  if (missionError) throw missionError;
+  for (const applicationId of activeApplicationIds) {
+    const { error } = await supabase.from('applications').update({ status: 'cancelled' }).eq('id', applicationId);
+    if (error) throw error;
+  }
+}

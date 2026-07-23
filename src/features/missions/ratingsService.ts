@@ -81,6 +81,21 @@ export async function fetchRatedApplicationIds(applicationIds: string[], directi
   return new Set((data ?? []).map((r) => r.application_id));
 }
 
+// Score de la note DEJA DONNEE par l'utilisateur courant (jamais celle recue :
+// pas de contournement de l'anonymat des avis "structure_to_worker" cote
+// travailleur ni de la publication par lots cote structure). Utilise pour
+// afficher "la note que tu as donnee" dans le resume d'une mission terminee.
+export async function fetchGivenRatingScores(applicationIds: string[], direction: RatingDirection): Promise<Map<string, number>> {
+  if (applicationIds.length === 0) return new Map();
+  const { data, error } = await supabase
+    .from('ratings')
+    .select('application_id, score')
+    .eq('direction', direction)
+    .in('application_id', applicationIds);
+  if (error) throw error;
+  return new Map((data ?? []).map((r) => [r.application_id, r.score]));
+}
+
 export interface WorkerReputation {
   average: number | null;
   count: number;

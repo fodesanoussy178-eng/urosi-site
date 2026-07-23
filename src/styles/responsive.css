@@ -88,6 +88,63 @@
     width: 100%;
     text-align: left;
   }
+
+  /* Espace Structure : vraie barre laterale desktop (pas une vue mobile
+     simplement etiree) — actif en permanence a ce breakpoint, sans dependre
+     d'un bascule manuel comme le format de la demo. */
+  .rsp-structure-shell .structure-dashboard {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    align-items: start;
+    gap: 24px;
+  }
+  .rsp-structure-shell .structure-sidebar {
+    display: block;
+    position: sticky;
+    top: 20px;
+    align-self: start;
+    padding: 20px 14px;
+    border-right: 1px solid rgba(148, 163, 184, .18);
+  }
+  .rsp-structure-shell .structure-sidebar-brand {
+    display: block;
+    padding: 0 6px 20px;
+  }
+  .rsp-structure-shell .structure-navigation {
+    position: static !important;
+    inset: auto !important;
+    transform: none !important;
+    max-width: none !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column;
+    gap: 6px !important;
+    padding: 0 !important;
+    border-top: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .rsp-structure-shell .structure-navigation > button {
+    width: 100%;
+    min-height: 44px !important;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    text-align: left;
+    padding: 10px 12px !important;
+    gap: 8px;
+  }
+  .rsp-structure-shell .structure-dashboard-content {
+    min-width: 0;
+  }
+  .rsp-structure-shell .structure-missions-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rsp-structure-shell .structure-mission-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
 }
 
 /* ── Très grand écran ≥ 1440 px : plafond, pas d'étirement ──────────────── */

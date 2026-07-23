@@ -12,7 +12,7 @@ import { WalletCard } from '@/components/ui/WalletCard';
 import { fetchMyStructures, createStructure, updateStructureAbout } from './structureService';
 import { StatsPanel, StructureStatsSummary } from './StatsPanel';
 import { StructureHistoryPanel } from './StructureHistoryPanel';
-import { fetchMissionsForStructure, createMission } from '@/features/missions/missionsService';
+import { fetchMissionsForStructure, createMission, updateMission, cancelMission, type MissionNonSensitivePatch } from '@/features/missions/missionsService';
 import {
   fetchApplicationsForMissions,
   updateApplicationStatus,
@@ -23,6 +23,7 @@ import {
 import {
   rate,
   fetchRatedApplicationIds,
+  fetchGivenRatingScores,
   fetchWorkerReputation,
   fetchPendingRatingRequests,
   snoozeRatingRequest,
@@ -31,7 +32,7 @@ import {
   type RatingRequest,
 } from '@/features/missions/ratingsService';
 import { fetchDelaysForApplications } from '@/features/missions/feedbackService';
-import { confirmRemoteAttendance, reportWorkerAbsence } from '@/features/missions/attendanceService';
+import { confirmRemoteAttendance, reportWorkerAbsence, reportMissionIssue } from '@/features/missions/attendanceService';
 import { verifyMissionCvEntry, disputeMissionCvEntry } from '@/features/missions/missionCvService';
 import { MissionValidationPanel } from '@/features/missions/MissionValidationPanel';
 import { fetchUnreadCounts } from '@/features/messages/messagesService';
@@ -42,7 +43,7 @@ import type { Mission, Structure } from '@/features/missions/types';
 import type { MissionDayOfWeek, MissionSlot, MissionTimeSlot } from '@/types/database.types';
 import { formatEuros, formatHours } from '@/lib/format';
 
-type Tab = 'missions' | 'candidats' | 'pilotage' | 'historique';
+type Tab = 'missions' | 'candidats' | 'habitues' | 'historique';
 const DEFAULT_HOURLY_EUR = 14;
 const MIN_HOURLY_EUR = 10;
 const MAX_HOURLY_EUR = 80;
@@ -133,6 +134,17 @@ function inferTimeSlot(slots: MissionSlot[]): MissionTimeSlot {
 
 type CandWithMission = ApplicationWithApplicant & { missionTitle: string };
 
+// Bucket derive du statut REEL de la candidature active sur la mission (pas
+// du statut de la mission elle-meme, qui reste open/closed/cancelled) : le
+// menu contextuel a trois points affiche uniquement les actions autorisees
+// pour cet etat, jamais de messagerie active une fois la mission terminee.
+type MissionBucket = 'cancelled' | 'completed' | 'active' | 'open';
+type ManageMode = 'menu' | 'edit' | 'cancel' | 'summary';
+interface ManageState {
+  mission: Mission;
+  mode: ManageMode;
+}
+
 function isVerifiedStructure(structure: Structure | null): boolean {
   if (!structure) return false;
   return structure.verification_status === 'verified' || structure.verification_status === 'founder_bypass';
@@ -143,6 +155,63 @@ function verificationBadge(structure: Structure): { label: string; color: string
   if (structure.verification_status === 'verified') return { label: '✓ SIRET vérifié', color: T.green, bg: T.greenBg };
   if (structure.verification_status === 'rejected') return { label: 'SIRET refusé', color: T.red, bg: T.redBg };
   return { label: 'Vérification SIRET', color: T.amber, bg: T.amberBg };
+}
+
+function statusPill(bucket: MissionBucket): { label: string; color: string; bg: string } {
+  if (bucket === 'cancelled') return { label: 'Annulée', color: T.red, bg: T.redBg };
+  if (bucket === 'completed') return { label: 'Terminée', color: T.cyan, bg: '#22d3ee15' };
+  if (bucket === 'active') return { label: 'En cours', color: T.green, bg: T.greenBg };
+  return { label: 'Publiée', color: T.amber, bg: T.amberBg };
+}
+
+// Carte compacte (inspiree de la demo) : titre, creneau, prix, statut derive
+// de la candidature la plus avancee, et un menu a trois points qui ouvre
+// MissionManageSheet plutot qu'une pile de boutons toujours visibles.
+function MissionCard({
+  mission,
+  bucket,
+  candidateCount,
+  onOpenCandidates,
+  onOpenMenu,
+}: {
+  mission: Mission;
+  bucket: MissionBucket;
+  candidateCount: number;
+  onOpenCandidates: () => void;
+  onOpenMenu: () => void;
+}) {
+  const pill = statusPill(bucket);
+  const slots = mission.slots ?? [];
+  const first = firstSlot(slots);
+  const last = lastSlot(slots);
+  return (
+    <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '11px 12px', display: 'flex', flexDirection: 'column', gap: 7 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mission.title}</div>
+          <div style={{ fontSize: 10, color: T.mu, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {first ? `${formatLongDay(first.date)} · ${first.start}–${last?.end ?? first.end}` : mission.city}
+          </div>
+        </div>
+        <button
+          onClick={onOpenMenu}
+          aria-label="Actions sur la mission"
+          style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 8, width: 30, height: 30, flexShrink: 0, cursor: 'pointer', color: T.sub, fontSize: 15, fontWeight: 900, lineHeight: 1 }}
+        >
+          •••
+        </button>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 9.5, fontWeight: 700, color: pill.color, background: pill.bg, borderRadius: 8, padding: '2px 7px' }}>{pill.label}</span>
+        <span style={{ fontSize: 12, fontWeight: 900, color: T.text }}>{mission.is_solidaire ? 'Solidaire' : euros(mission.worker_rate_cents)}</span>
+      </div>
+      {bucket === 'open' && candidateCount > 0 && (
+        <button onClick={onOpenCandidates} style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', fontSize: 10.5, fontWeight: 800, color: T.amber }}>
+          {candidateCount} candidature{candidateCount > 1 ? 's' : ''} à traiter →
+        </button>
+      )}
+    </div>
+  );
 }
 
 export function StructureApp() {
@@ -169,9 +238,13 @@ export function StructureApp() {
   const [vf, setVf] = useState({ nom: '', siret: '' });
   const [founderAccess, setFounderAccess] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [manage, setManage] = useState<ManageState | null>(null);
+  const [givenRatings, setGivenRatings] = useState<Map<string, number>>(new Map());
+  const [duplicateSeed, setDuplicateSeed] = useState<Mission | null>(null);
+  const [showDetailedStats, setShowDetailedStats] = useState(false);
   const tr = useRef<ReturnType<typeof setTimeout>>();
 
-  useBodyScrollLock(Boolean(showPub || validationMissionId || panelC || ratingCand || chatFor || docKey));
+  useBodyScrollLock(Boolean(showPub || validationMissionId || panelC || ratingCand || chatFor || docKey || manage));
 
   function notif(m: string) {
     setToast(m);
@@ -185,16 +258,18 @@ export function StructureApp() {
     setCands(candsByMission);
     const allApps = [...candsByMission.values()].flat();
     const appIds = allApps.map((a) => a.id);
-    const [delayMap, rated, unreadMap, pendingRatingRequests] = await Promise.all([
+    const [delayMap, rated, unreadMap, pendingRatingRequests, given] = await Promise.all([
       fetchDelaysForApplications(appIds),
       fetchRatedApplicationIds(appIds, 'structure_to_worker'),
       fetchUnreadCounts(appIds, session.user.id),
       fetchPendingRatingRequests(session.user.id).catch(() => [] as RatingRequest[]),
+      fetchGivenRatingScores(appIds, 'structure_to_worker').catch(() => new Map<string, number>()),
     ]);
     setDelays(delayMap);
     setRatedIds(rated);
     setUnread(unreadMap);
     setRatingRequests(pendingRatingRequests);
+    setGivenRatings(given);
   }
 
   async function reload() {
@@ -373,6 +448,48 @@ export function StructureApp() {
     }
   }
 
+  async function saveMissionEdit(missionId: string, patch: MissionNonSensitivePatch) {
+    try {
+      await updateMission(missionId, patch);
+      await reload();
+      setManage(null);
+      notif('Informations mises à jour.');
+    } catch (e) {
+      notif(e instanceof Error ? e.message : 'Modification impossible.');
+    }
+  }
+
+  async function confirmCancelMission(mission: Mission) {
+    const active = (cands.get(mission.id) ?? []).filter((c) => ['pending', 'accepted', 'in_progress'].includes(c.status));
+    try {
+      await cancelMission(mission.id, active.map((c) => c.id));
+      await reload();
+      setManage(null);
+      notif(active.length > 0 ? 'Mission annulée — le(s) travailleur(s) concerné(s) est/sont prévenu(s).' : 'Mission annulée.');
+    } catch (e) {
+      notif(e instanceof Error ? e.message : 'Annulation impossible.');
+    }
+  }
+
+  function startDuplicate(mission: Mission) {
+    setDuplicateSeed(mission);
+    setManage(null);
+    setShowPub(true);
+  }
+
+  async function signalerProbleme(applicationId: string) {
+    const description = window.prompt('Décris brièvement le problème (visible par Support UROSI) :');
+    if (!description || !description.trim()) return;
+    try {
+      await reportMissionIssue({ applicationId, category: 'autre', description: description.trim() });
+      notif('Signalement transmis à Support UROSI.');
+    } catch (e) {
+      notif(e instanceof Error ? e.message : 'Envoi impossible.');
+    } finally {
+      setManage(null);
+    }
+  }
+
   async function openPanel(c: CandWithMission) {
     setPanelC(c);
     setPanelRep(null);
@@ -414,6 +531,22 @@ export function StructureApp() {
   const misTitle = (mid: string) => mis.find((m) => m.id === mid)?.title ?? '—';
   const candCount = (mid: string) => (cands.get(mid) ?? []).filter((c) => c.status === 'pending').length;
   const unreadTotal = [...unread.values()].reduce((s, v) => s + v, 0);
+
+  // Candidature de reference pour le menu contextuel d'une mission : la plus
+  // avancee (terminee > active > en attente), jamais refusee/annulee.
+  function activeCandidateFor(missionId: string): CandWithMission | null {
+    const list = (cands.get(missionId) ?? []).map((c) => ({ ...c, missionTitle: misTitle(missionId) }));
+    const rank = (status: string) => (status === 'completed' ? 3 : ['accepted', 'in_progress', 'payment_pending'].includes(status) ? 2 : status === 'pending' ? 1 : 0);
+    return list.filter((c) => rank(c.status) > 0).sort((a, b) => rank(b.status) - rank(a.status))[0] ?? null;
+  }
+
+  function missionBucket(mission: Mission): MissionBucket {
+    if (mission.status === 'cancelled') return 'cancelled';
+    const candidate = activeCandidateFor(mission.id);
+    if (candidate?.status === 'completed' || candidate?.status === 'payment_pending') return 'completed';
+    if (candidate && ['accepted', 'in_progress'].includes(candidate.status)) return 'active';
+    return 'open';
+  }
   const formFounder = founderAccess;
   const formSiretOk = isValidSiret(vf.siret);
   const canCreateStructure = vf.nom.trim().length >= 2 && (formFounder || formSiretOk);
@@ -488,115 +621,96 @@ export function StructureApp() {
               </details>
             </div>
 
-            {/* Onglets */}
-            <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-              {(
-                [
-                  ['missions', 'Missions', mis.length],
-                  ['candidats', 'Candidats', pending.length + unreadTotal],
-                  ['pilotage', 'Pilotage', 0],
-                  ['historique', 'Historique', 0],
-                ] as [Tab, string, number][]
-              ).map(([k, l, n]) => (
-                <button
-                  key={k}
-                  onClick={() => {
-                    setTab(k);
-                    if (k === 'candidats') setCandMis(null);
-                  }}
-                  style={{ flex: 1, background: tab === k ? '#fff' : T.card, color: tab === k ? '#000' : T.sub, border: `1px solid ${tab === k ? '#fff' : T.cb}`, borderRadius: 9, padding: '8px 0', fontSize: 11.5, fontWeight: 800, cursor: 'pointer' }}
+            {/* Structure de tableau de bord : barre laterale en desktop (CSS
+                @1024px+), navigation basse fixe en mobile — meme composant. */}
+            <div className="structure-dashboard">
+              <aside className="structure-sidebar" aria-label="Navigation Structure">
+                <div className="structure-sidebar-brand" aria-hidden="true">
+                  <div style={{ color: T.green, fontSize: 10, fontWeight: 900, letterSpacing: 1.2 }}>ESPACE STRUCTURE</div>
+                  <div style={{ color: T.text, fontSize: 17, fontWeight: 900, marginTop: 5 }}>Tableau de bord</div>
+                </div>
+                <nav
+                  className="structure-navigation"
+                  aria-label="Navigation de l'espace Structure"
+                  style={{ width: '100%', maxWidth: 430, borderTop: `1px solid ${T.cb}`, padding: '8px 10px calc(10px + env(safe-area-inset-bottom))', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5, background: T.bg, position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', boxShadow: '0 -10px 28px rgba(0,0,0,.16)', zIndex: 50 }}
                 >
-                  {l}
-                  {n > 0 && <span style={{ marginLeft: 4, fontSize: 10, fontWeight: 800, color: tab === k ? '#000' : T.cyan }}>{n}</span>}
-                </button>
-              ))}
-            </div>
+                  {(
+                    [
+                      ['missions', 'Missions', mis.length],
+                      ['candidats', 'Candidats', pending.length + unreadTotal],
+                      ['habitues', 'Habitués', habitues.length],
+                      ['historique', 'Historique', 0],
+                    ] as [Tab, string, number][]
+                  ).map(([k, l, n]) => (
+                    <button
+                      key={k}
+                      onClick={() => {
+                        setTab(k);
+                        if (k === 'candidats') setCandMis(null);
+                      }}
+                      style={{ position: 'relative', background: tab === k ? '#fff' : 'transparent', color: tab === k ? '#05060d' : T.mu, border: 'none', borderRadius: 12, minHeight: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, fontSize: 10.5, fontWeight: 800, cursor: 'pointer' }}
+                    >
+                      {l}
+                      {n > 0 && (
+                        <span style={{ position: 'absolute', top: 3, right: '14%', minWidth: 16, height: 16, borderRadius: 9, background: '#dc2626', color: '#fff', fontSize: 9, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 0 2px ${T.bg}` }}>{n}</span>
+                      )}
+                    </button>
+                  ))}
+                </nav>
+              </aside>
 
-            {/* ── MISSIONS ── */}
-            {tab === 'missions' && (
-              <div className="rsp-grid" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {!structureVerified && (
-                  <div className="rsp-span" style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 10, padding: '10px 12px', fontSize: 10.5, color: T.amber, lineHeight: 1.45 }}>
-                    Vérification SIRET requise avant publication.
-                  </div>
-                )}
-                <button className="rsp-span" onClick={() => structureVerified && setShowPub(true)} disabled={!structureVerified} style={{ width: '100%', background: structureVerified ? '#fff' : T.row, color: structureVerified ? '#000' : T.mu, border: 'none', borderRadius: 11, padding: '13px 0', fontSize: 13, fontWeight: 900, cursor: structureVerified ? 'pointer' : 'not-allowed', marginBottom: 2 }}>
-                  {structureVerified ? '＋ Publier une mission' : 'Structure à vérifier'}
-                </button>
-                {pending.length > 0 && (
-                  <button className="rsp-span" type="button" onClick={() => { setCandMis(null); setTab('candidats'); }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', background: 'transparent', color: T.text, border: 0, borderBottom: `1px solid ${T.cb}`, padding: '10px 2px', fontSize: 11.5, fontWeight: 900, cursor: 'pointer' }}>
-                    <span>Candidatures à traiter</span><span style={{ color: T.amber }}>{pending.length} urgente{pending.length > 1 ? 's' : ''} →</span>
-                  </button>
-                )}
-                {mis.length > 0 && <div className="rsp-span" style={{ color: T.text, fontSize: 13, fontWeight: 900, marginTop: 6 }}>Missions en cours</div>}
-                {mis.length === 0 && <div className="rsp-span" style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 20, textAlign: 'center', fontSize: 11, color: T.mu }}>Aucune mission publiée pour l'instant.</div>}
-                {mis.map((m, i) => {
-                  const cc = candCount(m.id);
-                  return (
-                    <div key={m.id}>
-                      {i === 0 && <div style={{ fontSize: 9, fontWeight: 800, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6, marginTop: 4 }}>Prochaine mission</div>}
-                      <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '13px 15px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 7 }}>
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <div style={{ fontSize: 13, fontWeight: 800, color: T.text, marginBottom: 2 }}>
-                              {m.is_urgent && <span style={{ color: T.amber }}>⚡ </span>}
-                              {m.title}
-                            </div>
-                            <div style={{ fontSize: 10, color: T.mu }}>
-                              📍 {m.city || 'MEL'} · {m.scheduled_date}
-                              {m.start_time ? ` · ${m.start_time.slice(0, 5)}` : ''} · {formatHours(m.duration_minutes)}
-                            </div>
-                          </div>
-                          <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 10 }}>
-                            <div style={{ fontSize: 16, fontWeight: 900, color: m.is_solidaire ? T.green : T.text }}>{m.is_solidaire ? 'Solidaire' : euros(m.worker_rate_cents)}</div>
-                          </div>
+              <main className="structure-dashboard-content">
+                {/* ── MISSIONS ── */}
+                {tab === 'missions' && (
+                  <div className="structure-missions-layout">
+                    <div className="structure-missions-main" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {!structureVerified && (
+                        <div style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 10, padding: '10px 12px', fontSize: 10.5, color: T.amber, lineHeight: 1.45 }}>
+                          Vérification SIRET requise avant publication.
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 9, fontWeight: 700, color: m.status === 'open' ? T.green : T.mu }}>
-                            {m.status === 'open' ? 'Active' : m.status === 'closed' ? 'Clôturée' : 'Annulée'}
-                          </span>
-                          {cc > 0 ? (
-                            <button
-                              onClick={() => {
-                                setCandMis(m.id);
-                                setTab('candidats');
-                              }}
-                              style={{ fontSize: 10, fontWeight: 700, color: T.cyan, background: '#22d3ee15', border: 'none', borderRadius: 8, padding: '3px 9px', cursor: 'pointer' }}
-                            >
-                              {cc} candidat{cc > 1 ? 's' : ''} →
-                            </button>
-                          ) : (
-                            <span style={{ fontSize: 10, color: T.mu }}>Aucun candidat pour l'instant</span>
-                          )}
-                          {m.status !== 'cancelled' && (
-                            <button onClick={() => setValidationMissionId(m.id)} style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 800, color: T.text, background: T.row, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '5px 9px', cursor: 'pointer' }}>
-                              QR & PIN
-                            </button>
-                          )}
-                        </div>
+                      )}
+                      <button onClick={() => { setDuplicateSeed(null); structureVerified && setShowPub(true); }} disabled={!structureVerified} style={{ width: '100%', background: structureVerified ? '#fff' : T.row, color: structureVerified ? '#000' : T.mu, border: 'none', borderRadius: 11, padding: '13px 0', fontSize: 13, fontWeight: 900, cursor: structureVerified ? 'pointer' : 'not-allowed', marginBottom: 2 }}>
+                        {structureVerified ? '＋ Publier une mission' : 'Structure à vérifier'}
+                      </button>
+                      {pending.length > 0 && (
+                        <button type="button" onClick={() => { setCandMis(null); setTab('candidats'); }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', background: 'transparent', color: T.text, border: 0, borderBottom: `1px solid ${T.cb}`, padding: '10px 2px', fontSize: 11.5, fontWeight: 900, cursor: 'pointer' }}>
+                          <span>Candidatures à traiter</span><span style={{ color: T.amber }}>{pending.length} urgente{pending.length > 1 ? 's' : ''} →</span>
+                        </button>
+                      )}
+                      {mis.length > 0 && <div style={{ color: T.text, fontSize: 13, fontWeight: 900, marginTop: 6 }}>Missions</div>}
+                      {mis.length === 0 && <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 20, textAlign: 'center', fontSize: 11, color: T.mu }}>Aucune mission publiée pour l'instant.</div>}
+                      <div className="structure-mission-grid" style={{ display: 'grid', gap: 8 }}>
+                        {mis.map((m) => (
+                          <MissionCard
+                            key={m.id}
+                            mission={m}
+                            bucket={missionBucket(m)}
+                            candidateCount={candCount(m.id)}
+                            onOpenCandidates={() => { setCandMis(m.id); setTab('candidats'); }}
+                            onOpenMenu={() => setManage({ mission: m, mode: 'menu' })}
+                          />
+                        ))}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* ── CANDIDATS ── */}
-            {tab === 'candidats' && (
-              <div className="rsp-grid" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {candMis ? (
-                  <div className="rsp-span" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#22d3ee12', border: '1px solid #0e7490', borderRadius: 10, padding: '9px 12px' }}>
-                    <span style={{ fontSize: 11, color: T.cyan, fontWeight: 800 }}>Candidats pour « {misTitle(candMis)} »</span>
-                    <button onClick={() => setCandMis(null)} style={{ fontSize: 10, color: T.sub, background: T.row, border: `1px solid ${T.cb}`, borderRadius: 7, padding: '3px 9px', fontWeight: 700, cursor: 'pointer' }}>
-                      Tous ✕
-                    </button>
-                  </div>
-                ) : (
-                  <div className="rsp-span" style={{ fontSize: 10, color: T.sub, lineHeight: 1.5, marginBottom: 2 }}>
-                    Tape un candidat pour voir son CV vivant, puis confirme ou refuse. Une fois accepté, échange avec lui par message.
                   </div>
                 )}
-                {shownCands.map((c) => {
+
+                {/* ── CANDIDATS ── */}
+                {tab === 'candidats' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {candMis ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#22d3ee12', border: '1px solid #0e7490', borderRadius: 10, padding: '9px 12px' }}>
+                        <span style={{ fontSize: 11, color: T.cyan, fontWeight: 800 }}>Candidats pour « {misTitle(candMis)} »</span>
+                        <button onClick={() => setCandMis(null)} style={{ fontSize: 10, color: T.sub, background: T.row, border: `1px solid ${T.cb}`, borderRadius: 7, padding: '3px 9px', fontWeight: 700, cursor: 'pointer' }}>
+                          Tous ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 10, color: T.sub, lineHeight: 1.5, marginBottom: 2 }}>
+                        Tape un candidat pour voir son CV vivant, puis confirme ou refuse. Une fois accepté, échange avec lui par message.
+                      </div>
+                    )}
+                    {shownCands.map((c) => {
                   const delay = delays.get(c.id);
                   const unreadCount = unread.get(c.id) ?? 0;
                   return (
@@ -695,37 +809,56 @@ export function StructureApp() {
               </div>
             )}
 
-            {/* ── PILOTAGE : stats + wallet + habitués ── */}
-            {tab === 'pilotage' && session && (
-              <div className="rsp-grid-lg" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <StatsPanel structureId={structure.id} />
-                <WalletCard profileId={session.user.id} mode="structure" />
-                <AideRegles onOpen={setDocKey} />
-                <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '13px 15px' }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 9 }}>Habitués</div>
-                  {habitues.length === 0 && <div style={{ fontSize: 11, color: T.mu }}>Les travailleurs qui terminent des missions chez toi apparaîtront ici.</div>}
-                  {habitues.map((h) => (
-                    <div key={h.workerId} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '7px 0', borderTop: `1px solid ${T.cb}` }}>
-                      <div style={{ width: 30, height: 30, borderRadius: 9, background: 'hsl(265 58% 46%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 13, flexShrink: 0 }}>
-                        {h.nom.charAt(0).toUpperCase()}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 700, color: T.text }}>{h.nom}</div>
-                      <span style={{ fontSize: 14, fontWeight: 900, color: T.amber }}>{h.fois}×</span>
+            {/* ── HABITUÉS ── */}
+                {tab === 'habitues' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ fontSize: 10, color: T.sub, lineHeight: 1.5, marginBottom: 2 }}>
+                      Les travailleurs qui ont déjà terminé au moins une mission chez toi.
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                    {habitues.length === 0 && (
+                      <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 20, textAlign: 'center', fontSize: 11, color: T.mu }}>
+                        Les travailleurs qui terminent des missions chez toi apparaîtront ici.
+                      </div>
+                    )}
+                    {habitues.map((h) => (
+                      <div key={h.workerId} style={{ display: 'flex', gap: 10, alignItems: 'center', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '10px 12px' }}>
+                        <div style={{ width: 34, height: 34, borderRadius: 10, background: 'hsl(265 58% 46%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 13, flexShrink: 0 }}>
+                          {h.nom.charAt(0).toUpperCase()}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 700, color: T.text }}>{h.nom}</div>
+                        <span style={{ fontSize: 14, fontWeight: 900, color: T.amber }}>{h.fois}×</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-            {tab === 'historique' && (
-              <div className="rsp-grid-lg" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <section style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '13px 15px' }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 9 }}>Performance réelle</div>
-                  <StructureStatsSummary structureId={structure.id} acceptedCount={acceptedDecisionCount} decidedCount={decidedCount} />
-                </section>
-                <StructureHistoryPanel structureId={structure.id} />
-              </div>
-            )}
+                {/* ── HISTORIQUE : compact, avis anonymisés + stats détaillées repliables ── */}
+                {tab === 'historique' && (
+                  <div className="rsp-grid-lg" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <section style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '13px 15px' }}>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 9 }}>Performance réelle</div>
+                      <StructureStatsSummary structureId={structure.id} acceptedCount={acceptedDecisionCount} decidedCount={decidedCount} />
+                    </section>
+                    <StructureHistoryPanel structureId={structure.id} />
+                    <button
+                      type="button"
+                      onClick={() => setShowDetailedStats((v) => !v)}
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '11px 14px', fontSize: 11.5, fontWeight: 800, color: T.text, cursor: 'pointer' }}
+                    >
+                      <span>Statistiques détaillées &amp; portefeuille</span>
+                      <span style={{ color: T.mu }}>{showDetailedStats ? '▲' : '▼'}</span>
+                    </button>
+                    {showDetailedStats && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <StatsPanel structureId={structure.id} />
+                        {session && <WalletCard profileId={session.user.id} mode="structure" />}
+                      </div>
+                    )}
+                    <AideRegles onOpen={setDocKey} />
+                  </div>
+                )}
+              </main>
+            </div>
 
             {/* Panneau candidat */}
             {panelC && (
@@ -809,10 +942,12 @@ export function StructureApp() {
             {showPub && structure && (
               <PublishModal
                 structure={structure}
-                onClose={() => setShowPub(false)}
+                initial={duplicateSeed}
+                onClose={() => { setShowPub(false); setDuplicateSeed(null); }}
                 onPublished={(m) => {
                   setMis((l) => [m, ...l]);
                   setShowPub(false);
+                  setDuplicateSeed(null);
                   setTab('missions');
                   notif(`« ${m.title} » publiée${m.pricing_breakdown && m.pricing_breakdown.adjustments.length > 0 ? ` à ${euros(m.worker_rate_cents)} (rémunération boostée)` : ''}.`);
                 }}
@@ -820,6 +955,46 @@ export function StructureApp() {
             )}
             {validationMissionId && structure && (
               <MissionValidationPanel missionId={validationMissionId} structureId={structure.id} onClose={() => setValidationMissionId(null)} />
+            )}
+            {manage && (
+              <MissionManageSheet
+                mission={manage.mission}
+                mode={manage.mode}
+                bucket={missionBucket(manage.mission)}
+                candidate={activeCandidateFor(manage.mission.id)}
+                givenScore={(() => {
+                  const c = activeCandidateFor(manage.mission.id);
+                  return c ? givenRatings.get(c.id) : undefined;
+                })()}
+                onClose={() => setManage(null)}
+                onModeChange={(mode) => setManage((m) => (m ? { ...m, mode } : m))}
+                onSaveEdit={(patch) => saveMissionEdit(manage.mission.id, patch)}
+                onCancelMission={() => confirmCancelMission(manage.mission)}
+                onDuplicate={() => startDuplicate(manage.mission)}
+                onOpenCandidate={() => {
+                  const c = activeCandidateFor(manage.mission.id);
+                  if (c) {
+                    setManage(null);
+                    openPanel(c);
+                  }
+                }}
+                onMessage={() => {
+                  const c = activeCandidateFor(manage.mission.id);
+                  if (c) {
+                    setManage(null);
+                    setChatFor(c);
+                  }
+                }}
+                onPointage={() => {
+                  const missionId = manage.mission.id;
+                  setManage(null);
+                  setValidationMissionId(missionId);
+                }}
+                onReportIssue={() => {
+                  const c = activeCandidateFor(manage.mission.id);
+                  if (c) signalerProbleme(c.id);
+                }}
+              />
             )}
           </>
         )}
@@ -878,23 +1053,201 @@ function AboutEditor({ structure, onSaved, notif }: { structure: Structure; onSa
   );
 }
 
-function PublishModal({ structure, onClose, onPublished }: { structure: Structure; onClose: () => void; onPublished: (m: Mission) => void }) {
-  const [f, setF] = useState({
-    t: '',
-    city: '',
-    address: '',
-    category: 'renfort_service',
-    rateMode: 'hourly' as RateMode,
-    hourly: String(DEFAULT_HOURLY_EUR),
-    fixed: '60',
-    desc: '',
-    dressCode: '',
-    equipment: '',
-    instructions: '',
-    positions: 1,
-    solid: false,
+// Menu contextuel a trois points d'une mission : la liste d'actions depend
+// uniquement du bucket (statut de la candidature la plus avancee), jamais
+// d'un bouton "Contacter" laisse visible par erreur apres la fin de mission.
+function MissionManageSheet({
+  mission,
+  mode,
+  bucket,
+  candidate,
+  givenScore,
+  onClose,
+  onModeChange,
+  onSaveEdit,
+  onCancelMission,
+  onDuplicate,
+  onOpenCandidate,
+  onMessage,
+  onPointage,
+  onReportIssue,
+}: {
+  mission: Mission;
+  mode: ManageMode;
+  bucket: MissionBucket;
+  candidate: CandWithMission | null;
+  givenScore: number | undefined;
+  onClose: () => void;
+  onModeChange: (m: ManageMode) => void;
+  onSaveEdit: (patch: MissionNonSensitivePatch) => void;
+  onCancelMission: () => void;
+  onDuplicate: () => void;
+  onOpenCandidate: () => void;
+  onMessage: () => void;
+  onPointage: () => void;
+  onReportIssue: () => void;
+}) {
+  const [edit, setEdit] = useState({
+    title: mission.title,
+    detail: mission.detail ?? '',
+    dressCode: mission.dress_code ?? '',
+    equipment: mission.equipment ?? '',
+    instructions: mission.instructions ?? '',
   });
-  const [slots, setSlots] = useState<MissionSlot[]>([{ date: todayPlus(1), start: '18:00', end: '23:00' }]);
+
+  return (
+    <div className="rsp-sheet urosi-modal-layer urosi-bottom-sheet-layer" role="dialog" aria-modal="true" aria-label="Gérer la mission" style={{ background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+      <div className="rsp-sheet-body urosi-bottom-sheet" style={{ width: '100%', maxWidth: 420, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 26px', fontFamily: FONT }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <span style={{ fontSize: 14, fontWeight: 900, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 10 }}>{mission.title}</span>
+          <button onClick={onClose} style={{ background: T.row, border: 'none', borderRadius: 6, width: 26, height: 26, cursor: 'pointer', color: T.sub, fontSize: 14, flexShrink: 0 }}>×</button>
+        </div>
+
+        {mode === 'menu' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {bucket === 'open' && (
+              <>
+                <SheetAction label="Voir" onClick={() => onModeChange('summary')} />
+                <SheetAction label="Modifier" onClick={() => onModeChange('edit')} />
+                <SheetAction label="Dupliquer" onClick={onDuplicate} />
+                <SheetAction label="Annuler la mission" danger onClick={() => onModeChange('cancel')} />
+              </>
+            )}
+            {bucket === 'active' && (
+              <>
+                <SheetAction label="Voir le candidat" onClick={onOpenCandidate} />
+                {candidate?.conversation_status === 'open' && <SheetAction label="Messagerie" onClick={onMessage} />}
+                <SheetAction label="QR / pointage" onClick={onPointage} />
+                <SheetAction label="Modifier les informations non sensibles" onClick={() => onModeChange('edit')} />
+                <SheetAction label="Annuler la mission" danger onClick={() => onModeChange('cancel')} />
+              </>
+            )}
+            {bucket === 'completed' && (
+              <>
+                <SheetAction label="Voir le résumé" onClick={() => onModeChange('summary')} />
+                <SheetAction label="Voir le paiement" onClick={() => onModeChange('summary')} />
+                <SheetAction label={givenScore ? `Avis donné : ${'★'.repeat(givenScore)}` : "Voir l'avis"} onClick={() => onModeChange('summary')} />
+                <SheetAction label="Signaler un problème" onClick={onReportIssue} />
+              </>
+            )}
+            {bucket === 'cancelled' && <SheetAction label="Voir le résumé" onClick={() => onModeChange('summary')} />}
+          </div>
+        )}
+
+        {mode === 'edit' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <Fld label="Intitulé">
+              <input aria-label="Intitulé" value={edit.title} onChange={(e) => setEdit((x) => ({ ...x, title: e.target.value }))} style={inp} />
+            </Fld>
+            <Fld label="Descriptif">
+              <textarea aria-label="Descriptif" value={edit.detail} onChange={(e) => setEdit((x) => ({ ...x, detail: e.target.value }))} rows={3} style={{ ...inp, resize: 'none', lineHeight: 1.5 }} />
+            </Fld>
+            <Fld label="Tenue demandée">
+              <input aria-label="Tenue demandée" value={edit.dressCode} onChange={(e) => setEdit((x) => ({ ...x, dressCode: e.target.value }))} style={inp} />
+            </Fld>
+            <Fld label="Équipement">
+              <input aria-label="Équipement" value={edit.equipment} onChange={(e) => setEdit((x) => ({ ...x, equipment: e.target.value }))} style={inp} />
+            </Fld>
+            <Fld label="Consignes">
+              <textarea aria-label="Consignes" value={edit.instructions} onChange={(e) => setEdit((x) => ({ ...x, instructions: e.target.value }))} rows={3} style={{ ...inp, resize: 'none', lineHeight: 1.5 }} />
+            </Fld>
+            <div style={{ fontSize: 9.5, color: T.mu, lineHeight: 1.5 }}>Le prix, les horaires et le nombre de places restent fixés une fois la mission publiée.</div>
+            <button
+              onClick={() =>
+                onSaveEdit({
+                  title: edit.title.trim(),
+                  detail: edit.detail.trim() || null,
+                  dress_code: edit.dressCode.trim() || null,
+                  equipment: edit.equipment.trim() || null,
+                  instructions: edit.instructions.trim() || null,
+                })
+              }
+              style={{ width: '100%', background: '#fff', color: '#000', border: 'none', borderRadius: 10, padding: '12px 0', fontSize: 13, fontWeight: 900, cursor: 'pointer' }}
+            >
+              Enregistrer
+            </button>
+          </div>
+        )}
+
+        {mode === 'cancel' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ fontSize: 11.5, color: T.sub, lineHeight: 1.5 }}>
+              Annuler cette mission {candidate ? 'préviendra le travailleur concerné et libérera sa candidature' : "n'a pas de candidat engagé pour l'instant"}. Cette action est définitive.
+            </div>
+            <button onClick={onCancelMission} style={{ width: '100%', background: T.redBg, color: T.red, border: `1px solid ${T.redBorder}`, borderRadius: 10, padding: '12px 0', fontSize: 13, fontWeight: 900, cursor: 'pointer' }}>
+              Confirmer l'annulation
+            </button>
+            <button onClick={() => onModeChange('menu')} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: T.mu, padding: '4px 0' }}>
+              Retour
+            </button>
+          </div>
+        )}
+
+        {mode === 'summary' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.5 }}>{mission.detail || 'Aucun descriptif.'}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div style={{ background: T.row, borderRadius: 8, padding: '9px 10px' }}>
+                <div style={{ fontSize: 8.5, color: T.mu }}>Rémunération</div>
+                <div style={{ fontSize: 13, fontWeight: 900, color: T.text }}>{mission.is_solidaire ? 'Solidaire' : euros(mission.worker_rate_cents)}</div>
+              </div>
+              <div style={{ background: T.row, borderRadius: 8, padding: '9px 10px' }}>
+                <div style={{ fontSize: 8.5, color: T.mu }}>Places</div>
+                <div style={{ fontSize: 13, fontWeight: 900, color: T.text }}>{mission.positions ?? mission.places}</div>
+              </div>
+            </div>
+            {bucket === 'completed' && givenScore != null && (
+              <div style={{ background: T.row, borderRadius: 8, padding: '9px 10px' }}>
+                <div style={{ fontSize: 8.5, color: T.mu }}>Note que tu as donnée</div>
+                <div style={{ fontSize: 13, fontWeight: 900, color: '#f59e0b' }}>{'★'.repeat(givenScore)}</div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SheetAction({ label, onClick, danger }: { label: string; onClick: () => void; danger?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{ width: '100%', textAlign: 'left', background: danger ? T.redBg : T.row, color: danger ? T.red : T.text, border: `1px solid ${danger ? T.redBorder : T.cb}`, borderRadius: 10, padding: '12px 14px', fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function PublishModal({ structure, initial, onClose, onPublished }: { structure: Structure; initial?: Mission | null; onClose: () => void; onPublished: (m: Mission) => void }) {
+  const [f, setF] = useState(() => ({
+    t: initial ? `${initial.title} (copie)` : '',
+    city: initial?.city ?? '',
+    address: initial?.address ?? '',
+    category: initial?.mission_category ?? 'renfort_service',
+    rateMode: (initial && !initial.hourly_rate ? 'fixed' : 'hourly') as RateMode,
+    hourly: initial?.hourly_rate ? String(initial.hourly_rate) : String(DEFAULT_HOURLY_EUR),
+    fixed: initial && !initial.hourly_rate ? String((initial.worker_rate_cents ?? 6000) / 100) : '60',
+    desc: initial?.detail ?? '',
+    dressCode: initial?.dress_code ?? '',
+    equipment: initial?.equipment ?? '',
+    instructions: initial?.instructions ?? '',
+    positions: initial?.positions ?? 1,
+    solid: initial?.is_solidaire ?? false,
+  }));
+  // Duplique la structure des creneaux (nombre de jours, heures) mais jamais
+  // les dates : reprend a partir de demain, jamais dans le passe.
+  const [slots, setSlots] = useState<MissionSlot[]>(() => {
+    if (!initial?.slots || initial.slots.length === 0) return [{ date: todayPlus(1), start: '18:00', end: '23:00' }];
+    const sorted = initial.slots.slice().sort((a, b) => a.date.localeCompare(b.date));
+    const base = todayPlus(1);
+    const firstDate = sorted[0]?.date ?? base;
+    return sorted.map((sl) => {
+      const offsetDays = Math.round((new Date(`${sl.date}T00:00:00`).getTime() - new Date(`${firstDate}T00:00:00`).getTime()) / 86_400_000);
+      return { ...sl, date: addDays(base, offsetDays) };
+    });
+  });
   const [showDetail, setShowDetail] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
