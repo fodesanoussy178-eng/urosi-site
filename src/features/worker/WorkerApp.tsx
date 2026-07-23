@@ -611,32 +611,21 @@ export function WorkerApp() {
                       </div>
                     )}
                     <div style={{ background: T.row, border: `1px solid ${startDone ? T.greenBorder : T.cb}`, borderRadius: 12, padding: '11px 12px', marginBottom: 10 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                        <div>
-                          <div style={{ fontSize: 11, fontWeight: 900, color: startDone ? T.green : T.text }}>Début de mission</div>
-                          <div style={{ fontSize: 9.5, color: T.mu, marginTop: 2 }}>
-                            {startDone ? `Confirmé à ${new Date(a.actual_start_at || a.checked_in_at || '').toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : 'Affiche ton QR, la structure le scanne et confirme'}
-                          </div>
+                      {startDone && (
+                        <div style={{ fontSize: 11, fontWeight: 900, color: T.green, marginBottom: 8 }}>
+                          🟢 Mission en cours · débutée à {new Date(a.actual_start_at || a.checked_in_at || '').toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                         </div>
-                        {!startDone && (
-                          <button onClick={() => ouvrirPointage(a, 'start')} style={{ background: '#fff', color: '#000', border: 'none', borderRadius: 8, padding: '8px 10px', fontSize: 11, fontWeight: 900, cursor: 'pointer' }}>
-                            {kycIsReady ? 'Démarrer' : 'Ajouter IBAN + pièce'}
-                          </button>
-                        )}
+                      )}
+                      <div style={{ fontSize: 9.5, color: T.mu, marginBottom: 8 }}>
+                        {startDone ? 'La structure scanne ce QR pour confirmer la fin — aucune action de plus après.' : 'Présente ce QR à la structure, elle le scanne pour confirmer ton arrivée.'}
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
-                        <div>
-                          <div style={{ fontSize: 11, fontWeight: 900, color: startDone ? T.text : T.mu }}>Fin de mission</div>
-                          <div style={{ fontSize: 9.5, color: T.mu, marginTop: 2 }}>
-                            {startDone ? 'Disponible depuis la confirmation du début' : 'Disponible après le début'}
-                          </div>
-                        </div>
-                        {startDone && (
-                          <button onClick={() => ouvrirPointage(a, 'end')} style={{ background: T.grad, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 10px', fontSize: 11, fontWeight: 900, cursor: 'pointer' }}>
-                            Terminer
-                          </button>
-                        )}
-                      </div>
+                      <button
+                        onClick={() => ouvrirPointage(a, startDone ? 'end' : 'start')}
+                        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, background: startDone ? T.grad : '#fff', color: startDone ? '#fff' : '#000', border: 'none', borderRadius: 11, padding: '15px 0', fontSize: 14, fontWeight: 900, cursor: 'pointer' }}
+                      >
+                        <span aria-hidden="true" style={{ fontSize: 18 }}>▦</span>
+                        {!kycIsReady ? 'Ajouter IBAN + pièce' : startDone ? 'Afficher mon QR de départ' : 'Afficher mon QR d’arrivée'}
+                      </button>
                       {a.delay_minutes > 0 && (
                         <div style={{ marginTop: 8, fontSize: 9.5, color: a.delay_minutes <= 5 ? T.amber : T.red }}>
                           Retard calculé : {a.delay_minutes} min · {a.delay_status === 'tolerated' ? 'toléré' : a.delay_status}
