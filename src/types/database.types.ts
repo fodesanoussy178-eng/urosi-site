@@ -554,6 +554,10 @@ export interface Database {
           body: string | null;
           data: Json;
           read_at: string | null;
+          deleted_at: string | null;
+          archived_at: string | null;
+          is_critical: boolean;
+          resolved_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -564,6 +568,10 @@ export interface Database {
           body?: string | null;
           data?: Json;
           read_at?: string | null;
+          deleted_at?: string | null;
+          archived_at?: string | null;
+          is_critical?: boolean;
+          resolved_at?: string | null;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['notifications']['Insert']>;
@@ -1293,6 +1301,14 @@ export interface Database {
         Returns: undefined;
       };
       snooze_rating_request: {
+        Args: { p_id: string };
+        Returns: undefined;
+      };
+      delete_all_notifications: {
+        Args: Record<string, never>;
+        Returns: { deleted: number; kept_protected: number };
+      };
+      founder_resolve_notification: {
         Args: { p_id: string };
         Returns: undefined;
       };
