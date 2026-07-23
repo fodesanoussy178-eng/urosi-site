@@ -598,6 +598,7 @@ export interface Database {
           application_id: string | null;
           label: string;
           fund_status: 'pending' | 'available' | 'blocked';
+          available_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -608,6 +609,7 @@ export interface Database {
           application_id?: string | null;
           label?: string;
           fund_status?: 'pending' | 'available' | 'blocked';
+          available_at?: string | null;
           created_at?: string;
         };
         Update: Partial<Database['public']['Tables']['wallet_transactions']['Insert']>;

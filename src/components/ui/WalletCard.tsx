@@ -58,9 +58,10 @@ export function WalletCard({
     load();
   }, [load]);
 
-  const balance = wallet ? summary.available_cents : 0;
+  const available = wallet ? summary.available_cents : 0;
   const pending = summary.pending_cents;
   const blocked = summary.blocked_cents;
+  const total = available + pending + blocked;
   const shown = showAll ? txs : txs.slice(0, 5);
 
   return (
@@ -75,17 +76,18 @@ export function WalletCard({
           <span style={{ fontSize: 8.5, color: T.mu }}>paiements sécurisés UROSI</span>
         )}
       </div>
-      <div style={{ fontSize: 28, fontWeight: 900, color: balance < 0 ? T.amber : T.text, letterSpacing: -1, marginBottom: 10 }}>{amountsVisible ? euros(balance) : '•••'}</div>
-      {mode === 'structure' && balance < 0 && (
+      <div style={{ color: T.mu, fontSize: 8, marginBottom: 2 }}>Solde total</div>
+      <div style={{ fontSize: 28, fontWeight: 900, color: total < 0 ? T.amber : T.text, letterSpacing: -1, marginBottom: 10 }}>{amountsVisible ? euros(total) : '•••'}</div>
+      {mode === 'structure' && available < 0 && (
         <div style={{ fontSize: 10, color: T.amber, background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 8, padding: '7px 10px', marginBottom: 10, lineHeight: 1.5 }}>
           Solde à provisionner : les rémunérations versées dépassent ton provisionnement.
         </div>
       )}
-      {/* « Virement en cours » et « Bloqué » ne s'affichent que s'ils sont
-          non nuls : un montant en attente permanent crée de la frustration. */}
+      {/* « En attente » et « Bloqué » ne s'affichent que s'ils sont non nuls :
+          un montant en attente permanent crée de la frustration. */}
       {(() => {
-        const tiles: Array<[string, number, string]> = [['Disponible', balance, T.green]];
-        if (pending > 0) tiles.push(['Virement en cours · J+3', pending, T.amber]);
+        const tiles: Array<[string, number, string]> = [['Disponible', available, T.green]];
+        if (pending > 0) tiles.push(['En attente · J+3', pending, T.amber]);
         if (blocked > 0) tiles.push(['Bloqué', blocked, T.red]);
         return (
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${tiles.length}, 1fr)`, gap: 6, marginBottom: 12 }}>
@@ -108,7 +110,13 @@ export function WalletCard({
             <div style={{ fontSize: 11.5, fontWeight: 700, color: T.text }}>{TX_KIND_LABELS[tx.kind]}</div>
             {tx.label && <div style={{ fontSize: 9.5, color: T.mu, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.label}</div>}
             <div style={{ fontSize: 8.5, color: T.mu }}>{new Date(tx.created_at).toLocaleDateString('fr-FR')}</div>
-            {tx.fund_status !== 'available' && <div style={{ fontSize: 8.5, color: tx.fund_status === 'pending' ? T.amber : T.red }}>{tx.fund_status === 'pending' ? 'Virement en cours' : 'Bloqué'}</div>}
+            {tx.fund_status !== 'available' && (
+              <div style={{ fontSize: 8.5, color: tx.fund_status === 'pending' ? T.amber : T.red }}>
+                {tx.fund_status === 'pending'
+                  ? `En attente${tx.available_at ? ` · disponible le ${new Date(tx.available_at).toLocaleDateString('fr-FR')}` : ''}`
+                  : 'Bloqué'}
+              </div>
+            )}
           </div>
           <span style={{ fontSize: 12.5, fontWeight: 900, color: tx.amount_cents > 0 ? T.green : T.red, flexShrink: 0 }}>
             {amountsVisible ? `${tx.amount_cents > 0 ? '+' : ''}${euros(tx.amount_cents)}` : '•••'}
