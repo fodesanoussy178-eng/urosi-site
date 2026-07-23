@@ -36,6 +36,8 @@ import { confirmRemoteAttendance, reportWorkerAbsence, reportMissionIssue } from
 import { verifyMissionCvEntry, disputeMissionCvEntry } from '@/features/missions/missionCvService';
 import { MissionValidationPanel } from '@/features/missions/MissionValidationPanel';
 import { StructureQrScanSheet } from '@/features/missions/StructureQrScanSheet';
+import { createMissionCheckout } from '@/features/payments/stripeService';
+import { isStripeConfigured } from '@/lib/env';
 import { fetchUnreadCounts } from '@/features/messages/messagesService';
 import { geocodeMelCity } from '@/lib/geo';
 import { distinctDays, slotMinutes, spanDays, totalMinutes } from '@/lib/slots';
@@ -267,6 +269,7 @@ export function StructureApp() {
   const [duplicateSeed, setDuplicateSeed] = useState<Mission | null>(null);
   const [showDetailedStats, setShowDetailedStats] = useState(false);
   const [scanMission, setScanMission] = useState<Mission | null>(null);
+  const [payingId, setPayingId] = useState<string | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout>>();
 
   useBodyScrollLock(Boolean(showPub || validationMissionId || panelC || ratingCand || chatFor || docKey || manage || scanMission));
@@ -398,6 +401,35 @@ export function StructureApp() {
       notif(dec === 'accepted' ? 'Candidat accepté — le fil de discussion est ouvert.' : 'Candidat refusé.');
     } catch (e) {
       notif(e instanceof Error ? e.message : 'Action impossible.');
+    }
+  }
+
+  // Mission rémunérée : accepter un candidat passe OBLIGATOIREMENT par le
+  // paiement Stripe. On redirige vers la Checkout Session hébergée ; c'est le
+  // webhook (et lui seul) qui confirmera l'affectation. Une mission solidaire
+  // ou un environnement sans Stripe configuré garde l'acceptation directe.
+  function missionFor(candidate: CandWithMission): Mission | undefined {
+    return mis.find((m) => m.id === candidate.mission_id);
+  }
+
+  function isPaidMission(mission: Mission | undefined): boolean {
+    return Boolean(mission && !mission.is_solidaire && mission.worker_rate_cents > 0);
+  }
+
+  async function payAndConfirm(candidate: CandWithMission) {
+    const mission = missionFor(candidate);
+    if (!isStripeConfigured || !isPaidMission(mission)) {
+      await decide(candidate.id, 'accepted');
+      return;
+    }
+    try {
+      setPayingId(candidate.id);
+      const { url } = await createMissionCheckout(candidate.id);
+      if (!url) throw new Error('URL de paiement indisponible.');
+      window.location.assign(url); // redirection vers Stripe Checkout hébergé
+    } catch (e) {
+      setPayingId(null);
+      notif(e instanceof Error ? e.message : 'Ouverture du paiement impossible.');
     }
   }
 
@@ -778,9 +810,15 @@ export function StructureApp() {
                       </div>
                       {c.status === 'pending' && (
                         <div style={{ padding: '0 14px 12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                          <button onClick={() => decide(c.id, 'accepted')} style={{ background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
-                            ✓ Accepter
-                          </button>
+                          {isStripeConfigured && isPaidMission(missionFor(c)) ? (
+                            <button onClick={() => payAndConfirm(c)} disabled={payingId === c.id} style={{ background: '#fff', color: '#000', border: 'none', borderRadius: 8, padding: '9px 0', fontSize: 12, fontWeight: 900, cursor: payingId === c.id ? 'wait' : 'pointer' }}>
+                              {payingId === c.id ? 'Redirection…' : '💳 Payer et confirmer'}
+                            </button>
+                          ) : (
+                            <button onClick={() => decide(c.id, 'accepted')} style={{ background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
+                              ✓ Accepter
+                            </button>
+                          )}
                           <button onClick={() => decide(c.id, 'rejected')} style={{ background: T.redBg, color: T.red, border: `1px solid ${T.redBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                             Refuser
                           </button>
@@ -921,16 +959,55 @@ export function StructureApp() {
                   <div style={{ fontSize: 9.5, color: T.mu, lineHeight: 1.5, marginBottom: 12 }}>
                     Notes données par les structures après mission terminée. Informatives et jamais bloquantes (CGU) : la décision t'appartient.
                   </div>
-                  {panelC.status === 'pending' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                      <button onClick={() => decide(panelC.id, 'accepted')} style={{ background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 8, padding: '11px 0', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
-                        ✓ Accepter
-                      </button>
-                      <button onClick={() => decide(panelC.id, 'rejected')} style={{ background: T.redBg, color: T.red, border: `1px solid ${T.redBorder}`, borderRadius: 8, padding: '11px 0', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                        Refuser
-                      </button>
-                    </div>
-                  )}
+                  {panelC.status === 'pending' && (() => {
+                    const mission = missionFor(panelC);
+                    const paid = isStripeConfigured && isPaidMission(mission);
+                    const workerCents = mission?.worker_rate_cents ?? 0;
+                    const commissionCents = Math.round(workerCents * SERVICE_FEE_RATE);
+                    const totalCents = workerCents + commissionCents;
+                    return (
+                      <>
+                        {paid && mission && (
+                          <div style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '12px 13px', marginBottom: 10 }}>
+                            <div style={{ fontSize: 10, color: T.mu, marginBottom: 8 }}>
+                              {mission.title}{mission.scheduled_date ? ` · ${formatLongDay(mission.scheduled_date)}` : ''}{mission.duration_minutes ? ` · ${formatHours(mission.duration_minutes)}` : ''}
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 5 }}>
+                              <span style={{ color: T.mu }}>Rémunération du travailleur</span><strong style={{ color: T.text }}>{formatMoney(workerCents)}</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 5 }}>
+                              <span style={{ color: T.mu }}>Commission UROSI</span><strong style={{ color: T.text }}>{formatMoney(commissionCents)}</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 900, paddingTop: 6, borderTop: `1px solid ${T.cb}` }}>
+                              <span style={{ color: T.text }}>Total débité</span><span style={{ color: T.text }}>{formatMoney(totalCents)}</span>
+                            </div>
+                            <div style={{ fontSize: 9, color: T.mu, marginTop: 7, lineHeight: 1.45 }}>
+                              La mission n'est confirmée qu'après paiement. Tu seras redirigé vers un paiement sécurisé Stripe.
+                            </div>
+                          </div>
+                        )}
+                        {paid ? (
+                          <>
+                            <button onClick={() => payAndConfirm(panelC)} disabled={payingId === panelC.id} style={{ width: '100%', background: '#fff', color: '#000', border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: payingId === panelC.id ? 'wait' : 'pointer', marginBottom: 6 }}>
+                              {payingId === panelC.id ? 'Redirection vers le paiement…' : `Payer et confirmer la mission · ${formatMoney(totalCents)}`}
+                            </button>
+                            <button onClick={() => decide(panelC.id, 'rejected')} style={{ width: '100%', background: T.redBg, color: T.red, border: `1px solid ${T.redBorder}`, borderRadius: 10, padding: '11px 0', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
+                              Refuser le candidat
+                            </button>
+                          </>
+                        ) : (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                            <button onClick={() => decide(panelC.id, 'accepted')} style={{ background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 8, padding: '11px 0', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
+                              ✓ Accepter
+                            </button>
+                            <button onClick={() => decide(panelC.id, 'rejected')} style={{ background: T.redBg, color: T.red, border: `1px solid ${T.redBorder}`, borderRadius: 8, padding: '11px 0', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                              Refuser
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             )}

@@ -21,6 +21,7 @@ const ScanPage = lazy(() => import('@/features/missions/ScanPage').then((m) => (
 const WorkerAttendancePage = lazy(() => import('@/features/missions/WorkerAttendancePage').then((m) => ({ default: m.WorkerAttendancePage })));
 const ValidatorApp = lazy(() => import('@/features/missions/ValidatorApp').then((m) => ({ default: m.ValidatorApp })));
 const FounderAdminPage = lazy(() => import('@/features/founder/FounderAdminPage').then((m) => ({ default: m.FounderAdminPage })));
+const PaymentResultPage = lazy(() => import('@/features/payments/PaymentResultPage').then((m) => ({ default: m.PaymentResultPage })));
 
 function Centered({ text }: { text: string }) {
   return (
@@ -71,6 +72,8 @@ function AppShell() {
         <Route path="/reinitialisation" element={<ResetPasswordPage />} />
         <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
         <Route path="/scan/:token" element={<ScanPage />} />
+        <Route path="/paiement/succes" element={<PaymentResultPage outcome="success" />} />
+        <Route path="/paiement/annule" element={<PaymentResultPage outcome="cancel" />} />
         <Route path="/valider" element={<WorkerAttendancePage />} />
         <Route path="/valider/:qrCode" element={<WorkerAttendancePage />} />
         <Route path="/validation" element={<Navigate to="/connexion?next=/validation" replace />} />
@@ -94,6 +97,8 @@ function AppShell() {
       <Route path="/reinitialisation" element={<ResetPasswordPage />} />
       <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
       <Route path="/scan/:token" element={<ScanPage />} />
+      <Route path="/paiement/succes" element={<PaymentResultPage outcome="success" />} />
+      <Route path="/paiement/annule" element={<PaymentResultPage outcome="cancel" />} />
       <Route path="/valider" element={<WorkerAttendancePage />} />
       <Route path="/valider/:qrCode" element={<WorkerAttendancePage />} />
       <Route path="/validation" element={<ValidatorApp />} />

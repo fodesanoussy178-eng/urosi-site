@@ -426,6 +426,10 @@ export interface Database {
           cv_status: CvStatus | null;
           cv_status_reason: string | null;
           cv_verified_at: string | null;
+          stripe_payment_intent_id: string | null;
+          stripe_payment_status: string | null;
+          stripe_charge_id: string | null;
+          stripe_checkout_session_id: string | null;
           created_at: string;
         };
         Insert: {

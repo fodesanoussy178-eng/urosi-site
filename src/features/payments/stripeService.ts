@@ -84,6 +84,23 @@ export function createMissionPayment(applicationId: string) {
   return invoke<MissionPaymentIntent>('stripe-create-payment', { application_id: applicationId });
 }
 
+export interface MissionCheckout {
+  url: string;
+  session_id?: string;
+  amount?: number;
+  commission_cents?: number;
+  reused?: boolean;
+}
+
+/**
+ * Crée (ou réutilise) une Stripe Checkout Session pour payer ET confirmer une
+ * mission. Le montant est calculé côté serveur : jamais transmis depuis ici.
+ * Renvoie l'URL hébergée Stripe vers laquelle rediriger la structure.
+ */
+export function createMissionCheckout(applicationId: string) {
+  return invoke<MissionCheckout>('stripe-create-checkout', { application_id: applicationId });
+}
+
 // ── Identity (travailleur) ────────────────────────────────────────────────
 
 export interface IdentityStart {
