@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { QRBadge } from '@/components/ui/QRBadge';
 import { T, FONT, inp } from '@/components/ui/theme';
 import { useBodyScrollLock } from '@/components/ui/useBodyScrollLock';
 import {
@@ -67,26 +66,25 @@ export function MissionValidationPanel({ missionId, structureId, onClose }: { mi
     <div className="urosi-modal-layer urosi-bottom-sheet-layer" role="dialog" aria-modal="true" aria-label="QR et PIN de la mission" style={{ background: 'rgba(0,0,0,.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', fontFamily: FONT }} onClick={onClose}>
       <div className="urosi-bottom-sheet" style={{ width: '100%', maxWidth: 430, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px calc(24px + env(safe-area-inset-bottom))' }} onClick={(event) => event.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
-          <div><div style={{ color: T.text, fontSize: 16, fontWeight: 900 }}>QR & PIN de la mission</div><div style={{ color: T.sub, fontSize: 11, marginTop: 3 }}>{card?.title ?? 'Chargement…'}</div></div>
+          <div><div style={{ color: T.text, fontSize: 16, fontWeight: 900 }}>Code de secours</div><div style={{ color: T.sub, fontSize: 11, marginTop: 3 }}>{card?.title ?? 'Chargement…'}</div></div>
           <button aria-label="Fermer" onClick={onClose} style={{ width: 32, height: 32, border: 0, borderRadius: 9, background: T.row, color: T.text, cursor: 'pointer' }}>×</button>
         </div>
 
         {card && <>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 12, width: 'fit-content', margin: '0 auto 10px' }}>
-            <QRBadge value={`${window.location.origin}/valider/${card.qr_code}`} size={184} />
+          <div style={{ color: T.sub, fontSize: 11, lineHeight: 1.55, marginBottom: 14 }}>
+            Le travailleur affiche son propre QR — un responsable de la structure le scanne pour confirmer sa présence. Génère un code ci-dessous uniquement si le compte qui scanne n'est pas automatiquement reconnu.
           </div>
-          <div style={{ textAlign: 'center', color: T.sub, fontSize: 10, marginBottom: 14 }}>Secours : <strong style={{ color: T.text, letterSpacing: 1 }}>{card.mission_code}</strong></div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <button disabled={busy} onClick={() => generate('start')} style={{ minHeight: 48, border: 0, borderRadius: 11, background: '#fff', color: '#000', fontWeight: 900, cursor: 'pointer' }}>PIN arrivée</button>
-            <button disabled={busy} onClick={() => generate('end')} style={{ minHeight: 48, border: 0, borderRadius: 11, background: T.grad, color: '#fff', fontWeight: 900, cursor: 'pointer' }}>PIN départ</button>
+            <button disabled={busy} onClick={() => generate('start')} style={{ minHeight: 48, border: 0, borderRadius: 11, background: '#fff', color: '#000', fontWeight: 900, cursor: 'pointer' }}>Code arrivée</button>
+            <button disabled={busy} onClick={() => generate('end')} style={{ minHeight: 48, border: 0, borderRadius: 11, background: T.grad, color: '#fff', fontWeight: 900, cursor: 'pointer' }}>Code départ</button>
           </div>
         </>}
 
         {pin?.state === 'active' && pin.pin && (
           <div aria-live="polite" style={{ marginTop: 12, padding: 16, borderRadius: 13, background: T.greenBg, border: `1px solid ${T.greenBorder}`, textAlign: 'center' }}>
-            <div style={{ color: T.green, fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}>PIN {pin.step === 'start' ? 'arrivée' : 'départ'}</div>
+            <div style={{ color: T.green, fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}>Code {pin.step === 'start' ? 'arrivée' : 'départ'}</div>
             <div style={{ color: T.text, fontSize: 36, fontWeight: 900, letterSpacing: 8, margin: '4px 0' }}>{pin.pin}</div>
-            <div style={{ color: seconds ? T.sub : T.red, fontSize: 11 }}>{seconds ? `Expire dans ${seconds} s` : 'PIN expiré · génère-en un nouveau'}</div>
+            <div style={{ color: seconds ? T.sub : T.red, fontSize: 11 }}>{seconds ? `Expire dans ${seconds} s` : 'Code expiré · génère-en un nouveau'}</div>
           </div>
         )}
 

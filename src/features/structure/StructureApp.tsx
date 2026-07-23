@@ -20,9 +20,19 @@ import {
   unsubscribeApplicationsFeed,
   type ApplicationWithApplicant,
 } from '@/features/missions/applicationsService';
-import { rate, fetchRatedApplicationIds, fetchWorkerReputation, type WorkerReputation } from '@/features/missions/ratingsService';
+import {
+  rate,
+  fetchRatedApplicationIds,
+  fetchWorkerReputation,
+  fetchPendingRatingRequests,
+  snoozeRatingRequest,
+  shouldPromptRatingRequest,
+  type WorkerReputation,
+  type RatingRequest,
+} from '@/features/missions/ratingsService';
 import { fetchDelaysForApplications } from '@/features/missions/feedbackService';
 import { confirmRemoteAttendance, reportWorkerAbsence } from '@/features/missions/attendanceService';
+import { verifyMissionCvEntry, disputeMissionCvEntry } from '@/features/missions/missionCvService';
 import { MissionValidationPanel } from '@/features/missions/MissionValidationPanel';
 import { fetchUnreadCounts } from '@/features/messages/messagesService';
 import { geocodeMelCity } from '@/lib/geo';
@@ -151,6 +161,9 @@ export function StructureApp() {
   const [panelC, setPanelC] = useState<CandWithMission | null>(null);
   const [panelRep, setPanelRep] = useState<WorkerReputation | null>(null);
   const [ratingCand, setRatingCand] = useState<CandWithMission | null>(null);
+  const [ratingRequests, setRatingRequests] = useState<RatingRequest[]>([]);
+  const [autoRatingRequestId, setAutoRatingRequestId] = useState<string | null>(null);
+  const [snoozedThisSession, setSnoozedThisSession] = useState<Set<string>>(new Set());
   const [chatFor, setChatFor] = useState<CandWithMission | null>(null);
   const [docKey, setDocKey] = useState<DocKey | null>(null);
   const [vf, setVf] = useState({ nom: '', siret: '' });
@@ -172,14 +185,16 @@ export function StructureApp() {
     setCands(candsByMission);
     const allApps = [...candsByMission.values()].flat();
     const appIds = allApps.map((a) => a.id);
-    const [delayMap, rated, unreadMap] = await Promise.all([
+    const [delayMap, rated, unreadMap, pendingRatingRequests] = await Promise.all([
       fetchDelaysForApplications(appIds),
       fetchRatedApplicationIds(appIds, 'structure_to_worker'),
       fetchUnreadCounts(appIds, session.user.id),
+      fetchPendingRatingRequests(session.user.id).catch(() => [] as RatingRequest[]),
     ]);
     setDelays(delayMap);
     setRatedIds(rated);
     setUnread(unreadMap);
+    setRatingRequests(pendingRatingRequests);
   }
 
   async function reload() {
@@ -286,6 +301,15 @@ export function StructureApp() {
     }
   }
 
+  function closeRatingModal(snooze: boolean) {
+    if (snooze && autoRatingRequestId) {
+      setSnoozedThisSession((prev) => new Set(prev).add(autoRatingRequestId));
+      snoozeRatingRequest(autoRatingRequestId).catch(() => undefined);
+    }
+    setRatingCand(null);
+    setAutoRatingRequestId(null);
+  }
+
   async function noterTravailleur(score: number) {
     if (!structure || !ratingCand) return;
     try {
@@ -296,12 +320,36 @@ export function StructureApp() {
         score,
         direction: 'structure_to_worker',
       });
+      if (autoRatingRequestId) setSnoozedThisSession((prev) => new Set(prev).add(autoRatingRequestId));
       await loadMissionData(mis);
-      notif('Note enregistrée — elle apparaît dans le CV vivant du travailleur.');
+      notif('Note enregistrée. Elle sera visible une fois que les deux parties auront répondu (ou après quelques jours).');
     } catch (e) {
       notif(e instanceof Error ? e.message : 'Notation impossible.');
     } finally {
       setRatingCand(null);
+      setAutoRatingRequestId(null);
+    }
+  }
+
+  async function validerMissionCv(c: CandWithMission) {
+    try {
+      await verifyMissionCvEntry(c.id);
+      await loadMissionData(mis);
+      notif('Mission validée — elle passe en vert dans le CV du travailleur.');
+    } catch (e) {
+      notif(e instanceof Error ? e.message : 'Validation impossible.');
+    }
+  }
+
+  async function contesterMissionCv(c: CandWithMission) {
+    const reason = window.prompt('Motif de la contestation (visible par le travailleur) :');
+    if (!reason || !reason.trim()) return;
+    try {
+      await disputeMissionCvEntry(c.id, reason.trim());
+      await loadMissionData(mis);
+      notif('Mission contestée — Support UROSI est informé.');
+    } catch (e) {
+      notif(e instanceof Error ? e.message : 'Contestation impossible.');
     }
   }
 
@@ -336,6 +384,21 @@ export function StructureApp() {
   }
 
   const allCands: CandWithMission[] = mis.flatMap((m) => (cands.get(m.id) ?? []).map((c) => ({ ...c, missionTitle: m.title })));
+
+  // Demande de note automatique (cote structure) : meme cadence que le
+  // travailleur (prochaine connexion, puis 24h, 72h). "Me le rappeler plus
+  // tard" ne supprime jamais la demande.
+  useEffect(() => {
+    if (ratingCand || !session) return;
+    const due = ratingRequests.find((r) => !snoozedThisSession.has(r.id) && shouldPromptRatingRequest(r));
+    if (!due) return;
+    const cand = allCands.find((c) => c.id === due.applicationId);
+    if (!cand) return;
+    setAutoRatingRequestId(due.id);
+    setRatingCand(cand);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ratingRequests, cands, mis, ratingCand, session]);
+
   const pending = [...new Map(allCands.filter((c) => c.status === 'pending').map((candidate) => [candidate.worker_id, candidate])).values()];
   const completedByWorker = new Map<string, CandWithMission[]>();
   for (const c of allCands.filter((x) => x.status === 'completed')) {
@@ -578,16 +641,18 @@ export function StructureApp() {
                         </div>
                       )}
                       {['accepted', 'in_progress', 'payment_pending', 'completed'].includes(c.status) && (
-                        <div style={{ padding: '0 14px 12px', display: 'grid', gridTemplateColumns: c.status === 'completed' && !ratedIds.has(c.id) ? '1fr 1fr' : '1fr', gap: 6 }}>
-                          <button onClick={() => setChatFor(c)} style={{ position: 'relative', background: '#1d4ed815', color: '#93c5fd', border: '1px solid #1e40af', borderRadius: 8, padding: '9px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
-                            💬 Message
-                            {unreadCount > 0 && (
-                              <span style={{ position: 'absolute', top: -6, right: -4, minWidth: 15, height: 15, borderRadius: 8, background: '#dc2626', color: '#fff', fontSize: 9, fontWeight: 900, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>
-                                {unreadCount}
-                              </span>
-                            )}
-                          </button>
-                          {c.status === 'completed' && !ratedIds.has(c.id) && (
+                        <div style={{ padding: '0 14px 12px', display: 'grid', gridTemplateColumns: c.attendance_status === 'end_confirmed' && !ratedIds.has(c.id) ? '1fr 1fr' : '1fr', gap: 6 }}>
+                          {c.conversation_status === 'open' && (
+                            <button onClick={() => setChatFor(c)} style={{ position: 'relative', background: '#1d4ed815', color: '#93c5fd', border: '1px solid #1e40af', borderRadius: 8, padding: '9px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
+                              💬 Message
+                              {unreadCount > 0 && (
+                                <span style={{ position: 'absolute', top: -6, right: -4, minWidth: 15, height: 15, borderRadius: 8, background: '#dc2626', color: '#fff', fontSize: 9, fontWeight: 900, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>
+                                  {unreadCount}
+                                </span>
+                              )}
+                            </button>
+                          )}
+                          {c.attendance_status === 'end_confirmed' && !ratedIds.has(c.id) && (
                             <button onClick={() => setRatingCand(c)} style={{ background: '#22d3ee15', color: T.cyan, border: '1px solid #0e7490', borderRadius: 8, padding: '9px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
                               ★ Noter
                             </button>
@@ -606,6 +671,16 @@ export function StructureApp() {
                             <button onClick={() => validationDistance(c, 'end')} style={{ background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
                               Fin à distance
                             </button>
+                          )}
+                          {c.cv_status === 'pending_verification' && (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                              <button onClick={() => validerMissionCv(c)} style={{ background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+                                ✓ Valider la mission
+                              </button>
+                              <button onClick={() => contesterMissionCv(c)} style={{ background: T.amberBg, color: T.amber, border: `1px solid ${T.amberBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+                                Contester
+                              </button>
+                            </div>
                           )}
                         </div>
                       )}
@@ -697,11 +772,11 @@ export function StructureApp() {
 
             {/* Notation du travailleur */}
             {ratingCand && (
-              <div className="rsp-sheet urosi-modal-layer urosi-bottom-sheet-layer" role="dialog" aria-modal="true" aria-label="Noter le travailleur" style={{ background: 'rgba(0,0,0,.92)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={() => setRatingCand(null)}>
+              <div className="rsp-sheet urosi-modal-layer urosi-bottom-sheet-layer" role="dialog" aria-modal="true" aria-label="Mission terminée" style={{ background: 'rgba(0,0,0,.92)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={() => closeRatingModal(true)}>
                 <div className="rsp-sheet-body urosi-bottom-sheet" style={{ width: '100%', maxWidth: 420, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 26px', fontFamily: FONT }} onClick={(e) => e.stopPropagation()}>
-                  <div style={{ fontSize: 14, fontWeight: 900, color: T.text, marginBottom: 3 }}>Noter {ratingCand.profile?.full_name || 'le travailleur'}</div>
+                  <div style={{ fontSize: 14, fontWeight: 900, color: T.text, marginBottom: 3 }}>Mission terminée</div>
                   <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.5, marginBottom: 12 }}>
-                    Mission « {ratingCand.missionTitle} ». Ta note apparaîtra dans son CV vivant — informative, jamais bloquante (CGU).
+                    Comment s'est passée votre expérience avec {ratingCand.profile?.full_name || 'ce travailleur'} ? Ta note apparaîtra dans son CV vivant une fois publiée (informative, jamais bloquante).
                   </div>
                   <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
                     {[1, 2, 3, 4, 5].map((n) => (
@@ -710,8 +785,8 @@ export function StructureApp() {
                       </button>
                     ))}
                   </div>
-                  <button onClick={() => setRatingCand(null)} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: T.mu, padding: '4px 0' }}>
-                    Plus tard
+                  <button onClick={() => closeRatingModal(true)} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: T.mu, padding: '4px 0' }}>
+                    Me le rappeler plus tard
                   </button>
                 </div>
               </div>

@@ -59,8 +59,8 @@ export async function fetchScanContext(token: string): Promise<ScanContext> {
   return asObject<ScanContext>(data);
 }
 
-export async function confirmAttendanceQR(token: string): Promise<ScanContext> {
-  const { data, error } = await supabase.rpc('confirm_attendance_qr', { p_token: token });
+export async function confirmAttendanceQR(token: string, pin?: string | null): Promise<ScanContext> {
+  const { data, error } = await supabase.rpc('confirm_attendance_qr', { p_token: token, p_pin: pin || null });
   if (error) throw error;
   return asObject<ScanContext>(data);
 }

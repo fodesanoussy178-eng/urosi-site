@@ -85,6 +85,20 @@ export function unsubscribeApplicationsFeed(channel: RealtimeChannel | null): vo
   if (channel) supabase.removeChannel(channel);
 }
 
+// Flux en direct côté travailleur : la structure confirme le pointage (scan
+// du QR) depuis un autre appareil/session — la carte "mission en cours" doit
+// disparaître automatiquement, sans rechargement manuel de la page.
+export function subscribeToMyApplicationsFeed(workerId: string, onChange: () => void): RealtimeChannel {
+  const channel = supabase.channel(`applications-feed:worker:${workerId}`);
+  channel.on(
+    'postgres_changes',
+    { event: '*', schema: 'public', table: 'applications', filter: `worker_id=eq.${workerId}` },
+    () => onChange(),
+  );
+  channel.subscribe();
+  return channel;
+}
+
 export async function updateApplicationStatus(applicationId: string, status: ApplicationStatus): Promise<void> {
   const { error } = await supabase.from('applications').update({ status }).eq('id', applicationId);
   if (error) throw error;

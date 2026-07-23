@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Logo } from '@/components/ui/Logo';
-import { T, FONT } from '@/components/ui/theme';
+import { T, FONT, inp } from '@/components/ui/theme';
 import { SignInForm } from '@/features/auth/SignInForm';
 import { useAuth } from '@/features/auth/AuthContext';
 import { confirmAttendanceQR, fetchScanContext, type ScanContext } from './attendanceService';
@@ -22,7 +22,7 @@ const stateCopy: Record<ScanContext['state'], { title: string; body: string; ton
   invalid: { title: 'QR invalide', body: 'Ce lien ne correspond à aucun pointage UROSI valide.', tone: 'bad' },
   expired: { title: 'QR expiré', body: 'Demande au travailleur de regénérer un QR depuis son espace.', tone: 'warn' },
   used: { title: 'QR déjà utilisé', body: 'Ce QR a déjà servi. Un QR de pointage ne fonctionne qu’une seule fois.', tone: 'warn' },
-  not_authorized: { title: 'Compte non autorisé', body: 'Connecte-toi avec un compte membre de la structure autorisé à valider la présence.', tone: 'bad' },
+  not_authorized: { title: 'Compte non reconnu', body: 'Ce compte n’est pas reconnu comme validateur autorisé. Connecte-toi avec le bon compte, ou saisis le code de secours fourni par un responsable de la structure.', tone: 'bad' },
   missing_start: { title: 'Début non confirmé', body: 'La fin de mission ne peut pas être validée avant le début.', tone: 'bad' },
   already_started: { title: 'Début déjà confirmé', body: 'Le début de cette mission est déjà enregistré.', tone: 'muted' },
   already_ended: { title: 'Fin déjà confirmée', body: 'La fin de cette mission est déjà enregistrée.', tone: 'muted' },
@@ -36,6 +36,7 @@ export function ScanPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pin, setPin] = useState('');
 
   useEffect(() => {
     if (!session || !token) {
@@ -54,9 +55,12 @@ export function ScanPage() {
     setBusy(true);
     setError(null);
     try {
-      setCtx(await confirmAttendanceQR(token));
+      setCtx(await confirmAttendanceQR(token, pin || null));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Validation impossible.');
+      const message = e instanceof Error ? e.message : '';
+      if (message === 'not_authorized') setError('Ce compte n’est pas reconnu comme validateur autorisé. Demande le code de secours à un responsable de la structure.');
+      else if (message === 'invalid_pin') setError('Code de secours invalide ou expiré.');
+      else setError(message || 'Validation impossible.');
     } finally {
       setBusy(false);
     }
@@ -143,7 +147,20 @@ export function ScanPage() {
 
       {error && <div style={{ fontSize: 11, color: T.red, marginBottom: 10 }}>{error}</div>}
 
-      {state === 'valid' && (
+      {state === 'not_authorized' && (
+        <input
+          aria-label="Code de secours"
+          value={pin}
+          onChange={(event) => setPin(event.target.value.replace(/\D/g, '').slice(0, 6))}
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={6}
+          placeholder="Code de secours à 6 chiffres"
+          style={{ ...inp, textAlign: 'center', fontSize: 20, fontWeight: 900, letterSpacing: 6, marginBottom: 10 }}
+        />
+      )}
+
+      {(state === 'valid' || (state === 'not_authorized' && pin.length === 6)) && (
         <button
           onClick={confirm}
           disabled={busy}
