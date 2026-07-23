@@ -35,6 +35,7 @@ import { fetchDelaysForApplications } from '@/features/missions/feedbackService'
 import { confirmRemoteAttendance, reportWorkerAbsence, reportMissionIssue } from '@/features/missions/attendanceService';
 import { verifyMissionCvEntry, disputeMissionCvEntry } from '@/features/missions/missionCvService';
 import { MissionValidationPanel } from '@/features/missions/MissionValidationPanel';
+import { StructureQrScanSheet } from '@/features/missions/StructureQrScanSheet';
 import { fetchUnreadCounts } from '@/features/messages/messagesService';
 import { geocodeMelCity } from '@/lib/geo';
 import { distinctDays, slotMinutes, spanDays, totalMinutes } from '@/lib/slots';
@@ -138,7 +139,11 @@ type CandWithMission = ApplicationWithApplicant & { missionTitle: string };
 // du statut de la mission elle-meme, qui reste open/closed/cancelled) : le
 // menu contextuel a trois points affiche uniquement les actions autorisees
 // pour cet etat, jamais de messagerie active une fois la mission terminee.
-type MissionBucket = 'cancelled' | 'completed' | 'active' | 'open';
+// 'accepted' (candidat retenu, pas encore demarre) et 'in_progress' (QR de
+// debut deja confirme) sont deux buckets distincts : le pointage (icone QR)
+// n'a de sens que pour ces deux-la, jamais pour une mission sans candidat ou
+// deja terminee/annulee.
+type MissionBucket = 'cancelled' | 'completed' | 'in_progress' | 'accepted' | 'open';
 type ManageMode = 'menu' | 'edit' | 'cancel' | 'summary';
 interface ManageState {
   mission: Mission;
@@ -160,30 +165,37 @@ function verificationBadge(structure: Structure): { label: string; color: string
 function statusPill(bucket: MissionBucket): { label: string; color: string; bg: string } {
   if (bucket === 'cancelled') return { label: 'Annulée', color: T.red, bg: T.redBg };
   if (bucket === 'completed') return { label: 'Terminée', color: T.cyan, bg: '#22d3ee15' };
-  if (bucket === 'active') return { label: 'En cours', color: T.green, bg: T.greenBg };
+  if (bucket === 'in_progress') return { label: 'En cours', color: T.green, bg: T.greenBg };
+  if (bucket === 'accepted') return { label: 'Candidat retenu', color: T.green, bg: T.greenBg };
   return { label: 'Publiée', color: T.amber, bg: T.amberBg };
 }
 
 // Carte compacte (inspiree de la demo) : titre, creneau, prix, statut derive
-// de la candidature la plus avancee, et un menu a trois points qui ouvre
-// MissionManageSheet plutot qu'une pile de boutons toujours visibles.
+// de la candidature la plus avancee, un petit bouton QR separe (jamais un QR
+// de la structure : il OUVRE le scanner camera) visible uniquement quand le
+// pointage est reellement pertinent (candidat retenu ou mission en cours),
+// et un menu a trois points qui ouvre MissionManageSheet plutot qu'une pile
+// de boutons toujours visibles.
 function MissionCard({
   mission,
   bucket,
   candidateCount,
   onOpenCandidates,
   onOpenMenu,
+  onScan,
 }: {
   mission: Mission;
   bucket: MissionBucket;
   candidateCount: number;
   onOpenCandidates: () => void;
   onOpenMenu: () => void;
+  onScan: () => void;
 }) {
   const pill = statusPill(bucket);
   const slots = mission.slots ?? [];
   const first = firstSlot(slots);
   const last = lastSlot(slots);
+  const canScan = bucket === 'accepted' || bucket === 'in_progress';
   return (
     <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '11px 12px', display: 'flex', flexDirection: 'column', gap: 7 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
@@ -193,13 +205,25 @@ function MissionCard({
             {first ? `${formatLongDay(first.date)} · ${first.start}–${last?.end ?? first.end}` : mission.city}
           </div>
         </div>
-        <button
-          onClick={onOpenMenu}
-          aria-label="Actions sur la mission"
-          style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 8, width: 30, height: 30, flexShrink: 0, cursor: 'pointer', color: T.sub, fontSize: 15, fontWeight: 900, lineHeight: 1 }}
-        >
-          •••
-        </button>
+        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+          {canScan && (
+            <button
+              onClick={onScan}
+              aria-label="Scanner le QR de pointage"
+              title="Scanner le QR de pointage"
+              style={{ background: '#22d3ee15', border: '1px solid #0e7490', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', color: T.cyan, fontSize: 15, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <span aria-hidden="true">▦</span>
+            </button>
+          )}
+          <button
+            onClick={onOpenMenu}
+            aria-label="Actions sur la mission"
+            style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 8, width: 30, height: 30, cursor: 'pointer', color: T.sub, fontSize: 15, fontWeight: 900, lineHeight: 1 }}
+          >
+            •••
+          </button>
+        </div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 9.5, fontWeight: 700, color: pill.color, background: pill.bg, borderRadius: 8, padding: '2px 7px' }}>{pill.label}</span>
@@ -242,9 +266,10 @@ export function StructureApp() {
   const [givenRatings, setGivenRatings] = useState<Map<string, number>>(new Map());
   const [duplicateSeed, setDuplicateSeed] = useState<Mission | null>(null);
   const [showDetailedStats, setShowDetailedStats] = useState(false);
+  const [scanMission, setScanMission] = useState<Mission | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout>>();
 
-  useBodyScrollLock(Boolean(showPub || validationMissionId || panelC || ratingCand || chatFor || docKey || manage));
+  useBodyScrollLock(Boolean(showPub || validationMissionId || panelC || ratingCand || chatFor || docKey || manage || scanMission));
 
   function notif(m: string) {
     setToast(m);
@@ -533,18 +558,24 @@ export function StructureApp() {
   const unreadTotal = [...unread.values()].reduce((s, v) => s + v, 0);
 
   // Candidature de reference pour le menu contextuel d'une mission : la plus
-  // avancee (terminee > active > en attente), jamais refusee/annulee.
+  // avancee (terminee > en cours > retenue > en attente), jamais refusee/annulee.
   function activeCandidateFor(missionId: string): CandWithMission | null {
     const list = (cands.get(missionId) ?? []).map((c) => ({ ...c, missionTitle: misTitle(missionId) }));
-    const rank = (status: string) => (status === 'completed' ? 3 : ['accepted', 'in_progress', 'payment_pending'].includes(status) ? 2 : status === 'pending' ? 1 : 0);
+    const rank = (status: string) =>
+      status === 'completed' || status === 'payment_pending' ? 4 : status === 'in_progress' ? 3 : status === 'accepted' ? 2 : status === 'pending' ? 1 : 0;
     return list.filter((c) => rank(c.status) > 0).sort((a, b) => rank(b.status) - rank(a.status))[0] ?? null;
   }
 
+  // 'accepted' (candidat retenu, pointage de debut pas encore confirme) et
+  // 'in_progress' (QR de debut deja scanne) sont distingues : le pointage
+  // n'a de sens (icone QR, action "Voir le pointage") qu'a partir du moment
+  // ou un candidat est retenu, jamais pour une mission sans candidat.
   function missionBucket(mission: Mission): MissionBucket {
     if (mission.status === 'cancelled') return 'cancelled';
     const candidate = activeCandidateFor(mission.id);
     if (candidate?.status === 'completed' || candidate?.status === 'payment_pending') return 'completed';
-    if (candidate && ['accepted', 'in_progress'].includes(candidate.status)) return 'active';
+    if (candidate?.status === 'in_progress') return 'in_progress';
+    if (candidate?.status === 'accepted') return 'accepted';
     return 'open';
   }
   const formFounder = founderAccess;
@@ -669,7 +700,7 @@ export function StructureApp() {
                           Vérification SIRET requise avant publication.
                         </div>
                       )}
-                      <button onClick={() => { setDuplicateSeed(null); structureVerified && setShowPub(true); }} disabled={!structureVerified} style={{ width: '100%', background: structureVerified ? '#fff' : T.row, color: structureVerified ? '#000' : T.mu, border: 'none', borderRadius: 11, padding: '13px 0', fontSize: 13, fontWeight: 900, cursor: structureVerified ? 'pointer' : 'not-allowed', marginBottom: 2 }}>
+                      <button onClick={() => { setDuplicateSeed(null); if (structureVerified) setShowPub(true); }} disabled={!structureVerified} style={{ width: '100%', background: structureVerified ? '#fff' : T.row, color: structureVerified ? '#000' : T.mu, border: 'none', borderRadius: 11, padding: '13px 0', fontSize: 13, fontWeight: 900, cursor: structureVerified ? 'pointer' : 'not-allowed', marginBottom: 2 }}>
                         {structureVerified ? '＋ Publier une mission' : 'Structure à vérifier'}
                       </button>
                       {pending.length > 0 && (
@@ -688,6 +719,7 @@ export function StructureApp() {
                             candidateCount={candCount(m.id)}
                             onOpenCandidates={() => { setCandMis(m.id); setTab('candidats'); }}
                             onOpenMenu={() => setManage({ mission: m, mode: 'menu' })}
+                            onScan={() => setScanMission(m)}
                           />
                         ))}
                       </div>
@@ -985,14 +1017,22 @@ export function StructureApp() {
                     setChatFor(c);
                   }
                 }}
-                onPointage={() => {
-                  const missionId = manage.mission.id;
-                  setManage(null);
-                  setValidationMissionId(missionId);
-                }}
                 onReportIssue={() => {
                   const c = activeCandidateFor(manage.mission.id);
                   if (c) signalerProbleme(c.id);
+                }}
+              />
+            )}
+            {scanMission && (
+              <StructureQrScanSheet
+                expectedMissionId={scanMission.id}
+                expectedMissionTitle={scanMission.title}
+                onClose={() => setScanMission(null)}
+                onConfirmed={() => reload().catch(() => undefined)}
+                onUsePin={() => {
+                  const missionId = scanMission.id;
+                  setScanMission(null);
+                  setValidationMissionId(missionId);
                 }}
               />
             )}
@@ -1069,7 +1109,6 @@ function MissionManageSheet({
   onDuplicate,
   onOpenCandidate,
   onMessage,
-  onPointage,
   onReportIssue,
 }: {
   mission: Mission;
@@ -1084,7 +1123,6 @@ function MissionManageSheet({
   onDuplicate: () => void;
   onOpenCandidate: () => void;
   onMessage: () => void;
-  onPointage: () => void;
   onReportIssue: () => void;
 }) {
   const [edit, setEdit] = useState({
@@ -1107,27 +1145,33 @@ function MissionManageSheet({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {bucket === 'open' && (
               <>
-                <SheetAction label="Voir" onClick={() => onModeChange('summary')} />
-                <SheetAction label="Modifier" onClick={() => onModeChange('edit')} />
-                <SheetAction label="Dupliquer" onClick={onDuplicate} />
+                <SheetAction label="Voir les détails" onClick={() => onModeChange('summary')} />
+                <SheetAction label="Modifier la mission" onClick={() => onModeChange('edit')} />
+                <SheetAction label="Dupliquer la mission" onClick={onDuplicate} />
                 <SheetAction label="Annuler la mission" danger onClick={() => onModeChange('cancel')} />
               </>
             )}
-            {bucket === 'active' && (
+            {bucket === 'accepted' && (
               <>
-                <SheetAction label="Voir le candidat" onClick={onOpenCandidate} />
+                <SheetAction label="Voir le travailleur" onClick={onOpenCandidate} />
                 {candidate?.conversation_status === 'open' && <SheetAction label="Messagerie" onClick={onMessage} />}
-                <SheetAction label="QR / pointage" onClick={onPointage} />
                 <SheetAction label="Modifier les informations non sensibles" onClick={() => onModeChange('edit')} />
-                <SheetAction label="Annuler la mission" danger onClick={() => onModeChange('cancel')} />
+                <SheetAction label="Dupliquer la mission" onClick={onDuplicate} />
+                <SheetAction label="Annuler selon les règles" danger onClick={() => onModeChange('cancel')} />
+              </>
+            )}
+            {bucket === 'in_progress' && (
+              <>
+                <SheetAction label="Voir le pointage" onClick={onOpenCandidate} />
+                {candidate?.conversation_status === 'open' && <SheetAction label="Messagerie" onClick={onMessage} />}
+                <SheetAction label="Signaler un problème" onClick={onReportIssue} />
               </>
             )}
             {bucket === 'completed' && (
               <>
                 <SheetAction label="Voir le résumé" onClick={() => onModeChange('summary')} />
                 <SheetAction label="Voir le paiement" onClick={() => onModeChange('summary')} />
-                <SheetAction label={givenScore ? `Avis donné : ${'★'.repeat(givenScore)}` : "Voir l'avis"} onClick={() => onModeChange('summary')} />
-                <SheetAction label="Signaler un problème" onClick={onReportIssue} />
+                <SheetAction label={givenScore ? `Avis donné : ${'★'.repeat(givenScore)}` : 'Voir les avis'} onClick={() => onModeChange('summary')} />
               </>
             )}
             {bucket === 'cancelled' && <SheetAction label="Voir le résumé" onClick={() => onModeChange('summary')} />}
@@ -1201,6 +1245,14 @@ function MissionManageSheet({
                 <div style={{ fontSize: 8.5, color: T.mu }}>Note que tu as donnée</div>
                 <div style={{ fontSize: 13, fontWeight: 900, color: '#f59e0b' }}>{'★'.repeat(givenScore)}</div>
               </div>
+            )}
+            {bucket === 'completed' && (
+              <button
+                onClick={onReportIssue}
+                style={{ width: '100%', textAlign: 'left', background: T.amberBg, color: T.amber, border: `1px solid ${T.amberBorder}`, borderRadius: 10, padding: '11px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}
+              >
+                Signaler un problème
+              </button>
             )}
           </div>
         )}

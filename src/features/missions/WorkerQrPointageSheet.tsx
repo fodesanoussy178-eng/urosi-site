@@ -100,7 +100,7 @@ export function WorkerQrPointageSheet({
       >
         <button aria-label="Fermer" onClick={onClose} style={{ float: 'right', width: 32, height: 32, border: 0, borderRadius: 9, background: T.row, color: T.text, cursor: 'pointer' }}>×</button>
         <div style={{ fontSize: 16, fontWeight: 900, color: T.text, marginBottom: 2 }}>
-          {step === 'start' ? 'Démarrer la mission' : 'Terminer la mission'}
+          {step === 'start' ? 'Mon QR d’arrivée' : 'Mon QR de départ'}
         </div>
         {missionTitle && <div style={{ fontSize: 11, color: T.sub, marginBottom: 18 }}>{missionTitle}</div>}
 
