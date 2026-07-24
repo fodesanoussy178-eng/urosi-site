@@ -287,10 +287,15 @@ export function StructureApp() {
     setCands(candsByMission);
     const allApps = [...candsByMission.values()].flat();
     const appIds = allApps.map((a) => a.id);
+    // Messages non lus : uniquement sur les fils encore ouverts. Une fois la
+    // mission terminée, la messagerie se ferme (finalize_mission_end) et il
+    // n'existe plus aucun moyen d'ouvrir ce fil pour le marquer lu — un
+    // reliquat non lu y resterait sinon bloqué indéfiniment dans le badge.
+    const openConversationIds = allApps.filter((a) => a.conversation_status === 'open').map((a) => a.id);
     const [delayMap, rated, unreadMap, pendingRatingRequests, given] = await Promise.all([
       fetchDelaysForApplications(appIds),
       fetchRatedApplicationIds(appIds, 'structure_to_worker'),
-      fetchUnreadCounts(appIds, session.user.id),
+      fetchUnreadCounts(openConversationIds, session.user.id),
       fetchPendingRatingRequests(session.user.id).catch(() => [] as RatingRequest[]),
       fetchGivenRatingScores(appIds, 'structure_to_worker').catch(() => new Map<string, number>()),
     ]);
