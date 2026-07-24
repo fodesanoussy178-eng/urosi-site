@@ -5,6 +5,7 @@ import { SignInForm } from '@/features/auth/SignInForm';
 import { Logo } from '@/components/ui/Logo';
 import { T, FONT } from '@/components/ui/theme';
 import { confirmCheckin, fetchCheckinTarget, type CheckinTarget } from './applicationsService';
+import { describeError } from '@/lib/errors';
 
 // Page ouverte en scannant le QR d'un travailleur avec un telephone.
 // La validation n'aboutit que connectee au compte de la structure qui a
@@ -38,7 +39,7 @@ export function CheckinPage() {
       await confirmCheckin(applicationId, token);
       setDone(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Validation impossible.');
+      setError(describeError(e, 'la validation'));
     } finally {
       setBusy(false);
     }

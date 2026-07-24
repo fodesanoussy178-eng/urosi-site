@@ -45,6 +45,7 @@ import { formatSiret, isValidSiret, normalizeSiret } from '@/features/structure/
 import type { Mission, Structure } from '@/features/missions/types';
 import type { MissionDayOfWeek, MissionSlot, MissionTimeSlot } from '@/types/database.types';
 import { formatEuros, formatHours } from '@/lib/format';
+import { describeError } from '@/lib/errors';
 
 type Tab = 'missions' | 'candidats' | 'habitues' | 'historique';
 const DEFAULT_HOURLY_EUR = 14;
@@ -389,7 +390,7 @@ export function StructureApp() {
       setStructure(created);
       notif(founder ? '✓ Structure enregistrée avec accès fondateur.' : '✓ Structure enregistrée, SIRET vérifié.');
     } catch (e) {
-      notif(e instanceof Error ? e.message : 'Création impossible.');
+      notif(describeError(e, 'la création de la structure'));
     }
   }
 
@@ -400,7 +401,7 @@ export function StructureApp() {
       setPanelC(null);
       notif(dec === 'accepted' ? 'Candidat accepté — le fil de discussion est ouvert.' : 'Candidat refusé.');
     } catch (e) {
-      notif(e instanceof Error ? e.message : 'Action impossible.');
+      notif(describeError(e, 'cette décision'));
     }
   }
 
@@ -429,7 +430,7 @@ export function StructureApp() {
       window.location.assign(url); // redirection vers Stripe Checkout hébergé
     } catch (e) {
       setPayingId(null);
-      notif(e instanceof Error ? e.message : 'Ouverture du paiement impossible.');
+      notif(describeError(e, "l'ouverture du paiement"));
     }
   }
 
@@ -456,7 +457,7 @@ export function StructureApp() {
       await loadMissionData(mis);
       notif('Note enregistrée. Elle sera visible une fois que les deux parties auront répondu (ou après quelques jours).');
     } catch (e) {
-      notif(e instanceof Error ? e.message : 'Notation impossible.');
+      notif(describeError(e, "l'enregistrement de la note"));
     } finally {
       setRatingCand(null);
       setAutoRatingRequestId(null);
@@ -469,7 +470,7 @@ export function StructureApp() {
       await loadMissionData(mis);
       notif('Mission validée — elle passe en vert dans le CV du travailleur.');
     } catch (e) {
-      notif(e instanceof Error ? e.message : 'Validation impossible.');
+      notif(describeError(e, 'la validation'));
     }
   }
 
@@ -481,7 +482,7 @@ export function StructureApp() {
       await loadMissionData(mis);
       notif('Mission contestée — Support UROSI est informé.');
     } catch (e) {
-      notif(e instanceof Error ? e.message : 'Contestation impossible.');
+      notif(describeError(e, "l'envoi de la contestation"));
     }
   }
 
@@ -491,7 +492,7 @@ export function StructureApp() {
       await loadMissionData(mis);
       notif(type === 'start' ? 'Début validé à distance.' : 'Fin validée à distance — paiement préparé pour J+3.');
     } catch (e) {
-      notif(e instanceof Error ? e.message : 'Validation impossible.');
+      notif(describeError(e, 'la validation à distance'));
     }
   }
 
@@ -501,7 +502,7 @@ export function StructureApp() {
       await loadMissionData(mis);
       notif('Absence signalée — le travailleur peut répondre, aucune sanction automatique.');
     } catch (e) {
-      notif(e instanceof Error ? e.message : 'Signalement impossible.');
+      notif(describeError(e, "le signalement de l'absence"));
     }
   }
 
@@ -512,7 +513,7 @@ export function StructureApp() {
       setManage(null);
       notif('Informations mises à jour.');
     } catch (e) {
-      notif(e instanceof Error ? e.message : 'Modification impossible.');
+      notif(describeError(e, 'la modification de la mission'));
     }
   }
 
@@ -538,7 +539,7 @@ export function StructureApp() {
             : 'Mission annulée.',
       );
     } catch (e) {
-      notif(e instanceof Error ? e.message : 'Annulation impossible.');
+      notif(describeError(e, "l'annulation de la mission"));
     }
   }
 
@@ -555,7 +556,7 @@ export function StructureApp() {
       setManage(null);
       notif('Remplaçant confirmé — le paiement est transféré, aucun nouveau règlement.');
     } catch (e) {
-      notif(e instanceof Error ? e.message : 'Remplacement impossible.');
+      notif(describeError(e, 'la confirmation du remplacement'));
     }
   }
 
@@ -564,7 +565,7 @@ export function StructureApp() {
       const count = await notifyReplacementSearch(missionId);
       notif(count > 0 ? `${count} travailleur${count > 1 ? 's' : ''} proche${count > 1 ? 's' : ''} prévenu${count > 1 ? 's' : ''}.` : 'Aucun travailleur proche à prévenir pour le moment.');
     } catch (e) {
-      notif(e instanceof Error ? e.message : 'Envoi impossible.');
+      notif(describeError(e, "l'envoi des notifications"));
     }
   }
 
@@ -575,7 +576,7 @@ export function StructureApp() {
       await reportMissionIssue({ applicationId, category: 'autre', description: description.trim() });
       notif('Signalement transmis à Support UROSI.');
     } catch (e) {
-      notif(e instanceof Error ? e.message : 'Envoi impossible.');
+      notif(describeError(e, "l'envoi du signalement"));
     } finally {
       setManage(null);
     }
@@ -1251,7 +1252,7 @@ function AboutEditor({ structure, onSaved, notif }: { structure: Structure; onSa
               setEditing(false);
               notif('"À propos" enregistré.');
             } catch (e) {
-              notif(e instanceof Error ? e.message : 'Enregistrement impossible.');
+              notif(describeError(e, "l'enregistrement"));
             }
           }}
           style={{ flex: 1, background: '#fff', color: '#000', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
@@ -1490,22 +1491,6 @@ function SheetAction({ label, onClick, danger }: { label: string; onClick: () =>
   );
 }
 
-// Signatures d'erreurs techniques (Postgres/PostgREST) à ne jamais montrer
-// telles quelles : colonne/relation absente, contrainte violée, droit refusé,
-// cache de schéma… Tout le reste (nos triggers métier lèvent déjà des phrases
-// françaises claires : abonnement, suspension, quotas) passe tel quel.
-const TECHNICAL_ERROR_PATTERN =
-  /does not exist|violates .* constraint|duplicate key value|permission denied for|syntax error|schema cache|invalid input syntax/i;
-
-function describeMissionPublishError(e: unknown): string {
-  // Le détail technique complet reste dans la console (support/diagnostic) ;
-  // seul un message métier lisible est montré à la structure.
-  console.error('[mission-publish]', e);
-  const message = e instanceof Error ? e.message : typeof e === 'object' && e !== null && 'message' in e ? String((e as { message?: unknown }).message ?? '') : '';
-  if (message && !TECHNICAL_ERROR_PATTERN.test(message)) return message;
-  return 'Une erreur technique empêche temporairement la publication. Réessaie dans un instant, ou contacte le support si ça persiste.';
-}
-
 function PublishModal({ structure, initial, founderAccess, onClose, onPublished }: { structure: Structure; initial?: Mission | null; founderAccess?: boolean; onClose: () => void; onPublished: (m: Mission) => void }) {
   const [f, setF] = useState(() => ({
     t: initial ? `${initial.title} (copie)` : '',
@@ -1659,7 +1644,7 @@ function PublishModal({ structure, initial, founderAccess, onClose, onPublished 
       });
       onPublished(mission);
     } catch (e) {
-      setError(describeMissionPublishError(e));
+      setError(describeError(e, 'la publication de la mission'));
     } finally {
       setBusy(false);
     }

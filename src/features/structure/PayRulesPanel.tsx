@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { T, inp } from '@/components/ui/theme';
 import { Fld } from '@/components/ui/Fld';
 import { formatEuros } from '@/lib/format';
+import { describeError } from '@/lib/errors';
 import type { PayRuleKind } from '@/types/database.types';
 import {
   RULE_KINDS,
@@ -60,7 +61,7 @@ export function PayRulesPanel({ structureId, notif }: { structureId: string; not
       await load();
       notif(`✓ Règle « ${tpl.label} » activée.`);
     } catch (e) {
-      notif(e instanceof Error ? e.message : 'Création impossible.');
+      notif(describeError(e, 'la création de la règle'));
     }
   }
 
@@ -236,7 +237,7 @@ function CustomRuleForm({
       });
       onCreated(finalLabel);
     } catch (e) {
-      notif(e instanceof Error ? e.message : 'Création impossible.');
+      notif(describeError(e, 'la création de la règle'));
     } finally {
       setBusy(false);
     }

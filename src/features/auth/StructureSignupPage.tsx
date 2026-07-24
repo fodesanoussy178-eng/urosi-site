@@ -7,6 +7,7 @@ import { signUp } from './authService';
 import { AuthTabs, type AuthMode } from './AuthTabs';
 import { SignInForm } from './SignInForm';
 import { formatSiret, isValidSiret, normalizeSiret } from '@/features/structure/verification';
+import { describeError } from '@/lib/errors';
 
 export function StructureSignupPage() {
   const nav = useNavigate();
@@ -42,7 +43,7 @@ export function StructureSignupPage() {
         setInfo('Compte créé ! Vérifie ta boîte mail pour confirmer ton adresse, puis connecte-toi.');
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erreur.');
+      setError(describeError(e, 'la création du compte'));
     } finally {
       setBusy(false);
     }
