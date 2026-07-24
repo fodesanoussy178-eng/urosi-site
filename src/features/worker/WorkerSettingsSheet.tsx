@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { T, FONT, inp } from '@/components/ui/theme';
 import { Fld } from '@/components/ui/Fld';
 import { AideRegles, DocModal, type DocKey } from '@/components/ui/DocModal';
-import { NotificationBell } from '@/components/ui/NotificationBell';
+import { SectionErrorBoundary } from '@/components/ui/SectionErrorBoundary';
 import { useBodyScrollLock } from '@/components/ui/useBodyScrollLock';
 import { signOut, updateEmail, updatePassword } from '@/features/auth/authService';
 import { requestAccountDeletion, updateProfile, type Profile } from '@/features/profile/profileService';
@@ -337,37 +337,53 @@ export function WorkerSettingsSheet({
         {toast && <div style={{ marginBottom: 12, background: T.card, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '8px 11px', fontSize: 11, color: T.sub }}>{toast}</div>}
 
         <SectionTitle>Identité</SectionTitle>
-        <IdentityCard
-          profile={profile}
-          onSave={async (updates) => {
-            await updateProfile(session.user.id, updates);
-            await onProfileSaved();
-            notif('Profil mis à jour ✓');
-          }}
-        />
+        <SectionErrorBoundary label="Identité">
+          <IdentityCard
+            profile={profile}
+            onSave={async (updates) => {
+              await updateProfile(session.user.id, updates);
+              await onProfileSaved();
+              notif('Profil mis à jour ✓');
+            }}
+          />
+        </SectionErrorBoundary>
 
         <SectionTitle>Compte</SectionTitle>
-        <AccountCard session={session} notif={notif} />
+        <SectionErrorBoundary label="Compte">
+          <AccountCard session={session} notif={notif} />
+        </SectionErrorBoundary>
 
         <SectionTitle>Notifications</SectionTitle>
-        <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 15, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-          <span style={{ fontSize: 11.5, color: T.sub, lineHeight: 1.4 }}>Consulter, marquer comme lues, archiver ou supprimer tes notifications.</span>
-          <NotificationBell profileId={session.user.id} onDataChanged={() => undefined} />
-        </div>
+        <SectionErrorBoundary label="Notifications">
+          {/* Pas de second abonnement temps réel ici : la cloche 🔔 de l'écran
+              principal gère déjà tout (lu/archivé/supprimé). En ouvrir un
+              second sur le même canal Realtime créerait un conflit. */}
+          <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 15 }}>
+            <span style={{ fontSize: 11.5, color: T.sub, lineHeight: 1.4 }}>
+              Gère tes notifications depuis la cloche 🔔 en haut de l'écran principal (marquer comme lues, archiver, supprimer).
+            </span>
+          </div>
+        </SectionErrorBoundary>
 
         <SectionTitle>Documents légaux</SectionTitle>
-        <AideRegles onOpen={setDocKey} />
+        <SectionErrorBoundary label="Documents légaux">
+          <AideRegles onOpen={setDocKey} />
+        </SectionErrorBoundary>
 
         <SectionTitle>Session</SectionTitle>
-        <button
-          onClick={() => signOut()}
-          style={{ width: '100%', textAlign: 'left', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, cursor: 'pointer', padding: '13px 15px', fontSize: 12.5, color: T.text, fontWeight: 700 }}
-        >
-          Se déconnecter
-        </button>
+        <SectionErrorBoundary label="Session">
+          <button
+            onClick={() => signOut()}
+            style={{ width: '100%', textAlign: 'left', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, cursor: 'pointer', padding: '13px 15px', fontSize: 12.5, color: T.text, fontWeight: 700 }}
+          >
+            Se déconnecter
+          </button>
+        </SectionErrorBoundary>
 
         <SectionTitle>Zone sensible</SectionTitle>
-        <DeleteAccountCard notif={notif} />
+        <SectionErrorBoundary label="Zone sensible">
+          <DeleteAccountCard notif={notif} />
+        </SectionErrorBoundary>
 
         {docKey && <DocModal dk={docKey} onClose={() => setDocKey(null)} />}
       </div>
