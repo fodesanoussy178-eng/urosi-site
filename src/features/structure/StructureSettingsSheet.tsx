@@ -7,24 +7,156 @@ import { SectionTitle, AccountCard, DeleteAccountCard } from '@/components/ui/Se
 import { useBodyScrollLock } from '@/components/ui/useBodyScrollLock';
 import { signOut } from '@/features/auth/authService';
 import { updateProfile, type Profile } from '@/features/profile/profileService';
+import { submitStructureSiret, requestStructureVerification, updateStructurePresentation } from './structureService';
+import { formatSiret } from './verification';
+import { describeError } from '@/lib/errors';
 import type { Structure } from '@/features/missions/types';
 
 type ProfileUpdate = Parameters<typeof updateProfile>[1];
 
 function verificationLabel(structure: Structure | null): { label: string; color: string; bg: string } {
   if (!structure) return { label: '—', color: T.mu, bg: T.row };
-  if (structure.verification_status === 'founder_bypass' || structure.founder_bypass) return { label: 'Accès fondateur', color: T.green, bg: T.greenBg };
-  if (structure.verification_status === 'verified') return { label: '✓ SIRET vérifié', color: T.green, bg: T.greenBg };
+  if (structure.verification_status === 'founder_bypass' || structure.founder_bypass) return { label: 'Accès fondateur (test)', color: T.green, bg: T.greenBg };
+  if (structure.verification_status === 'verified') return { label: '✓ Vérifiée', color: T.green, bg: T.greenBg };
+  if (structure.verification_status === 'closed') return { label: 'Établissement fermé', color: T.red, bg: T.redBg };
+  if (structure.verification_status === 'not_found') return { label: 'SIRET introuvable', color: T.red, bg: T.redBg };
   if (structure.verification_status === 'rejected') return { label: 'SIRET refusé', color: T.red, bg: T.redBg };
-  return { label: 'Vérification SIRET en cours', color: T.amber, bg: T.amberBg };
+  return { label: 'À vérifier', color: T.amber, bg: T.amberBg };
 }
 
-function StructureIdentityCard({
-  structure,
+// Fiche officielle : raison sociale, SIRET/SIREN, adresse, NAF, forme
+// juridique, statut association/type — tout vient du registre, rien n'est
+// modifiable ici (cf. guard_structure_verification_fields côté serveur).
+function OfficialProfileCard({ structure, onReverified }: { structure: Structure | null; onReverified: () => Promise<void> }) {
+  const [siretInput, setSiretInput] = useState('');
+  const [editingSiret, setEditingSiret] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const badge = verificationLabel(structure);
+  const isFounderTest = structure?.verification_method === 'founder';
+  const canRetry = !isFounderTest && (structure?.verification_status === 'pending' || structure?.verification_status === 'not_found' || structure?.verification_status === 'closed');
+
+  async function reverify(siret?: string) {
+    if (!structure || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      if (siret) await submitStructureSiret(structure.id, siret);
+      const result = await requestStructureVerification(structure.id);
+      await onReverified();
+      setEditingSiret(false);
+      setSiretInput('');
+      if (result.status !== 'verified') setError(result.message);
+    } catch (e) {
+      setError(describeError(e, 'la vérification du SIRET'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const officialAddress = [structure?.address, structure?.postal_code, structure?.city].filter(Boolean).join(', ');
+
+  return (
+    <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 15 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5 }}>Raison sociale</div>
+          <div style={{ fontSize: 13.5, fontWeight: 900, color: T.text, overflowWrap: 'anywhere' }}>{structure?.name ?? '—'}</div>
+        </div>
+        <span style={{ fontSize: 9, fontWeight: 800, color: badge.color, background: badge.bg, borderRadius: 10, padding: '3px 9px', flexShrink: 0 }}>{badge.label}</span>
+      </div>
+
+      {structure?.is_association && (
+        <div style={{ display: 'inline-block', fontSize: 9, fontWeight: 800, color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 9, padding: '3px 9px', marginBottom: 10 }}>
+          🤝 Association vérifiée
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gap: 5, fontSize: 10.5, color: T.sub, marginBottom: 14 }}>
+        {structure?.siret && <div>SIRET : <span style={{ color: T.text, fontWeight: 700 }}>{formatSiret(structure.siret)}</span></div>}
+        {structure?.siren && <div>SIREN : <span style={{ color: T.text, fontWeight: 700 }}>{structure.siren}</span></div>}
+        {officialAddress && <div>Adresse : <span style={{ color: T.text, fontWeight: 700 }}>{officialAddress}</span></div>}
+        {structure?.naf_code && <div>Activité (NAF) : <span style={{ color: T.text, fontWeight: 700 }}>{structure.naf_code}{structure.naf_label ? ` — ${structure.naf_label}` : ''}</span></div>}
+        {structure?.legal_form && <div>Forme juridique : <span style={{ color: T.text, fontWeight: 700 }}>{structure.legal_form}</span></div>}
+        {structure?.siret_established_at && <div>Créée le : <span style={{ color: T.text, fontWeight: 700 }}>{new Date(structure.siret_established_at).toLocaleDateString('fr-FR')}</span></div>}
+        {structure?.siret_checked_at && <div>Dernière vérification : <span style={{ color: T.text, fontWeight: 700 }}>{new Date(structure.siret_checked_at).toLocaleDateString('fr-FR')}</span></div>}
+      </div>
+
+      <div style={{ fontSize: 9.5, color: T.mu, lineHeight: 1.5, marginBottom: 12 }}>
+        Ces informations proviennent du registre officiel des entreprises françaises — elles ne sont pas modifiables directement.
+      </div>
+
+      {error && <div style={{ fontSize: 11, color: T.red, marginBottom: 10 }}>{error}</div>}
+
+      {canRetry && !editingSiret && (
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => reverify()} disabled={busy} style={{ flex: 1, background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '9px 0', fontSize: 11.5, fontWeight: 800, cursor: 'pointer' }}>
+            {busy ? '…' : 'Revérifier ce SIRET'}
+          </button>
+          <button onClick={() => setEditingSiret(true)} style={{ flex: 1, background: 'none', border: `1px solid ${T.cb}`, color: T.sub, borderRadius: 8, padding: '9px 0', fontSize: 11.5, fontWeight: 800, cursor: 'pointer' }}>
+            Corriger le SIRET
+          </button>
+        </div>
+      )}
+      {canRetry && editingSiret && (
+        <div>
+          <input
+            aria-label="Nouveau SIRET"
+            value={siretInput}
+            onChange={(e) => setSiretInput(formatSiret(e.target.value))}
+            placeholder="123 456 789 00012"
+            style={{ ...inp, marginBottom: 8 }}
+          />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => reverify(siretInput)} disabled={busy || siretInput.replace(/\D/g, '').length !== 14} style={{ flex: 1, background: '#fff', color: '#000', border: 'none', borderRadius: 8, padding: '9px 0', fontSize: 11.5, fontWeight: 800, cursor: 'pointer' }}>
+              {busy ? '…' : 'Soumettre'}
+            </button>
+            <button onClick={() => { setEditingSiret(false); setSiretInput(''); }} style={{ flex: 1, background: T.row, color: T.sub, border: 'none', borderRadius: 8, padding: '9px 0', fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}>
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StructurePresentationCard({ structure, notif, onSaved }: { structure: Structure | null; notif: (m: string) => void; onSaved: () => Promise<void> }) {
+  const [tradeName, setTradeName] = useState(structure?.trade_name ?? '');
+  const [logoUrl, setLogoUrl] = useState(structure?.logo_url ?? '');
+  const [busy, setBusy] = useState(false);
+
+  async function save() {
+    if (!structure || busy) return;
+    setBusy(true);
+    try {
+      await updateStructurePresentation(structure.id, { trade_name: tradeName.trim() || null, logo_url: logoUrl.trim() || null });
+      await onSaved();
+      notif('Présentation mise à jour ✓');
+    } catch (e) {
+      notif(describeError(e, 'la mise à jour de la présentation'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 15 }}>
+      <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Nom commercial / enseigne</div>
+      <input aria-label="Nom commercial" value={tradeName} onChange={(e) => setTradeName(e.target.value)} placeholder={structure?.name ?? 'Nom affiché aux travailleurs'} style={{ ...inp, marginBottom: 12 }} />
+      <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Logo (URL)</div>
+      <input aria-label="URL du logo" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://…" style={{ ...inp, marginBottom: 12 }} />
+      <button onClick={save} disabled={busy} style={{ width: '100%', background: busy ? T.row : '#fff', color: busy ? T.mu : '#000', border: 'none', borderRadius: 10, padding: '12px 0', fontSize: 13, fontWeight: 900, cursor: 'pointer' }}>
+        {busy ? '…' : 'Enregistrer'}
+      </button>
+    </div>
+  );
+}
+
+function ContactCard({
   profile,
   onSave,
 }: {
-  structure: Structure | null;
   profile: Profile | null;
   onSave: (updates: ProfileUpdate) => Promise<void>;
 }) {
@@ -33,7 +165,6 @@ function StructureIdentityCard({
   const [address, setAddress] = useState(profile?.address ?? '');
   const [bio, setBio] = useState(profile?.bio ?? '');
   const [busy, setBusy] = useState(false);
-  const badge = verificationLabel(structure);
 
   async function save() {
     setBusy(true);
@@ -51,19 +182,9 @@ function StructureIdentityCard({
 
   return (
     <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 15 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5 }}>Raison sociale</div>
-          <div style={{ fontSize: 13.5, fontWeight: 900, color: T.text, overflowWrap: 'anywhere' }}>{structure?.name ?? '—'}</div>
-        </div>
-        <span style={{ fontSize: 9, fontWeight: 800, color: badge.color, background: badge.bg, borderRadius: 10, padding: '3px 9px', flexShrink: 0 }}>{badge.label}</span>
+      <div style={{ fontSize: 10, color: T.mu, lineHeight: 1.5, marginBottom: 12 }}>
+        Coordonnées internes (jamais issues du registre) — utilisées par UROSI pour te contacter.
       </div>
-      {structure?.siret && (
-        <div style={{ fontSize: 10.5, color: T.mu, marginBottom: 14 }}>
-          SIRET : <span style={{ color: T.sub, fontWeight: 700 }}>{structure.siret}</span>
-        </div>
-      )}
-
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Ville</div>
@@ -84,7 +205,7 @@ function StructureIdentityCard({
         style={{ ...inp, marginBottom: 12 }}
       />
 
-      <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Contact (usage interne)</div>
+      <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Notes (usage interne)</div>
       <textarea
         aria-label="Notes de contact"
         value={bio}
@@ -137,10 +258,19 @@ export function StructureSettingsSheet({
 
         {toast && <div style={{ marginBottom: 12, background: T.card, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '8px 11px', fontSize: 11, color: T.sub }}>{toast}</div>}
 
-        <SectionTitle>Identité</SectionTitle>
-        <SectionErrorBoundary label="Identité">
-          <StructureIdentityCard
-            structure={structure}
+        <SectionTitle>Fiche officielle</SectionTitle>
+        <SectionErrorBoundary label="Fiche officielle">
+          <OfficialProfileCard structure={structure} onReverified={onProfileSaved} />
+        </SectionErrorBoundary>
+
+        <SectionTitle>Présentation</SectionTitle>
+        <SectionErrorBoundary label="Présentation">
+          <StructurePresentationCard structure={structure} notif={notif} onSaved={onProfileSaved} />
+        </SectionErrorBoundary>
+
+        <SectionTitle>Coordonnées</SectionTitle>
+        <SectionErrorBoundary label="Coordonnées">
+          <ContactCard
             profile={profile}
             onSave={async (updates) => {
               await updateProfile(session.user.id, updates);

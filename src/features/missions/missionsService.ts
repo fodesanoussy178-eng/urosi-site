@@ -6,13 +6,29 @@ const MISSION_COLUMNS =
   'id, structure_id, title, detail, city, address, location, lat, lng, distance_km, scheduled_date, start_time, end_time, starts_at, ends_at, duration_minutes, duration_minutes_per_person, mission_days, sector, difficulty, is_urgent, worker_rate_cents, base_rate_cents, pricing_breakdown, is_solidaire, places, positions, slots, hourly_rate, worker_amount, price_total, worker_subtotal, service_fee, structure_total, total_worker_hours, time_slot, day_of_week, mission_category, dress_code, equipment, instructions, status, archived_at, created_at';
 
 export interface MissionWithStructure extends Mission {
-  structure: Pick<Structure, 'name' | 'siret' | 'is_ess' | 'about' | 'verification_status'> | null;
+  structure: Pick<
+    Structure,
+    | 'name'
+    | 'trade_name'
+    | 'logo_url'
+    | 'siret'
+    | 'is_ess'
+    | 'is_association'
+    | 'about'
+    | 'verification_status'
+    | 'founder_bypass'
+    | 'address'
+    | 'postal_code'
+    | 'city'
+  > | null;
 }
 
 export async function fetchOpenMissions(): Promise<MissionWithStructure[]> {
   const { data, error } = await supabase
     .from('missions')
-    .select(`${MISSION_COLUMNS}, structure:structures(name, siret, is_ess, about, verification_status)`)
+    .select(
+      `${MISSION_COLUMNS}, structure:structures(name, trade_name, logo_url, siret, is_ess, is_association, about, verification_status, founder_bypass, address, postal_code, city)`,
+    )
     .eq('status', 'open')
     .order('scheduled_date', { ascending: true });
   if (error) throw error;

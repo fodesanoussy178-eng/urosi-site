@@ -35,6 +35,24 @@ const TEST_ACCOUNTS = {
       p_bio: "Compte propriétaire de test — usage interne Fondateur uniquement.",
       p_address: "1 rue Fictive, 59000 Lille",
     },
+    // Profil officiel entierement fictif : simule le resultat d'une vraie
+    // verification SIRET sans jamais appeler le registre. Coherent avec
+    // apply_structure_siret_verification (structure_type/is_association
+    // derives de legal_category_code, jamais un choix manuel).
+    official: {
+      p_siren: "123456789",
+      p_trade_name: "Bistrot Fictif",
+      p_naf_code: "56.10A",
+      p_naf_label: "Restauration traditionnelle",
+      p_legal_form: "SARL",
+      p_postal_code: "59000",
+      p_city: "Lille",
+      p_address: "1 rue Fictive",
+      p_established_at: "2018-03-12",
+      p_structure_type: "entreprise",
+      p_legal_category_code: "5499",
+      p_is_association: false,
+    },
   },
 } as const;
 
@@ -153,13 +171,23 @@ Deno.serve(async (req) => {
     if (markError) throw new Error(markError.message);
 
     if (as === "structure") {
-      const { error: structureError } = await callerClient.rpc("founder_provision_test_structure", {
+      const { data: testStructure, error: structureError } = await callerClient.rpc("founder_provision_test_structure", {
         p_owner_id: testUserId,
         p_name: TEST_ACCOUNTS.structure.structureName,
         p_siret: FAKE_SIRET,
         p_about: "Structure fictive dédiée aux tests internes Fondateur. Jamais une vraie entreprise.",
+        ...TEST_ACCOUNTS.structure.official,
       });
       if (structureError) throw new Error(structureError.message);
+
+      // Une mission ouverte deja disponible : pas besoin de publier a la main
+      // avant de pouvoir tester candidatures/QR/paiement/historique.
+      if (testStructure?.id) {
+        const { error: missionError } = await callerClient.rpc("founder_provision_test_mission", {
+          p_structure_id: testStructure.id,
+        });
+        if (missionError) throw new Error(missionError.message);
+      }
     }
 
     const { data: link, error: linkError } = await adminClient.auth.admin.generateLink({

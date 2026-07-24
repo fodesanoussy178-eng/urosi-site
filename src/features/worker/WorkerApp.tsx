@@ -160,6 +160,122 @@ function SpotOfferBanner({ offer, busy, onRespond }: { offer: SpotOffer; busy: b
   );
 }
 
+function initials(name: string): string {
+  return name.split(' ').map((x) => x.charAt(0)).join('').slice(0, 2).toUpperCase();
+}
+
+// Fiche publique de la structure : signaux de confiance (vérification
+// officielle, statut association, note/avis) + accès direct aux missions.
+// Les avis ne montrent jamais qui les a écrits (anonymisés côté serveur).
+function StructureProfileSheet({
+  mission,
+  rating,
+  initialReviews,
+  onClose,
+  onSeeMissions,
+}: {
+  mission: MissionWithStructure;
+  rating: StructureRating | undefined;
+  initialReviews: StructureReview[];
+  onClose: () => void;
+  onSeeMissions: () => void;
+}) {
+  const [reviews, setReviews] = useState(initialReviews);
+  const [expanded, setExpanded] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const structure = mission.structure;
+  const displayName = structure?.trade_name || structure?.name || 'Structure';
+  const verified = structure?.verification_status === 'verified' || structure?.verification_status === 'founder_bypass';
+  const address = [structure?.address, structure?.postal_code, structure?.city].filter(Boolean).join(', ') || mission.city || mission.address || 'Localisation à confirmer';
+  const visibleReviews = expanded ? reviews : reviews.slice(0, 3);
+  const hasMore = !expanded && reviews.length > 3;
+
+  async function seeAllReviews() {
+    if (expanded || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      setReviews(await fetchStructureReviews(mission.structure_id, 20));
+    } catch {
+      // Repli silencieux : on affiche au moins ce qui a deja ete charge.
+    } finally {
+      setExpanded(true);
+      setLoadingMore(false);
+    }
+  }
+
+  return (
+    <div className="urosi-modal-layer urosi-bottom-sheet-layer" style={SHEET} onClick={onClose}>
+      <div className="urosi-bottom-sheet" role="dialog" aria-modal="true" aria-label={`Profil de ${displayName}`} style={SHEET_BODY} onClick={(event) => event.stopPropagation()}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 14 }}>
+          <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: 13, overflow: 'hidden', background: 'hsl(200 58% 46%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 16 }}>
+            {structure?.logo_url ? <img src={structure.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials(displayName)}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ color: T.text, fontSize: 16.5, fontWeight: 900, overflowWrap: 'anywhere' }}>{displayName}</div>
+              {verified && <span style={{ fontSize: 9, fontWeight: 900, color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 10, padding: '2px 8px', flexShrink: 0 }}>✓ Vérifiée</span>}
+            </div>
+            {structure?.is_association && (
+              <span style={{ display: 'inline-block', marginTop: 5, fontSize: 9, fontWeight: 800, color: T.green, background: T.greenBg, borderRadius: 8, padding: '1px 7px' }}>🤝 Association vérifiée</span>
+            )}
+          </div>
+          <button aria-label="Fermer le profil structure" onClick={onClose} style={{ background: T.row, border: 'none', borderRadius: 6, width: 26, height: 26, cursor: 'pointer', color: T.sub, flexShrink: 0 }}>×</button>
+        </div>
+
+        <div style={{ display: 'flex', gap: 7, alignItems: 'center', marginBottom: 8 }}>
+          {rating ? (
+            <>
+              <span style={{ color: T.amber, fontSize: 12.5, fontWeight: 900 }}>⭐ {rating.average.toFixed(1).replace('.', ',')}</span>
+              <span style={{ color: T.mu, fontSize: 11 }}>({rating.count} avis)</span>
+            </>
+          ) : (
+            <span style={{ color: T.mu, fontSize: 11 }}>Pas encore notée</span>
+          )}
+        </div>
+        <div style={{ color: T.sub, fontSize: 11.5, marginBottom: 16 }}>📍 {address}</div>
+
+        <button type="button" onClick={onSeeMissions} style={{ width: '100%', background: '#fff', color: '#000', border: 0, borderRadius: 10, padding: '12px 0', fontSize: 13, fontWeight: 900, cursor: 'pointer', marginBottom: 14 }}>
+          Voir les missions disponibles
+        </button>
+
+        {structure?.about && (
+          <details style={{ borderTop: `1px solid ${T.cb}`, borderBottom: `1px solid ${T.cb}`, padding: '12px 0', marginBottom: 16 }}>
+            <summary style={{ color: T.text, fontSize: 11.5, fontWeight: 900, cursor: 'pointer' }}>À propos de la structure</summary>
+            <p style={{ color: T.sub, fontSize: 11, lineHeight: 1.55, marginTop: 8 }}>{structure.about}</p>
+          </details>
+        )}
+
+        <section aria-label="Avis sur la structure">
+          <div style={{ color: T.text, fontSize: 13, fontWeight: 900, marginBottom: 8 }}>Avis</div>
+          {visibleReviews.length === 0 ? (
+            <div style={{ color: T.mu, fontSize: 11, padding: '10px 0', borderTop: `1px solid ${T.cb}` }}>Aucun avis détaillé publié pour le moment.</div>
+          ) : (
+            <div style={{ display: 'grid', gap: 2 }}>
+              {visibleReviews.map((review) => (
+                <article key={`${review.created_at}-${review.comment}`} style={{ borderTop: `1px solid ${T.cb}`, padding: '11px 0' }}>
+                  <span style={{ color: T.amber, fontSize: 10.5, fontWeight: 900 }}>⭐ {review.score}/5</span>
+                  <p style={{ color: T.sub, fontSize: 11, lineHeight: 1.5, margin: '5px 0 6px' }}>{review.comment}</p>
+                  <span style={{ color: T.mu, fontSize: 9, fontWeight: 800 }}>Avis anonyme vérifié</span>
+                </article>
+              ))}
+            </div>
+          )}
+          {hasMore && (
+            <button
+              type="button"
+              onClick={seeAllReviews}
+              disabled={loadingMore}
+              style={{ width: '100%', marginTop: 10, padding: '11px 12px', borderRadius: 11, border: `1px solid ${T.cb}`, background: 'transparent', color: T.text, fontSize: 11, fontWeight: 900, cursor: 'pointer' }}
+            >
+              {loadingMore ? '…' : 'Voir tous les avis'}
+            </button>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}
+
 export function WorkerApp() {
   const { session, profile, refreshProfile } = useAuth();
   const [tab, setTab] = useState<Tab>('flux');
@@ -921,25 +1037,13 @@ export function WorkerApp() {
 
         {/* Profil structure : uniquement les signaux utiles pour juger sa fiabilité. */}
         {structureProfile && (
-          <div className="urosi-modal-layer urosi-bottom-sheet-layer" style={SHEET} onClick={() => setStructureProfile(null)}>
-            <div className="urosi-bottom-sheet" role="dialog" aria-modal="true" aria-label={`Profil de ${structureProfile.structure?.name ?? 'la structure'}`} style={SHEET_BODY} onClick={(event) => event.stopPropagation()}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                <div>
-                  <div style={{ color: T.text, fontSize: 18, fontWeight: 900 }}>{structureProfile.structure?.name ?? 'Structure'}</div>
-                  <div style={{ color: structureProfile.structure?.verification_status === 'verified' || structureProfile.structure?.verification_status === 'founder_bypass' ? T.green : T.amber, fontSize: 10.5, fontWeight: 900, marginTop: 5 }}>{structureProfile.structure?.verification_status === 'verified' || structureProfile.structure?.verification_status === 'founder_bypass' ? '✓ Structure vérifiée' : 'Vérification en cours'}</div>
-                </div>
-                <button aria-label="Fermer le profil structure" onClick={() => setStructureProfile(null)} style={{ background: T.row, border: 'none', borderRadius: 6, width: 26, height: 26, cursor: 'pointer', color: T.sub }}>×</button>
-              </div>
-              <div style={{ color: T.amber, fontSize: 12, fontWeight: 900, marginTop: 12 }}>{(() => { const rating = structRatings.get(structureProfile.structure_id); return rating ? `⭐ ${rating.average.toFixed(1).replace('.', ',')} · ${rating.count} avis` : 'Pas encore notée'; })()}</div>
-              <div style={{ color: T.sub, fontSize: 11.5, marginTop: 9 }}>📍 {structureProfile.city || structureProfile.address || 'Localisation à confirmer'}</div>
-              <section aria-label="Avis sur la structure" style={{ marginTop: 18 }}>
-                <div style={{ color: T.text, fontSize: 13, fontWeight: 900, marginBottom: 5 }}>Avis récents</div>
-                {structureReviews.length === 0 ? <div style={{ color: T.mu, fontSize: 11, padding: '10px 0', borderTop: `1px solid ${T.cb}` }}>Aucun avis détaillé publié pour le moment.</div> : structureReviews.map((review) => <article key={`${review.created_at}-${review.comment}`} style={{ borderTop: `1px solid ${T.cb}`, padding: '11px 0' }}><div style={{ color: T.amber, fontSize: 10 }}>⭐ {review.score}/5</div><div style={{ color: T.sub, fontSize: 11, lineHeight: 1.55, marginTop: 4 }}>{review.comment}</div></article>)}
-              </section>
-              {structureProfile.structure?.about && <details style={{ borderTop: `1px solid ${T.cb}`, marginTop: 8, paddingTop: 12 }}><summary style={{ color: T.text, fontSize: 11.5, fontWeight: 900, cursor: 'pointer' }}>À propos</summary><p style={{ color: T.sub, fontSize: 11, lineHeight: 1.55 }}>{structureProfile.structure.about}</p></details>}
-              <button type="button" onClick={() => { setStructureProfile(null); setTab('flux'); }} style={{ width: '100%', background: '#fff', color: '#000', border: 0, borderRadius: 10, padding: '12px 0', fontSize: 13, fontWeight: 900, cursor: 'pointer', marginTop: 16 }}>Voir les missions disponibles</button>
-            </div>
-          </div>
+          <StructureProfileSheet
+            mission={structureProfile}
+            rating={structRatings.get(structureProfile.structure_id)}
+            initialReviews={structureReviews}
+            onClose={() => setStructureProfile(null)}
+            onSeeMissions={() => { setStructureProfile(null); setTab('flux'); }}
+          />
         )}
 
         {/* Retard / Annulation */}

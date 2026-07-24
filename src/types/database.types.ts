@@ -6,8 +6,9 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 
 export type ProfileRole = 'worker' | 'structure_admin';
 export type ProfileKycStatus = 'not_started' | 'requested' | 'submitted' | 'verified' | 'rejected';
-export type StructureVerificationStatus = 'pending' | 'verified' | 'rejected' | 'founder_bypass';
+export type StructureVerificationStatus = 'pending' | 'verified' | 'rejected' | 'closed' | 'not_found' | 'founder_bypass';
 export type StructureVerificationMethod = 'siret' | 'founder' | 'manual';
+export type StructureType = 'entreprise' | 'association' | 'entrepreneur_individuel' | 'autre';
 export type MissionStatus = 'open' | 'closed' | 'cancelled';
 export type MissionTimeSlot = 'morning' | 'afternoon' | 'evening' | 'night';
 export type MissionDayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
@@ -203,6 +204,23 @@ export interface Database {
           owner_id: string;
           name: string;
           siret: string | null;
+          siren: string | null;
+          trade_name: string | null;
+          logo_url: string | null;
+          postal_code: string | null;
+          city: string | null;
+          address: string | null;
+          naf_code: string | null;
+          naf_label: string | null;
+          legal_form: string | null;
+          admin_state: string | null;
+          siret_established_at: string | null;
+          siret_payload: Json | null;
+          siret_checked_at: string | null;
+          structure_type: StructureType | null;
+          legal_category_code: string | null;
+          is_association: boolean;
+          is_verified: boolean;
           is_ess: boolean;
           about: string | null;
           verification_status: StructureVerificationStatus;
@@ -218,6 +236,23 @@ export interface Database {
           owner_id: string;
           name: string;
           siret?: string | null;
+          siren?: string | null;
+          trade_name?: string | null;
+          logo_url?: string | null;
+          postal_code?: string | null;
+          city?: string | null;
+          address?: string | null;
+          naf_code?: string | null;
+          naf_label?: string | null;
+          legal_form?: string | null;
+          admin_state?: string | null;
+          siret_established_at?: string | null;
+          siret_payload?: Json | null;
+          siret_checked_at?: string | null;
+          structure_type?: StructureType | null;
+          legal_category_code?: string | null;
+          is_association?: boolean;
+          is_verified?: boolean;
           is_ess?: boolean;
           about?: string | null;
           verification_status?: StructureVerificationStatus;
@@ -1224,6 +1259,10 @@ export interface Database {
       has_founder_access: {
         Args: Record<string, never>;
         Returns: boolean;
+      };
+      resubmit_structure_siret: {
+        Args: { p_structure_id: string; p_siret: string };
+        Returns: Database['public']['Tables']['structures']['Row'];
       };
       applicants_display_names: {
         Args: { p_worker_ids: string[] };

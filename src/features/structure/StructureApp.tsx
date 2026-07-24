@@ -10,7 +10,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { ChatSheet } from '@/components/ui/ChatSheet';
 import { useBodyScrollLock } from '@/components/ui/useBodyScrollLock';
 import { WalletCard } from '@/components/ui/WalletCard';
-import { fetchMyStructures, createStructure, updateStructureAbout } from './structureService';
+import { fetchMyStructures, createStructure, updateStructureAbout, requestStructureVerification } from './structureService';
 import { StatsPanel, StructureStatsSummary, StructurePerformances } from './StatsPanel';
 import { StructureHistoryPanel } from './StructureHistoryPanel';
 import { fetchMissionsForStructure, createMission, updateMission, cancelMission, replaceMissionWorker, notifyReplacementSearch, type MissionNonSensitivePatch } from '@/features/missions/missionsService';
@@ -160,9 +160,11 @@ function isVerifiedStructure(structure: Structure | null): boolean {
 
 function verificationBadge(structure: Structure): { label: string; color: string; bg: string } {
   if (structure.verification_status === 'founder_bypass' || structure.founder_bypass) return { label: 'Accès fondateur', color: T.green, bg: T.greenBg };
-  if (structure.verification_status === 'verified') return { label: '✓ SIRET vérifié', color: T.green, bg: T.greenBg };
+  if (structure.verification_status === 'verified') return { label: '✓ Vérifiée', color: T.green, bg: T.greenBg };
+  if (structure.verification_status === 'closed') return { label: 'Établissement fermé', color: T.red, bg: T.redBg };
+  if (structure.verification_status === 'not_found') return { label: 'SIRET introuvable', color: T.red, bg: T.redBg };
   if (structure.verification_status === 'rejected') return { label: 'SIRET refusé', color: T.red, bg: T.redBg };
-  return { label: 'Vérification SIRET', color: T.amber, bg: T.amberBg };
+  return { label: 'À vérifier', color: T.amber, bg: T.amberBg };
 }
 
 function statusPill(bucket: MissionBucket): { label: string; color: string; bg: string } {
@@ -350,18 +352,20 @@ export function StructureApp() {
           if (meta.structure_name) {
             const metaSiret = String(meta.siret ?? '');
             const metaSiretOk = isValidSiret(metaSiret);
+            // Type association/entreprise : jamais un choix a l'inscription,
+            // uniquement deduit du registre officiel apres verification.
             const created = await createStructure(
               session.user.id,
               String(meta.structure_name),
               founder && !metaSiretOk ? undefined : normalizeSiret(metaSiret),
-              Boolean(meta.is_ess),
-              {
-                verificationStatus: founder ? 'founder_bypass' : metaSiretOk ? 'verified' : 'pending',
-                verificationMethod: founder ? 'founder' : 'siret',
-                founderBypass: founder,
-              },
+              false,
+              founder ? { verificationStatus: 'founder_bypass', verificationMethod: 'founder', founderBypass: true } : undefined,
             );
             mine = [created];
+            if (!founder && metaSiretOk) {
+              await requestStructureVerification(created.id).catch(() => undefined);
+              mine = await fetchMyStructures(session.user.id);
+            }
           }
         }
         const st = mine[0] ?? null;
@@ -389,13 +393,26 @@ export function StructureApp() {
       return;
     }
     try {
-      const created = await createStructure(session.user.id, vf.nom.trim(), founder ? undefined : normalizeSiret(vf.siret), false, {
-        verificationStatus: founder ? 'founder_bypass' : 'verified',
-        verificationMethod: founder ? 'founder' : 'siret',
-        founderBypass: founder,
-      });
+      const created = await createStructure(
+        session.user.id,
+        vf.nom.trim(),
+        founder ? undefined : normalizeSiret(vf.siret),
+        false,
+        founder ? { verificationStatus: 'founder_bypass', verificationMethod: 'founder', founderBypass: true } : undefined,
+      );
       setStructure(created);
-      notif(founder ? '✓ Structure enregistrée avec accès fondateur.' : '✓ Structure enregistrée, SIRET vérifié.');
+      if (founder) {
+        notif('✓ Structure enregistrée avec accès fondateur.');
+      } else {
+        notif('Structure enregistrée — vérification du SIRET auprès du registre officiel…');
+        const result = await requestStructureVerification(created.id).catch((e) => {
+          notif(describeError(e, 'la vérification du SIRET'));
+          return null;
+        });
+        const refreshed = await fetchMyStructures(session.user.id);
+        setStructure(refreshed[0] ?? created);
+        if (result) notif(result.message);
+      }
     } catch (e) {
       notif(describeError(e, 'la création de la structure'));
     }
@@ -730,8 +747,8 @@ export function StructureApp() {
             <Fld label="SIRET">
               <input aria-label="SIRET" value={vf.siret} onChange={(e) => setVf((x) => ({ ...x, siret: formatSiret(e.target.value) }))} placeholder="123 456 789 00012" style={inp} />
               {normalizeSiret(vf.siret).length > 0 && (
-                <div style={{ fontSize: 9.5, color: formSiretOk ? T.green : T.amber, marginTop: -7, marginBottom: 10 }}>
-                  {formSiretOk ? '✓ SIRET vérifié automatiquement' : 'Le SIRET doit contenir 14 chiffres valides.'}
+                <div style={{ fontSize: 9.5, color: formSiretOk ? T.sub : T.amber, marginTop: -7, marginBottom: 10 }}>
+                  {formSiretOk ? 'Format valide — vérification officielle auprès du registre juste après.' : 'Le SIRET doit contenir 14 chiffres valides.'}
                 </div>
               )}
             </Fld>
@@ -1268,6 +1285,8 @@ export function StructureApp() {
             onClose={() => setShowSettings(false)}
             onProfileSaved={async () => {
               await refreshProfile();
+              const refreshed = await fetchMyStructures(session.user.id).catch(() => null);
+              if (refreshed) setStructure(refreshed[0] ?? null);
             }}
           />
         )}
