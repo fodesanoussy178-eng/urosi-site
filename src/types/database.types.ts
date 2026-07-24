@@ -1235,6 +1235,10 @@ export interface Database {
         Args: { p_structure_ids: string[] };
         Returns: Array<{ structure_id: string; average: number; review_count: number }>;
       };
+      public_structure_reviews: {
+        Args: { p_structure_id: string; p_limit?: number };
+        Returns: Array<{ score: number; comment: string | null; created_at: string }>;
+      };
       worker_public_rating_summary: {
         Args: { p_worker_id: string };
         Returns: Json;
