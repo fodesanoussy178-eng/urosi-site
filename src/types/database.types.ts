@@ -129,6 +129,7 @@ export interface Database {
           skills: string[];
           public_first_name: string | null;
           show_last_name: boolean;
+          is_founder_test_account: boolean;
           kyc_status: ProfileKycStatus;
           kyc_requested_at: string | null;
           kyc_submitted_at: string | null;
@@ -153,6 +154,7 @@ export interface Database {
           skills?: string[];
           public_first_name?: string | null;
           show_last_name?: boolean;
+          is_founder_test_account?: boolean;
           kyc_status?: ProfileKycStatus;
           kyc_requested_at?: string | null;
           kyc_submitted_at?: string | null;

@@ -1,9 +1,10 @@
-import { Suspense, lazy, useEffect, type CSSProperties, type ReactNode } from 'react';
+import { Suspense, lazy, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/features/auth/AuthContext';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { T, FONT } from '@/components/ui/theme';
+import { exitFounderTestMode } from '@/features/founder/testMode';
 
 // Chaque route est chargée à la demande : la démo de la landing ne télécharge
 // plus les espaces travailleur/structure/fondateur, et inversement. Aucun
@@ -43,6 +44,48 @@ function actionButtonStyle(primary: boolean): CSSProperties {
     background: primary ? T.grad : 'transparent',
     color: primary ? '#fff' : T.sub,
   };
+}
+
+// Bandeau permanent affiché tant que la session active est un compte de test
+// Fondateur (jamais un vrai utilisateur) : impossible de l'oublier en cours
+// de test, et un chemin de retour immédiat vers la session Fondateur réelle.
+function FounderTestBanner() {
+  const nav = useNavigate();
+  const [busy, setBusy] = useState(false);
+
+  async function back() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await exitFounderTestMode();
+      nav('/fondateur', { replace: true });
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'Retour impossible — reconnecte-toi avec ton compte fondateur.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div
+      role="status"
+      style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 2000,
+        background: '#7c2d12', color: '#fff', fontSize: 10.5, fontWeight: 800,
+        padding: '6px 10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        gap: 10, flexWrap: 'wrap', textAlign: 'center',
+      }}
+    >
+      <span>🧪 TEST FONDATEUR — données isolées, aucun impact sur les vrais utilisateurs</span>
+      <button
+        onClick={back}
+        disabled={busy}
+        style={{ background: '#fff', color: '#7c2d12', border: 'none', borderRadius: 6, padding: '3px 9px', fontSize: 10, fontWeight: 900, cursor: busy ? 'wait' : 'pointer' }}
+      >
+        {busy ? '…' : 'Revenir au mode Fondateur'}
+      </button>
+    </div>
+  );
 }
 
 // Le site vitrine (/) est une page statique servie par Vercel, hors React :
@@ -137,24 +180,31 @@ function AppShell() {
     return <Centered text="Chargement du profil…" />;
   }
 
+  const isFounderTest = Boolean(profile.is_founder_test_account);
+
   return (
-    <Routes>
-      <Route path="/" element={<StaticHome />} />
-      <Route path="/demo" element={<DemoExperience />} />
-      <Route path="/connexion" element={<SignInPage />} />
-      <Route path="/app" element={profile.role === 'structure_admin' ? <StructureApp /> : <WorkerApp />} />
-      <Route path="/fondateur" element={<FounderAdminPage />} />
-      <Route path="/fondateur/kyc" element={<Navigate to="/fondateur?section=kyc" replace />} />
-      <Route path="/reinitialisation" element={<ResetPasswordPage />} />
-      <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
-      <Route path="/scan/:token" element={<ScanPage />} />
-      <Route path="/paiement/succes" element={<PaymentResultPage outcome="success" />} />
-      <Route path="/paiement/annule" element={<PaymentResultPage outcome="cancel" />} />
-      <Route path="/valider" element={<WorkerAttendancePage />} />
-      <Route path="/valider/:qrCode" element={<WorkerAttendancePage />} />
-      <Route path="/validation" element={<ValidatorApp />} />
-      <Route path="*" element={<Navigate to="/app" replace />} />
-    </Routes>
+    <>
+      {isFounderTest && <FounderTestBanner />}
+      <div style={{ paddingTop: isFounderTest ? 28 : 0 }}>
+        <Routes>
+          <Route path="/" element={<StaticHome />} />
+          <Route path="/demo" element={<DemoExperience />} />
+          <Route path="/connexion" element={<SignInPage />} />
+          <Route path="/app" element={profile.role === 'structure_admin' ? <StructureApp /> : <WorkerApp />} />
+          <Route path="/fondateur" element={<FounderAdminPage />} />
+          <Route path="/fondateur/kyc" element={<Navigate to="/fondateur?section=kyc" replace />} />
+          <Route path="/reinitialisation" element={<ResetPasswordPage />} />
+          <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
+          <Route path="/scan/:token" element={<ScanPage />} />
+          <Route path="/paiement/succes" element={<PaymentResultPage outcome="success" />} />
+          <Route path="/paiement/annule" element={<PaymentResultPage outcome="cancel" />} />
+          <Route path="/valider" element={<WorkerAttendancePage />} />
+          <Route path="/valider/:qrCode" element={<WorkerAttendancePage />} />
+          <Route path="/validation" element={<ValidatorApp />} />
+          <Route path="*" element={<Navigate to="/app" replace />} />
+        </Routes>
+      </div>
+    </>
   );
 }
 
