@@ -911,7 +911,7 @@ export function StructureApp() {
                         </div>
                       )}
                       {['accepted', 'in_progress', 'payment_pending', 'completed'].includes(c.status) && (
-                        <div style={{ padding: '0 14px 12px', display: 'grid', gridTemplateColumns: c.attendance_status === 'end_confirmed' && !ratedIds.has(c.id) ? '1fr 1fr' : '1fr', gap: 6 }}>
+                        <div style={{ padding: '0 14px 12px', display: 'grid', gridTemplateColumns: c.conversation_status === 'open' && c.attendance_status === 'end_confirmed' && !ratedIds.has(c.id) ? '1fr 1fr' : '1fr', gap: 6 }}>
                           {c.conversation_status === 'open' && (
                             <button onClick={() => setChatFor(c)} style={{ position: 'relative', background: '#1d4ed815', color: '#93c5fd', border: '1px solid #1e40af', borderRadius: 8, padding: '9px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
                               💬 Message
