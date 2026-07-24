@@ -101,6 +101,21 @@ export function createMissionCheckout(applicationId: string) {
   return invoke<MissionCheckout>('stripe-create-checkout', { application_id: applicationId });
 }
 
+export interface MissionRefundResult {
+  refunded: boolean;
+  reason?: string;
+  already?: boolean;
+}
+
+/**
+ * Initie le remboursement Stripe de l'encaissement d'une mission (annulation
+ * d'une mission confirmée). La synchronisation Wallet/candidature se fait via
+ * le webhook `charge.refunded`. Idempotent côté serveur.
+ */
+export function requestMissionRefund(applicationId: string) {
+  return invoke<MissionRefundResult>('stripe-refund-mission', { application_id: applicationId });
+}
+
 // ── Identity (travailleur) ────────────────────────────────────────────────
 
 export interface IdentityStart {

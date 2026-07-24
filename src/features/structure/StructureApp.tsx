@@ -36,7 +36,7 @@ import { confirmRemoteAttendance, reportWorkerAbsence, reportMissionIssue } from
 import { verifyMissionCvEntry, disputeMissionCvEntry } from '@/features/missions/missionCvService';
 import { MissionValidationPanel } from '@/features/missions/MissionValidationPanel';
 import { StructureQrScanSheet } from '@/features/missions/StructureQrScanSheet';
-import { createMissionCheckout } from '@/features/payments/stripeService';
+import { createMissionCheckout, requestMissionRefund } from '@/features/payments/stripeService';
 import { isStripeConfigured } from '@/lib/env';
 import { fetchUnreadCounts } from '@/features/messages/messagesService';
 import { geocodeMelCity } from '@/lib/geo';
@@ -518,11 +518,25 @@ export function StructureApp() {
 
   async function confirmCancelMission(mission: Mission) {
     const active = (cands.get(mission.id) ?? []).filter((c) => ['pending', 'accepted', 'in_progress'].includes(c.status));
+    // Mission confirmée (paiement Stripe encaissé) : on lance d'abord le
+    // remboursement, puis on annule. Le webhook charge.refunded synchronise le
+    // Wallet et repasse la candidature en remboursée. Mission non confirmée :
+    // annulation immédiate, aucun remboursement nécessaire (Document 5).
+    const paid = active.filter((c) => c.stripe_payment_status === 'paid');
     try {
+      for (const c of paid) {
+        if (isStripeConfigured) await requestMissionRefund(c.id);
+      }
       await cancelMission(mission.id, active.map((c) => c.id));
       await reload();
       setManage(null);
-      notif(active.length > 0 ? 'Mission annulée — le(s) travailleur(s) concerné(s) est/sont prévenu(s).' : 'Mission annulée.');
+      notif(
+        paid.length > 0
+          ? 'Mission annulée — remboursement Stripe lancé, le travailleur est prévenu.'
+          : active.length > 0
+            ? 'Mission annulée — le(s) travailleur(s) concerné(s) est/sont prévenu(s).'
+            : 'Mission annulée.',
+      );
     } catch (e) {
       notif(e instanceof Error ? e.message : 'Annulation impossible.');
     }
@@ -1347,8 +1361,13 @@ function MissionManageSheet({
             <div style={{ fontSize: 11.5, color: T.sub, lineHeight: 1.5 }}>
               Annuler cette mission {candidate ? 'préviendra le travailleur concerné et libérera sa candidature' : "n'a pas de candidat engagé pour l'instant"}. Cette action est définitive.
             </div>
+            {candidate?.stripe_payment_status === 'paid' && (
+              <div style={{ fontSize: 10.5, color: T.amber, background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 10, padding: '9px 11px', lineHeight: 1.45 }}>
+                Cette mission est payée : un remboursement Stripe sera lancé automatiquement et le Wallet sera synchronisé.
+              </div>
+            )}
             <button onClick={onCancelMission} style={{ width: '100%', background: T.redBg, color: T.red, border: `1px solid ${T.redBorder}`, borderRadius: 10, padding: '12px 0', fontSize: 13, fontWeight: 900, cursor: 'pointer' }}>
-              Confirmer l'annulation
+              {candidate?.stripe_payment_status === 'paid' ? 'Annuler et rembourser' : "Confirmer l'annulation"}
             </button>
             <button onClick={() => onModeChange('menu')} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: T.mu, padding: '4px 0' }}>
               Retour
