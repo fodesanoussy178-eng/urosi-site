@@ -237,7 +237,13 @@ export function WorkerApp() {
       if (myStats) setStats(myStats);
       const structureIds = [...new Set(missions.map((m) => m.structure_id))];
       setStructRatings(await fetchStructureRatings(structureIds));
-      const activeIds = myApps.filter((a) => ['accepted', 'in_progress', 'payment_pending', 'completed'].includes(a.status)).map((a) => a.id);
+      // Ne compte les messages non lus que sur les fils encore ouverts : une
+      // fois la mission terminée, la messagerie se ferme (finalize_mission_end)
+      // et il n'existe plus aucun moyen d'ouvrir ce fil pour le marquer lu — un
+      // reliquat non lu y resterait donc bloqué indéfiniment dans le badge.
+      const activeIds = myApps
+        .filter((a) => ['accepted', 'in_progress', 'payment_pending', 'completed'].includes(a.status) && a.conversation_status === 'open')
+        .map((a) => a.id);
       const cvIds = myApps.filter((a) => a.cv_status != null || a.status === 'completed').map((a) => a.id);
       const [unreadMap, attendanceMap, ratedStructure] = await Promise.all([
         fetchUnreadCounts(activeIds, session.user.id),
@@ -702,11 +708,17 @@ export function WorkerApp() {
                 {/* Réputation étoiles d'abord (comme côté structure) : étoiles,
                     puis la note, puis le nombre d'avis toujours visible. */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, marginBottom: 13 }}>
-                  <span aria-hidden="true" style={{ fontSize: 22, letterSpacing: 2, color: '#f59e0b', lineHeight: 1 }}>
-                    {[1, 2, 3, 4, 5].map((n) => (n <= Math.round(receivedAvg ?? 0) ? '★' : '☆')).join('')}
-                  </span>
-                  <div style={{ fontSize: 26, fontWeight: 900, color: T.text, lineHeight: 1.1 }}>{receivedAvg ? receivedAvg.toFixed(1).replace('.', ',') : '—'}</div>
-                  <div style={{ fontSize: 10.5, color: T.mu }}>{receivedScores.length} avis</div>
+                  {receivedScores.length > 0 ? (
+                    <>
+                      <span aria-hidden="true" style={{ fontSize: 22, letterSpacing: 2, color: '#f59e0b', lineHeight: 1 }}>
+                        {[1, 2, 3, 4, 5].map((n) => (n <= Math.round(receivedAvg ?? 0) ? '★' : '☆')).join('')}
+                      </span>
+                      <div style={{ fontSize: 26, fontWeight: 900, color: T.text, lineHeight: 1.1 }}>{receivedAvg!.toFixed(1).replace('.', ',')}</div>
+                      <div style={{ fontSize: 10.5, color: T.mu }}>{receivedScores.length} avis</div>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 12, fontWeight: 700, color: T.mu }}>Pas encore évalué – 0 avis</div>
+                  )}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7, marginBottom: 13 }}>
                   {[
