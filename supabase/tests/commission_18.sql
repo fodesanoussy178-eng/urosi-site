@@ -36,8 +36,8 @@ insert into public.founder_access (user_id)
 values ('10000000-0000-0000-0000-000000000001')
 on conflict do nothing;
 
-insert into public.structures (id, owner_id, name, subscription_active)
-values ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000003', 'Structure Test', true);
+insert into public.structures (id, owner_id, name)
+values ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000003', 'Structure Test');
 
 insert into public.missions (
   id, structure_id, title, scheduled_date, duration_minutes,

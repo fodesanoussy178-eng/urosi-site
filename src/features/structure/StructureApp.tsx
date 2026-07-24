@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/features/auth/AuthContext';
-import { hasFounderAccess, signOut } from '@/features/auth/authService';
+import { hasFounderAccess } from '@/features/auth/authService';
+import { StructureSettingsSheet } from './StructureSettingsSheet';
 import { T, FONT, inp } from '@/components/ui/theme';
 import { Fld } from '@/components/ui/Fld';
 import { DocModal, AideRegles, type DocKey } from '@/components/ui/DocModal';
@@ -241,7 +242,7 @@ function MissionCard({
 }
 
 export function StructureApp() {
-  const { session } = useAuth();
+  const { session, profile, refreshProfile } = useAuth();
   const [structure, setStructure] = useState<Structure | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('missions');
@@ -270,6 +271,7 @@ export function StructureApp() {
   const [showDetailedStats, setShowDetailedStats] = useState(false);
   const [scanMission, setScanMission] = useState<Mission | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
   const tr = useRef<ReturnType<typeof setTimeout>>();
 
   useBodyScrollLock(Boolean(showPub || validationMissionId || panelC || ratingCand || chatFor || docKey || manage || scanMission));
@@ -687,7 +689,9 @@ export function StructureApp() {
   const formSiretOk = isValidSiret(vf.siret);
   const canCreateStructure = vf.nom.trim().length >= 2 && (formFounder || formSiretOk);
   const structureVerified = isVerifiedStructure(structure);
-  const canPublishMission = structureVerified && (founderAccess || Boolean(structure?.subscription_active));
+  // Aucun abonnement structure : la seule condition pour publier est la
+  // vérification de la structure (SIRET, ou accès fondateur en test).
+  const canPublishMission = structureVerified;
 
   if (loading) {
     return <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, color: T.mu, fontSize: 12 }}>Chargement…</div>;
@@ -705,8 +709,7 @@ export function StructureApp() {
             <ThemeToggle />
             {session && <NotificationBell profileId={session.user.id} onDataChanged={() => reload().catch(() => undefined)} />}
             {founderAccess && <button onClick={() => window.location.assign('/fondateur')} style={{ fontSize: 10, color: T.cyan, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>Fondateur</button>}
-            <button onClick={() => setDocKey('cgu')} style={{ fontSize: 10, color: T.mu, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>? Aide</button>
-            <button onClick={() => signOut()} style={{ fontSize: 10, color: T.mu, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>Déconnexion</button>
+            <button onClick={() => setShowSettings(true)} aria-label="Réglages" title="Réglages" style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: T.mu, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 8, cursor: 'pointer' }}>⚙</button>
           </div>
         </div>
 
@@ -806,13 +809,8 @@ export function StructureApp() {
                           Vérification SIRET requise avant publication.
                         </div>
                       )}
-                      {structureVerified && !founderAccess && !structure.subscription_active && (
-                        <div style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 10, padding: '10px 12px', fontSize: 10.5, color: T.amber, lineHeight: 1.45 }}>
-                          Abonnement requis : abonne ta structure pour publier des missions.
-                        </div>
-                      )}
                       <button onClick={() => { setDuplicateSeed(null); if (canPublishMission) setShowPub(true); }} disabled={!canPublishMission} style={{ width: '100%', background: canPublishMission ? '#fff' : T.row, color: canPublishMission ? '#000' : T.mu, border: 'none', borderRadius: 11, padding: '13px 0', fontSize: 13, fontWeight: 900, cursor: canPublishMission ? 'pointer' : 'not-allowed', marginBottom: 2 }}>
-                        {!structureVerified ? 'Structure à vérifier' : !canPublishMission ? 'Abonnement requis' : '＋ Publier une mission'}
+                        {!structureVerified ? 'Structure à vérifier' : '＋ Publier une mission'}
                       </button>
                       {accueilEmpty && (
                         <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 20, textAlign: 'center', fontSize: 11, color: T.mu, lineHeight: 1.5 }}>
@@ -1182,7 +1180,6 @@ export function StructureApp() {
               <PublishModal
                 structure={structure}
                 initial={duplicateSeed}
-                founderAccess={founderAccess}
                 onClose={() => { setShowPub(false); setDuplicateSeed(null); }}
                 onPublished={(m) => {
                   setMis((l) => [m, ...l]);
@@ -1262,6 +1259,18 @@ export function StructureApp() {
         )}
 
         {docKey && <DocModal dk={docKey} onClose={() => setDocKey(null)} />}
+
+        {showSettings && session && (
+          <StructureSettingsSheet
+            session={session}
+            profile={profile}
+            structure={structure}
+            onClose={() => setShowSettings(false)}
+            onProfileSaved={async () => {
+              await refreshProfile();
+            }}
+          />
+        )}
       </div>
     </div>
   );
@@ -1539,7 +1548,7 @@ function SheetAction({ label, onClick, danger }: { label: string; onClick: () =>
   );
 }
 
-function PublishModal({ structure, initial, founderAccess, onClose, onPublished }: { structure: Structure; initial?: Mission | null; founderAccess?: boolean; onClose: () => void; onPublished: (m: Mission) => void }) {
+function PublishModal({ structure, initial, onClose, onPublished }: { structure: Structure; initial?: Mission | null; onClose: () => void; onPublished: (m: Mission) => void }) {
   const [f, setF] = useState(() => ({
     t: initial ? `${initial.title} (copie)` : '',
     city: initial?.city ?? '',
@@ -1594,11 +1603,8 @@ function PublishModal({ structure, initial, founderAccess, onClose, onPublished 
   const summary = first
     ? `${formatLongDay(first.date)} · ${first.start}–${last?.end ?? first.end}${last && last.end < last.start ? ' +1' : ''} · ${formatHours(minutes)}`
     : '';
-  const subscriptionOk = Boolean(founderAccess) || structure.subscription_active;
   const validationMessage =
-    !subscriptionOk
-      ? "Abonnement requis : abonne ta structure pour publier des missions."
-      : f.t.trim().length < 2
+    f.t.trim().length < 2
       ? 'Renseigne le titre de la mission.'
       : f.city.trim().length < 2
         ? 'Renseigne la ville de la mission.'

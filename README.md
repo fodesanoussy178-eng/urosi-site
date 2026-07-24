@@ -73,7 +73,8 @@ Supabase (migrations, auth, variables d'environnement).
   **notifications** en direct (candidatures, decisions, paiements, notes,
   retards, messages).
 - **CV vivant** (missions prouvees + notes bidirectionnelles), statistiques
-  Worker et Structure, wallet, abonnement structure.
+  Worker et Structure, wallet. Aucun abonnement structure : le seul cout
+  cote structure est le paiement de la mission + la commission UROSI.
 - **Centre Fondateur** unique (`/fondateur`) : tableau de bord, comptes,
   missions, KYC, signalements, revenus UROSI, journal d'administration et
   laboratoire strictement bloque sur la base de production.

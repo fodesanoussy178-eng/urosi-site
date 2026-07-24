@@ -124,6 +124,12 @@ Deno.serve(async (req) => {
     // peut faire : creer un compte auth et generer un lien de bascule.
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
+    // verify_jwt est desactive au niveau de la passerelle pour cette fonction :
+    // on verifie nous-memes le jeton ici via un appel reel a GoTrue
+    // (auth.getUser), l'autorite qui l'a emis — plus fiable qu'une
+    // verification de signature au niveau de la passerelle, qui peut echouer
+    // (« unrecognized JWT kid ... ») si la rotation des cles de signature du
+    // projet n'est pas encore repercutee a ce niveau-la.
     const { data: authData, error: authError } = await callerClient.auth.getUser();
     if (authError || !authData.user) return json({ error: "Non authentifié." }, 401);
 

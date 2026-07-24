@@ -7,45 +7,42 @@ import { SectionTitle, AccountCard, DeleteAccountCard } from '@/components/ui/Se
 import { useBodyScrollLock } from '@/components/ui/useBodyScrollLock';
 import { signOut } from '@/features/auth/authService';
 import { updateProfile, type Profile } from '@/features/profile/profileService';
+import type { Structure } from '@/features/missions/types';
 
 type ProfileUpdate = Parameters<typeof updateProfile>[1];
 
-function firstNameOf(fullName: string): string {
-  return fullName.trim().split(/\s+/)[0] || '';
+function verificationLabel(structure: Structure | null): { label: string; color: string; bg: string } {
+  if (!structure) return { label: '—', color: T.mu, bg: T.row };
+  if (structure.verification_status === 'founder_bypass' || structure.founder_bypass) return { label: 'Accès fondateur', color: T.green, bg: T.greenBg };
+  if (structure.verification_status === 'verified') return { label: '✓ SIRET vérifié', color: T.green, bg: T.greenBg };
+  if (structure.verification_status === 'rejected') return { label: 'SIRET refusé', color: T.red, bg: T.redBg };
+  return { label: 'Vérification SIRET en cours', color: T.amber, bg: T.amberBg };
 }
 
-function lastNamePartOf(fullName: string): string {
-  return fullName.trim().split(/\s+/).slice(1).join(' ');
-}
-
-function IdentityCard({ profile, onSave }: { profile: Profile | null; onSave: (updates: ProfileUpdate) => Promise<void> }) {
-  const fullName = profile?.full_name ?? '';
-  const [legalName, setLegalName] = useState(fullName);
-  const [publicFirstName, setPublicFirstName] = useState(profile?.public_first_name ?? '');
-  const [showLastName, setShowLastName] = useState(profile?.show_last_name ?? false);
+function StructureIdentityCard({
+  structure,
+  profile,
+  onSave,
+}: {
+  structure: Structure | null;
+  profile: Profile | null;
+  onSave: (updates: ProfileUpdate) => Promise<void>;
+}) {
   const [city, setCity] = useState(profile?.city ?? '');
   const [phone, setPhone] = useState(profile?.phone ?? '');
+  const [address, setAddress] = useState(profile?.address ?? '');
   const [bio, setBio] = useState(profile?.bio ?? '');
-  const [skillsText, setSkillsText] = useState((profile?.skills ?? []).join(', '));
-  const [micro, setMicro] = useState(profile?.is_micro_entrepreneur ?? false);
   const [busy, setBusy] = useState(false);
-
-  const effectiveFirstName = publicFirstName.trim() || firstNameOf(legalName);
-  const lastPart = lastNamePartOf(legalName);
-  const preview = showLastName && lastPart ? `${effectiveFirstName} ${lastPart}` : effectiveFirstName || 'Travailleur';
+  const badge = verificationLabel(structure);
 
   async function save() {
     setBusy(true);
     try {
       await onSave({
-        full_name: legalName,
-        public_first_name: publicFirstName.trim() || null,
-        show_last_name: showLastName,
-        is_micro_entrepreneur: micro,
         city: city.trim() || null,
         phone: phone.trim() || null,
+        address: address.trim() || null,
         bio: bio.trim() || null,
-        skills: skillsText.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 12),
       });
     } finally {
       setBusy(false);
@@ -54,21 +51,18 @@ function IdentityCard({ profile, onSave }: { profile: Profile | null; onSave: (u
 
   return (
     <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 15 }}>
-      <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Prénom affiché</div>
-      <input
-        aria-label="Prénom affiché"
-        value={publicFirstName}
-        onChange={(e) => setPublicFirstName(e.target.value)}
-        placeholder={firstNameOf(legalName) || 'Ton prénom'}
-        style={{ ...inp, marginBottom: 10 }}
-      />
-      <label style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 6, cursor: 'pointer' }}>
-        <input type="checkbox" checked={showLastName} onChange={(e) => setShowLastName(e.target.checked)} style={{ width: 16, height: 16 }} />
-        <span style={{ fontSize: 12, fontWeight: 700, color: T.text }}>Afficher mon nom de famille aux structures</span>
-      </label>
-      <div style={{ fontSize: 10.5, color: T.mu, lineHeight: 1.5, marginBottom: 14 }}>
-        Les structures verront : <strong style={{ color: T.sub }}>{preview}</strong>. Ton prénom leur est toujours visible ; le nom de famille reste masqué tant que cette case n'est pas cochée.
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5 }}>Raison sociale</div>
+          <div style={{ fontSize: 13.5, fontWeight: 900, color: T.text, overflowWrap: 'anywhere' }}>{structure?.name ?? '—'}</div>
+        </div>
+        <span style={{ fontSize: 9, fontWeight: 800, color: badge.color, background: badge.bg, borderRadius: 10, padding: '3px 9px', flexShrink: 0 }}>{badge.label}</span>
       </div>
+      {structure?.siret && (
+        <div style={{ fontSize: 10.5, color: T.mu, marginBottom: 14 }}>
+          SIRET : <span style={{ color: T.sub, fontWeight: 700 }}>{structure.siret}</span>
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
         <div style={{ flex: 1 }}>
@@ -77,46 +71,28 @@ function IdentityCard({ profile, onSave }: { profile: Profile | null; onSave: (u
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Téléphone</div>
-          <input aria-label="Téléphone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="06 12 34 56 78" inputMode="tel" style={{ ...inp, marginBottom: 0 }} />
+          <input aria-label="Téléphone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="01 23 45 67 89" inputMode="tel" style={{ ...inp, marginBottom: 0 }} />
         </div>
       </div>
 
-      <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Bio (visible sur ton CV vivant)</div>
-      <textarea
-        aria-label="Bio"
-        value={bio}
-        onChange={(e) => setBio(e.target.value)}
-        rows={2}
-        placeholder="En deux mots, qui tu es et ce que tu cherches…"
-        style={{ ...inp, resize: 'none', lineHeight: 1.5, marginBottom: 12 }}
-      />
-
-      <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Compétences (séparées par des virgules)</div>
+      <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Adresse</div>
       <input
-        aria-label="Compétences"
-        value={skillsText}
-        onChange={(e) => setSkillsText(e.target.value)}
-        placeholder="service, caisse, manutention…"
+        aria-label="Adresse"
+        value={address}
+        onChange={(e) => setAddress(e.target.value)}
+        placeholder="1 rue Exemple, 59000 Lille"
         style={{ ...inp, marginBottom: 12 }}
       />
 
-      <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Statut</div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 14 }}>
-        <button onClick={() => setMicro(false)} style={{ background: !micro ? '#fff' : T.row, color: !micro ? '#000' : T.sub, border: `1px solid ${!micro ? '#fff' : T.cb}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
-          Particulier
-        </button>
-        <button onClick={() => setMicro(true)} style={{ background: micro ? '#fff' : T.row, color: micro ? '#000' : T.sub, border: `1px solid ${micro ? '#fff' : T.cb}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
-          Micro-entrepreneur
-        </button>
-      </div>
-
-      <details style={{ marginBottom: 14 }}>
-        <summary style={{ fontSize: 10.5, fontWeight: 800, color: T.mu, cursor: 'pointer' }}>Nom légal complet (usage interne : KYC, paiement, conformité)</summary>
-        <div style={{ marginTop: 8 }}>
-          <input aria-label="Nom légal complet" value={legalName} onChange={(e) => setLegalName(e.target.value)} style={{ ...inp, marginBottom: 6 }} />
-          <div style={{ fontSize: 9.5, color: T.mu, lineHeight: 1.5 }}>Utilisé uniquement pour la vérification d'identité et le paiement — jamais montré aux structures.</div>
-        </div>
-      </details>
+      <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Contact (usage interne)</div>
+      <textarea
+        aria-label="Notes de contact"
+        value={bio}
+        onChange={(e) => setBio(e.target.value)}
+        rows={2}
+        placeholder="Personne à contacter, précisions utiles…"
+        style={{ ...inp, resize: 'none', lineHeight: 1.5, marginBottom: 14 }}
+      />
 
       <button
         onClick={save}
@@ -129,14 +105,16 @@ function IdentityCard({ profile, onSave }: { profile: Profile | null; onSave: (u
   );
 }
 
-export function WorkerSettingsSheet({
+export function StructureSettingsSheet({
   session,
   profile,
+  structure,
   onClose,
   onProfileSaved,
 }: {
   session: Session;
   profile: Profile | null;
+  structure: Structure | null;
   onClose: () => void;
   onProfileSaved: () => Promise<void>;
 }) {
@@ -161,12 +139,13 @@ export function WorkerSettingsSheet({
 
         <SectionTitle>Identité</SectionTitle>
         <SectionErrorBoundary label="Identité">
-          <IdentityCard
+          <StructureIdentityCard
+            structure={structure}
             profile={profile}
             onSave={async (updates) => {
               await updateProfile(session.user.id, updates);
               await onProfileSaved();
-              notif('Profil mis à jour ✓');
+              notif('Coordonnées mises à jour ✓');
             }}
           />
         </SectionErrorBoundary>
