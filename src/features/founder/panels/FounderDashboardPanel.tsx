@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { T } from '@/components/ui/theme';
 import { founderAdminApi, type FounderDashboard } from '../founderAdminService';
 import { founderCard, founderNotice } from '../founderUi';
+import { describeError } from '@/lib/errors';
 
 export function FounderDashboardPanel() {
   const [data, setData] = useState<FounderDashboard | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    founderAdminApi.dashboard().then(setData).catch((reason) => setError(reason instanceof Error ? reason.message : 'Chargement impossible.'));
+    founderAdminApi.dashboard().then(setData).catch((reason) => setError(describeError(reason, 'le chargement du tableau de bord')));
   }, []);
 
   if (error) return <div style={{ ...founderNotice, color: T.red }}>{error}</div>;

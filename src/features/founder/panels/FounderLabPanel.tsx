@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { T } from '@/components/ui/theme';
 import { founderAdminApi, type FounderLabStatus } from '../founderAdminService';
 import { founderButton, founderCard, founderDate, founderNotice } from '../founderUi';
+import { describeError } from '@/lib/errors';
 
 const scenarios = [
   ['user', 'Faux utilisateur'],
@@ -18,14 +19,14 @@ export function FounderLabPanel() {
   const [busy, setBusy] = useState('');
   const load = useCallback(async () => {
     try { setData(await founderAdminApi.labStatus()); setError(''); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'Chargement impossible.'); }
+    catch (cause) { setError(describeError(cause, "la vérification de l'environnement")); }
   }, []);
   useEffect(() => { void load(); }, [load]);
 
   async function create(type: string) {
     setBusy(type);
     try { await founderAdminApi.createLabScenario(type); await load(); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'Simulation impossible.'); }
+    catch (cause) { setError(describeError(cause, 'cette simulation')); }
     finally { setBusy(''); }
   }
 

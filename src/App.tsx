@@ -67,24 +67,21 @@ function FounderTestBanner() {
   }
 
   return (
-    <div
+    <button
+      type="button"
       role="status"
+      onClick={back}
+      disabled={busy}
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 2000,
-        background: '#7c2d12', color: '#fff', fontSize: 10.5, fontWeight: 800,
-        padding: '6px 10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        gap: 10, flexWrap: 'wrap', textAlign: 'center',
+        background: '#7c2d12', color: '#fff', fontSize: 11, fontWeight: 800,
+        border: 'none', width: '100%', cursor: busy ? 'wait' : 'pointer',
+        padding: 'calc(6px + env(safe-area-inset-top)) 10px 6px',
+        textAlign: 'center', lineHeight: 1.3,
       }}
     >
-      <span>🧪 TEST FONDATEUR — données isolées, aucun impact sur les vrais utilisateurs</span>
-      <button
-        onClick={back}
-        disabled={busy}
-        style={{ background: '#fff', color: '#7c2d12', border: 'none', borderRadius: 6, padding: '3px 9px', fontSize: 10, fontWeight: 900, cursor: busy ? 'wait' : 'pointer' }}
-      >
-        {busy ? '…' : 'Revenir au mode Fondateur'}
-      </button>
-    </div>
+      {busy ? '…' : 'TEST FONDATEUR · Revenir au mode Admin'}
+    </button>
   );
 }
 
@@ -185,7 +182,7 @@ function AppShell() {
   return (
     <>
       {isFounderTest && <FounderTestBanner />}
-      <div style={{ paddingTop: isFounderTest ? 28 : 0 }}>
+      <div style={{ paddingTop: isFounderTest ? 'calc(30px + env(safe-area-inset-top))' : 0 }}>
         <Routes>
           <Route path="/" element={<StaticHome />} />
           <Route path="/demo" element={<DemoExperience />} />
