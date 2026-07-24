@@ -3,8 +3,10 @@ import { Stars } from '@/components/ui/Stars';
 import { T } from '@/components/ui/theme';
 import { formatEuros } from '@/lib/format';
 import {
+  archiveMission,
   fetchStructureMissionHistory,
   fetchWeeklyStructureReviews,
+  unarchiveMission,
   type StructureMissionHistoryRow,
   type WeeklyStructureReview,
 } from './structureInsightsService';
@@ -48,14 +50,20 @@ export function StructureHistoryPanel({ structureId }: { structureId: string }) 
   const [history, setHistory] = useState<StructureMissionHistoryRow[]>([]);
   const [reviews, setReviews] = useState<WeeklyStructureReview[]>([]);
   const [expanded, setExpanded] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [busyMission, setBusyMission] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  function loadHistory(includeArchived: boolean) {
+    return fetchStructureMissionHistory(structureId, includeArchived).then(setHistory);
+  }
 
   useEffect(() => {
     let active = true;
     setLoading(true);
     setError(false);
-    Promise.all([fetchStructureMissionHistory(structureId), fetchWeeklyStructureReviews(structureId)])
+    Promise.all([fetchStructureMissionHistory(structureId, showArchived), fetchWeeklyStructureReviews(structureId)])
       .then(([historyRows, reviewRows]) => {
         if (!active) return;
         setHistory(historyRows);
@@ -70,7 +78,20 @@ export function StructureHistoryPanel({ structureId }: { structureId: string }) 
     return () => {
       active = false;
     };
-  }, [structureId]);
+  }, [structureId, showArchived]);
+
+  async function toggleArchive(row: StructureMissionHistoryRow) {
+    setBusyMission(row.mission_id);
+    try {
+      if (row.archived_at) await unarchiveMission(row.mission_id);
+      else await archiveMission(row.mission_id);
+      await loadHistory(showArchived);
+    } catch {
+      setError(true);
+    } finally {
+      setBusyMission(null);
+    }
+  }
 
   const visibleHistory = expanded ? history : history.slice(0, DEFAULT_HISTORY_SIZE);
   const reviewAverage = useMemo(
@@ -88,20 +109,32 @@ export function StructureHistoryPanel({ structureId }: { structureId: string }) 
             <div style={labelStyle}>Historique des missions terminées</div>
             <div style={{ color: T.mu, fontSize: 9 }}>Les 5 plus récentes sont affichées par défaut.</div>
           </div>
-          <button onClick={() => downloadHistory(history)} disabled={history.length === 0} style={buttonStyle}>Télécharger les dépenses</button>
+          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+            <button onClick={() => setShowArchived((v) => !v)} style={{ ...buttonStyle, color: showArchived ? T.text : T.cyan }}>
+              {showArchived ? 'Masquer archivées' : 'Voir les archivées'}
+            </button>
+            <button onClick={() => downloadHistory(history)} disabled={history.length === 0} style={buttonStyle}>Télécharger</button>
+          </div>
         </div>
         {loading && <div style={{ color: T.mu, fontSize: 11 }}>Chargement de l’historique…</div>}
         {!loading && history.length === 0 && <div style={{ color: T.mu, fontSize: 11 }}>Aucune mission terminée.</div>}
         {visibleHistory.map((row) => (
-          <div key={row.mission_id} style={{ borderTop: `1px solid ${T.cb}`, padding: '9px 0' }}>
+          <div key={row.mission_id} style={{ borderTop: `1px solid ${T.cb}`, padding: '9px 0', opacity: row.archived_at ? 0.6 : 1 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
               <div style={{ minWidth: 0 }}>
-                <div style={{ color: T.text, fontSize: 11.5, fontWeight: 800 }}>{row.title}</div>
+                <div style={{ color: T.text, fontSize: 11.5, fontWeight: 800 }}>
+                  {row.title}{row.archived_at && <span style={{ color: T.mu, fontWeight: 700 }}> · archivée</span>}
+                </div>
                 <div style={{ color: T.mu, fontSize: 9.5, marginTop: 3 }}>
                   {new Date(`${row.scheduled_date}T12:00:00`).toLocaleDateString('fr-FR')} · 📍 {row.address || 'Adresse non renseignée'} · {row.completed_workers} travailleur{row.completed_workers > 1 ? 's' : ''}
                 </div>
               </div>
-              <div style={{ color: T.text, fontSize: 12, fontWeight: 900, whiteSpace: 'nowrap' }}>{euros(row.total_expense_cents)}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5, flexShrink: 0 }}>
+                <div style={{ color: T.text, fontSize: 12, fontWeight: 900, whiteSpace: 'nowrap' }}>{euros(row.total_expense_cents)}</div>
+                <button onClick={() => toggleArchive(row)} disabled={busyMission === row.mission_id} style={{ background: 'none', border: 0, color: T.mu, fontSize: 9, fontWeight: 800, cursor: 'pointer', padding: 0 }}>
+                  {busyMission === row.mission_id ? '…' : row.archived_at ? 'Désarchiver' : 'Archiver'}
+                </button>
+              </div>
             </div>
           </div>
         ))}

@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import type { Mission, MissionInsert, Structure } from './types';
 
 const MISSION_COLUMNS =
-  'id, structure_id, title, detail, city, address, location, lat, lng, distance_km, scheduled_date, start_time, end_time, starts_at, ends_at, duration_minutes, duration_minutes_per_person, mission_days, sector, difficulty, is_urgent, worker_rate_cents, base_rate_cents, pricing_breakdown, is_solidaire, places, positions, slots, hourly_rate, worker_amount, price_total, worker_subtotal, service_fee, structure_total, total_worker_hours, time_slot, day_of_week, mission_category, dress_code, equipment, instructions, status, created_at';
+  'id, structure_id, title, detail, city, address, location, lat, lng, distance_km, scheduled_date, start_time, end_time, starts_at, ends_at, duration_minutes, duration_minutes_per_person, mission_days, sector, difficulty, is_urgent, worker_rate_cents, base_rate_cents, pricing_breakdown, is_solidaire, places, positions, slots, hourly_rate, worker_amount, price_total, worker_subtotal, service_fee, structure_total, total_worker_hours, time_slot, day_of_week, mission_category, dress_code, equipment, instructions, status, archived_at, created_at';
 
 export interface MissionWithStructure extends Mission {
   structure: Pick<Structure, 'name' | 'siret' | 'is_ess' | 'about' | 'verification_status'> | null;
@@ -38,6 +38,7 @@ export async function fetchMissionsForStructure(structureId: string): Promise<Mi
     .from('missions')
     .select(MISSION_COLUMNS)
     .eq('structure_id', structureId)
+    .is('archived_at', null)
     .order('created_at', { ascending: false });
   if (error) throw error;
   return data ?? [];

@@ -312,6 +312,7 @@ export interface Database {
           instructions: string | null;
           price_total: number;
           status: MissionStatus;
+          archived_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -1243,7 +1244,7 @@ export interface Database {
         Returns: Array<{ score: number; comment: string | null; published_week: string }>;
       };
       structure_mission_history: {
-        Args: { p_structure_id: string };
+        Args: { p_structure_id: string; p_include_archived?: boolean };
         Returns: Array<{
           mission_id: string;
           title: string;
@@ -1254,7 +1255,16 @@ export interface Database {
           commission_cents: number;
           total_expense_cents: number;
           paid_at: string | null;
+          archived_at: string | null;
         }>;
+      };
+      archive_mission: {
+        Args: { p_mission_id: string };
+        Returns: undefined;
+      };
+      unarchive_mission: {
+        Args: { p_mission_id: string };
+        Returns: undefined;
       };
       withdraw_wallet: {
         Args: { p_amount_cents: number };
