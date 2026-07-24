@@ -99,6 +99,32 @@ export interface FounderAuditEntry {
   created_at: string;
 }
 
+export interface PlatformAuditEntry {
+  id: string;
+  created_at: string;
+  event_type: string;
+  actor_role: string;
+  actor_id: string | null;
+  subject_user_id: string | null;
+  mission_id: string | null;
+  summary: string;
+  actor_name: string | null;
+  subject_name: string | null;
+  mission_title: string | null;
+}
+
+export interface PlatformAuditFilters {
+  eventType?: string;
+  actorRole?: string;
+  userId?: string;
+  missionId?: string;
+  search?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+  offset?: number;
+}
+
 export interface LabScenario {
   id: string;
   entity_type: string;
@@ -155,6 +181,18 @@ export const founderAdminApi = {
     }),
   revenue: () => call<FounderRevenue>('founder_admin_revenue'),
   auditLog: () => call<FounderAuditEntry[]>('founder_admin_audit_log', { p_limit: 200 }),
+  platformAudit: (filters: PlatformAuditFilters = {}) =>
+    call<PlatformAuditEntry[]>('founder_platform_audit', {
+      p_event_type: filters.eventType || null,
+      p_actor_role: filters.actorRole || null,
+      p_user_id: filters.userId || null,
+      p_mission_id: filters.missionId || null,
+      p_search: filters.search || null,
+      p_from: filters.from || null,
+      p_to: filters.to || null,
+      p_limit: filters.limit ?? 50,
+      p_offset: filters.offset ?? 0,
+    }),
   requestKycDocument: (profileId: string, reason: string) =>
     call<void>('founder_admin_request_kyc_document', { p_profile_id: profileId, p_reason: reason }),
   labStatus: () => call<FounderLabStatus>('founder_admin_lab_status'),

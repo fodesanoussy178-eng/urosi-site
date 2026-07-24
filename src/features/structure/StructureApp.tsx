@@ -10,9 +10,9 @@ import { ChatSheet } from '@/components/ui/ChatSheet';
 import { useBodyScrollLock } from '@/components/ui/useBodyScrollLock';
 import { WalletCard } from '@/components/ui/WalletCard';
 import { fetchMyStructures, createStructure, updateStructureAbout } from './structureService';
-import { StatsPanel, StructureStatsSummary } from './StatsPanel';
+import { StatsPanel, StructureStatsSummary, StructurePerformances } from './StatsPanel';
 import { StructureHistoryPanel } from './StructureHistoryPanel';
-import { fetchMissionsForStructure, createMission, updateMission, cancelMission, type MissionNonSensitivePatch } from '@/features/missions/missionsService';
+import { fetchMissionsForStructure, createMission, updateMission, cancelMission, replaceMissionWorker, notifyReplacementSearch, type MissionNonSensitivePatch } from '@/features/missions/missionsService';
 import {
   fetchApplicationsForMissions,
   updateApplicationStatus,
@@ -36,6 +36,8 @@ import { confirmRemoteAttendance, reportWorkerAbsence, reportMissionIssue } from
 import { verifyMissionCvEntry, disputeMissionCvEntry } from '@/features/missions/missionCvService';
 import { MissionValidationPanel } from '@/features/missions/MissionValidationPanel';
 import { StructureQrScanSheet } from '@/features/missions/StructureQrScanSheet';
+import { createMissionCheckout, requestMissionRefund } from '@/features/payments/stripeService';
+import { isStripeConfigured } from '@/lib/env';
 import { fetchUnreadCounts } from '@/features/messages/messagesService';
 import { geocodeMelCity } from '@/lib/geo';
 import { distinctDays, slotMinutes, spanDays, totalMinutes } from '@/lib/slots';
@@ -144,7 +146,7 @@ type CandWithMission = ApplicationWithApplicant & { missionTitle: string };
 // n'a de sens que pour ces deux-la, jamais pour une mission sans candidat ou
 // deja terminee/annulee.
 type MissionBucket = 'cancelled' | 'completed' | 'in_progress' | 'accepted' | 'open';
-type ManageMode = 'menu' | 'edit' | 'cancel' | 'summary';
+type ManageMode = 'menu' | 'edit' | 'cancel' | 'summary' | 'replace';
 interface ManageState {
   mission: Mission;
   mode: ManageMode;
@@ -267,6 +269,7 @@ export function StructureApp() {
   const [duplicateSeed, setDuplicateSeed] = useState<Mission | null>(null);
   const [showDetailedStats, setShowDetailedStats] = useState(false);
   const [scanMission, setScanMission] = useState<Mission | null>(null);
+  const [payingId, setPayingId] = useState<string | null>(null);
   const tr = useRef<ReturnType<typeof setTimeout>>();
 
   useBodyScrollLock(Boolean(showPub || validationMissionId || panelC || ratingCand || chatFor || docKey || manage || scanMission));
@@ -401,6 +404,35 @@ export function StructureApp() {
     }
   }
 
+  // Mission rémunérée : accepter un candidat passe OBLIGATOIREMENT par le
+  // paiement Stripe. On redirige vers la Checkout Session hébergée ; c'est le
+  // webhook (et lui seul) qui confirmera l'affectation. Une mission solidaire
+  // ou un environnement sans Stripe configuré garde l'acceptation directe.
+  function missionFor(candidate: CandWithMission): Mission | undefined {
+    return mis.find((m) => m.id === candidate.mission_id);
+  }
+
+  function isPaidMission(mission: Mission | undefined): boolean {
+    return Boolean(mission && !mission.is_solidaire && mission.worker_rate_cents > 0);
+  }
+
+  async function payAndConfirm(candidate: CandWithMission) {
+    const mission = missionFor(candidate);
+    if (!isStripeConfigured || !isPaidMission(mission)) {
+      await decide(candidate.id, 'accepted');
+      return;
+    }
+    try {
+      setPayingId(candidate.id);
+      const { url } = await createMissionCheckout(candidate.id);
+      if (!url) throw new Error('URL de paiement indisponible.');
+      window.location.assign(url); // redirection vers Stripe Checkout hébergé
+    } catch (e) {
+      setPayingId(null);
+      notif(e instanceof Error ? e.message : 'Ouverture du paiement impossible.');
+    }
+  }
+
   function closeRatingModal(snooze: boolean) {
     if (snooze && autoRatingRequestId) {
       setSnoozedThisSession((prev) => new Set(prev).add(autoRatingRequestId));
@@ -486,11 +518,25 @@ export function StructureApp() {
 
   async function confirmCancelMission(mission: Mission) {
     const active = (cands.get(mission.id) ?? []).filter((c) => ['pending', 'accepted', 'in_progress'].includes(c.status));
+    // Mission confirmée (paiement Stripe encaissé) : on lance d'abord le
+    // remboursement, puis on annule. Le webhook charge.refunded synchronise le
+    // Wallet et repasse la candidature en remboursée. Mission non confirmée :
+    // annulation immédiate, aucun remboursement nécessaire (Document 5).
+    const paid = active.filter((c) => c.stripe_payment_status === 'paid');
     try {
+      for (const c of paid) {
+        if (isStripeConfigured) await requestMissionRefund(c.id);
+      }
       await cancelMission(mission.id, active.map((c) => c.id));
       await reload();
       setManage(null);
-      notif(active.length > 0 ? 'Mission annulée — le(s) travailleur(s) concerné(s) est/sont prévenu(s).' : 'Mission annulée.');
+      notif(
+        paid.length > 0
+          ? 'Mission annulée — remboursement Stripe lancé, le travailleur est prévenu.'
+          : active.length > 0
+            ? 'Mission annulée — le(s) travailleur(s) concerné(s) est/sont prévenu(s).'
+            : 'Mission annulée.',
+      );
     } catch (e) {
       notif(e instanceof Error ? e.message : 'Annulation impossible.');
     }
@@ -500,6 +546,26 @@ export function StructureApp() {
     setDuplicateSeed(mission);
     setManage(null);
     setShowPub(true);
+  }
+
+  async function confirmReplace(oldApplicationId: string, newApplicationId: string) {
+    try {
+      await replaceMissionWorker(oldApplicationId, newApplicationId);
+      await reload();
+      setManage(null);
+      notif('Remplaçant confirmé — le paiement est transféré, aucun nouveau règlement.');
+    } catch (e) {
+      notif(e instanceof Error ? e.message : 'Remplacement impossible.');
+    }
+  }
+
+  async function notifyNearbyForReplacement(missionId: string) {
+    try {
+      const count = await notifyReplacementSearch(missionId);
+      notif(count > 0 ? `${count} travailleur${count > 1 ? 's' : ''} proche${count > 1 ? 's' : ''} prévenu${count > 1 ? 's' : ''}.` : 'Aucun travailleur proche à prévenir pour le moment.');
+    } catch (e) {
+      notif(e instanceof Error ? e.message : 'Envoi impossible.');
+    }
   }
 
   async function signalerProbleme(applicationId: string) {
@@ -578,6 +644,19 @@ export function StructureApp() {
     if (candidate?.status === 'accepted') return 'accepted';
     return 'open';
   }
+  // Accueil = tableau de bord opérationnel : uniquement les missions qui
+  // demandent une action, regroupées par action attendue. Les missions
+  // terminées / annulées quittent l'accueil (elles vivent dans l'Historique).
+  const accueilSections: Array<{ key: string; label: string; hint: string; missions: Mission[] }> = [
+    { key: 'candidatures', label: 'Candidatures à traiter', hint: 'Choisir un candidat', missions: mis.filter((m) => missionBucket(m) === 'open' && candCount(m.id) > 0) },
+    { key: 'confirmees', label: 'Confirmées — à préparer', hint: 'Préparer la mission', missions: mis.filter((m) => missionBucket(m) === 'accepted') },
+    { key: 'encours', label: 'En cours', hint: 'Suivre · scanner le QR', missions: mis.filter((m) => missionBucket(m) === 'in_progress') },
+    { key: 'publiees', label: 'Publiées — en attente de candidats', hint: '', missions: mis.filter((m) => missionBucket(m) === 'open' && candCount(m.id) === 0) },
+  ].filter((s) => s.missions.length > 0);
+  const accueilEmpty = accueilSections.length === 0;
+  // Mission active pour le code de secours : la première acceptée ou en cours.
+  const pinMission = mis.find((m) => ['accepted', 'in_progress'].includes(missionBucket(m))) ?? null;
+
   const formFounder = founderAccess;
   const formSiretOk = isValidSiret(vf.siret);
   const canCreateStructure = vf.nom.trim().length >= 2 && (formFounder || formSiretOk);
@@ -703,25 +782,53 @@ export function StructureApp() {
                       <button onClick={() => { setDuplicateSeed(null); if (structureVerified) setShowPub(true); }} disabled={!structureVerified} style={{ width: '100%', background: structureVerified ? '#fff' : T.row, color: structureVerified ? '#000' : T.mu, border: 'none', borderRadius: 11, padding: '13px 0', fontSize: 13, fontWeight: 900, cursor: structureVerified ? 'pointer' : 'not-allowed', marginBottom: 2 }}>
                         {structureVerified ? '＋ Publier une mission' : 'Structure à vérifier'}
                       </button>
-                      {pending.length > 0 && (
-                        <button type="button" onClick={() => { setCandMis(null); setTab('candidats'); }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', background: 'transparent', color: T.text, border: 0, borderBottom: `1px solid ${T.cb}`, padding: '10px 2px', fontSize: 11.5, fontWeight: 900, cursor: 'pointer' }}>
-                          <span>Candidatures à traiter</span><span style={{ color: T.amber }}>{pending.length} urgente{pending.length > 1 ? 's' : ''} →</span>
-                        </button>
+                      {accueilEmpty && (
+                        <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 20, textAlign: 'center', fontSize: 11, color: T.mu, lineHeight: 1.5 }}>
+                          Rien ne demande ton attention. Les missions terminées sont dans l'Historique.
+                        </div>
                       )}
-                      {mis.length > 0 && <div style={{ color: T.text, fontSize: 13, fontWeight: 900, marginTop: 6 }}>Missions</div>}
-                      {mis.length === 0 && <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 20, textAlign: 'center', fontSize: 11, color: T.mu }}>Aucune mission publiée pour l'instant.</div>}
-                      <div className="structure-mission-grid" style={{ display: 'grid', gap: 8 }}>
-                        {mis.map((m) => (
-                          <MissionCard
-                            key={m.id}
-                            mission={m}
-                            bucket={missionBucket(m)}
-                            candidateCount={candCount(m.id)}
-                            onOpenCandidates={() => { setCandMis(m.id); setTab('candidats'); }}
-                            onOpenMenu={() => setManage({ mission: m, mode: 'menu' })}
-                            onScan={() => setScanMission(m)}
-                          />
-                        ))}
+
+                      {/* Missions groupées par action attendue : chaque section
+                          ne s'affiche que si elle contient des missions. */}
+                      {accueilSections.map((section) => (
+                        <div key={section.key} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+                          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                            <span style={{ color: T.text, fontSize: 12.5, fontWeight: 900 }}>{section.label}</span>
+                            {section.hint && <span style={{ color: T.mu, fontSize: 9.5, fontWeight: 700 }}>{section.hint}</span>}
+                          </div>
+                          <div className="structure-mission-grid" style={{ display: 'grid', gap: 8 }}>
+                            {section.missions.map((m) => (
+                              <MissionCard
+                                key={m.id}
+                                mission={m}
+                                bucket={missionBucket(m)}
+                                candidateCount={candCount(m.id)}
+                                onOpenCandidates={() => { setCandMis(m.id); setTab('candidats'); }}
+                                onOpenMenu={() => setManage({ mission: m, mode: 'menu' })}
+                                onScan={() => setScanMission(m)}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Performances (compactes) + code de secours discret. */}
+                      <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <StructurePerformances structureId={structure.id} favoris={habitues.length} avisADonner={ratingRequests.length} />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (pinMission) setValidationMissionId(pinMission.id);
+                            else notif('Le code de secours est disponible pendant une mission confirmée ou en cours.');
+                          }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%', background: T.row, border: `1px solid ${T.cb}`, borderRadius: 11, padding: '11px 13px', cursor: 'pointer', textAlign: 'left' }}
+                        >
+                          <span>
+                            <span style={{ display: 'block', fontSize: 11.5, fontWeight: 800, color: T.text }}>Pointage manuel</span>
+                            <span style={{ display: 'block', fontSize: 9.5, color: T.mu, marginTop: 2 }}>Le QR ne fonctionne pas ? Obtiens un code de secours.</span>
+                          </span>
+                          <span style={{ fontSize: 10, fontWeight: 800, color: T.cyan, flexShrink: 0 }}>Code →</span>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -778,9 +885,15 @@ export function StructureApp() {
                       </div>
                       {c.status === 'pending' && (
                         <div style={{ padding: '0 14px 12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                          <button onClick={() => decide(c.id, 'accepted')} style={{ background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
-                            ✓ Accepter
-                          </button>
+                          {isStripeConfigured && isPaidMission(missionFor(c)) ? (
+                            <button onClick={() => payAndConfirm(c)} disabled={payingId === c.id} style={{ background: '#fff', color: '#000', border: 'none', borderRadius: 8, padding: '9px 0', fontSize: 12, fontWeight: 900, cursor: payingId === c.id ? 'wait' : 'pointer' }}>
+                              {payingId === c.id ? 'Redirection…' : '💳 Payer et confirmer'}
+                            </button>
+                          ) : (
+                            <button onClick={() => decide(c.id, 'accepted')} style={{ background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
+                              ✓ Accepter
+                            </button>
+                          )}
                           <button onClick={() => decide(c.id, 'rejected')} style={{ background: T.redBg, color: T.red, border: `1px solid ${T.redBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                             Refuser
                           </button>
@@ -921,16 +1034,55 @@ export function StructureApp() {
                   <div style={{ fontSize: 9.5, color: T.mu, lineHeight: 1.5, marginBottom: 12 }}>
                     Notes données par les structures après mission terminée. Informatives et jamais bloquantes (CGU) : la décision t'appartient.
                   </div>
-                  {panelC.status === 'pending' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                      <button onClick={() => decide(panelC.id, 'accepted')} style={{ background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 8, padding: '11px 0', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
-                        ✓ Accepter
-                      </button>
-                      <button onClick={() => decide(panelC.id, 'rejected')} style={{ background: T.redBg, color: T.red, border: `1px solid ${T.redBorder}`, borderRadius: 8, padding: '11px 0', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                        Refuser
-                      </button>
-                    </div>
-                  )}
+                  {panelC.status === 'pending' && (() => {
+                    const mission = missionFor(panelC);
+                    const paid = isStripeConfigured && isPaidMission(mission);
+                    const workerCents = mission?.worker_rate_cents ?? 0;
+                    const commissionCents = Math.round(workerCents * SERVICE_FEE_RATE);
+                    const totalCents = workerCents + commissionCents;
+                    return (
+                      <>
+                        {paid && mission && (
+                          <div style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '12px 13px', marginBottom: 10 }}>
+                            <div style={{ fontSize: 10, color: T.mu, marginBottom: 8 }}>
+                              {mission.title}{mission.scheduled_date ? ` · ${formatLongDay(mission.scheduled_date)}` : ''}{mission.duration_minutes ? ` · ${formatHours(mission.duration_minutes)}` : ''}
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 5 }}>
+                              <span style={{ color: T.mu }}>Rémunération du travailleur</span><strong style={{ color: T.text }}>{formatMoney(workerCents)}</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 5 }}>
+                              <span style={{ color: T.mu }}>Commission UROSI</span><strong style={{ color: T.text }}>{formatMoney(commissionCents)}</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 900, paddingTop: 6, borderTop: `1px solid ${T.cb}` }}>
+                              <span style={{ color: T.text }}>Total débité</span><span style={{ color: T.text }}>{formatMoney(totalCents)}</span>
+                            </div>
+                            <div style={{ fontSize: 9, color: T.mu, marginTop: 7, lineHeight: 1.45 }}>
+                              La mission n'est confirmée qu'après paiement. Tu seras redirigé vers un paiement sécurisé Stripe.
+                            </div>
+                          </div>
+                        )}
+                        {paid ? (
+                          <>
+                            <button onClick={() => payAndConfirm(panelC)} disabled={payingId === panelC.id} style={{ width: '100%', background: '#fff', color: '#000', border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: payingId === panelC.id ? 'wait' : 'pointer', marginBottom: 6 }}>
+                              {payingId === panelC.id ? 'Redirection vers le paiement…' : `Payer et confirmer la mission · ${formatMoney(totalCents)}`}
+                            </button>
+                            <button onClick={() => decide(panelC.id, 'rejected')} style={{ width: '100%', background: T.redBg, color: T.red, border: `1px solid ${T.redBorder}`, borderRadius: 10, padding: '11px 0', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
+                              Refuser le candidat
+                            </button>
+                          </>
+                        ) : (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                            <button onClick={() => decide(panelC.id, 'accepted')} style={{ background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 8, padding: '11px 0', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
+                              ✓ Accepter
+                            </button>
+                            <button onClick={() => decide(panelC.id, 'rejected')} style={{ background: T.redBg, color: T.red, border: `1px solid ${T.redBorder}`, borderRadius: 8, padding: '11px 0', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                              Refuser
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -994,6 +1146,10 @@ export function StructureApp() {
                 mode={manage.mode}
                 bucket={missionBucket(manage.mission)}
                 candidate={activeCandidateFor(manage.mission.id)}
+                candidateCount={candCount(manage.mission.id)}
+                replacementCandidates={(cands.get(manage.mission.id) ?? [])
+                  .filter((c) => c.status === 'pending')
+                  .map((c) => ({ ...c, missionTitle: manage.mission.title }))}
                 givenScore={(() => {
                   const c = activeCandidateFor(manage.mission.id);
                   return c ? givenRatings.get(c.id) : undefined;
@@ -1010,6 +1166,11 @@ export function StructureApp() {
                     openPanel(c);
                   }
                 }}
+                onOpenCandidates={() => {
+                  setCandMis(manage.mission.id);
+                  setManage(null);
+                  setTab('candidats');
+                }}
                 onMessage={() => {
                   const c = activeCandidateFor(manage.mission.id);
                   if (c) {
@@ -1021,6 +1182,11 @@ export function StructureApp() {
                   const c = activeCandidateFor(manage.mission.id);
                   if (c) signalerProbleme(c.id);
                 }}
+                onReplaceWith={(newApplicationId) => {
+                  const c = activeCandidateFor(manage.mission.id);
+                  if (c) confirmReplace(c.id, newApplicationId);
+                }}
+                onNotifyNearby={() => notifyNearbyForReplacement(manage.mission.id)}
               />
             )}
             {scanMission && (
@@ -1101,6 +1267,8 @@ function MissionManageSheet({
   mode,
   bucket,
   candidate,
+  candidateCount,
+  replacementCandidates,
   givenScore,
   onClose,
   onModeChange,
@@ -1108,13 +1276,18 @@ function MissionManageSheet({
   onCancelMission,
   onDuplicate,
   onOpenCandidate,
+  onOpenCandidates,
   onMessage,
   onReportIssue,
+  onReplaceWith,
+  onNotifyNearby,
 }: {
   mission: Mission;
   mode: ManageMode;
   bucket: MissionBucket;
   candidate: CandWithMission | null;
+  candidateCount: number;
+  replacementCandidates: CandWithMission[];
   givenScore: number | undefined;
   onClose: () => void;
   onModeChange: (m: ManageMode) => void;
@@ -1122,8 +1295,11 @@ function MissionManageSheet({
   onCancelMission: () => void;
   onDuplicate: () => void;
   onOpenCandidate: () => void;
+  onOpenCandidates: () => void;
   onMessage: () => void;
   onReportIssue: () => void;
+  onReplaceWith: (newApplicationId: string) => void;
+  onNotifyNearby: () => void;
 }) {
   const [edit, setEdit] = useState({
     title: mission.title,
@@ -1146,6 +1322,7 @@ function MissionManageSheet({
             {bucket === 'open' && (
               <>
                 <SheetAction label="Voir les détails" onClick={() => onModeChange('summary')} />
+                {candidateCount > 0 && <SheetAction label={`Voir les candidats (${candidateCount})`} onClick={onOpenCandidates} />}
                 <SheetAction label="Modifier la mission" onClick={() => onModeChange('edit')} />
                 <SheetAction label="Dupliquer la mission" onClick={onDuplicate} />
                 <SheetAction label="Annuler la mission" danger onClick={() => onModeChange('cancel')} />
@@ -1155,6 +1332,7 @@ function MissionManageSheet({
               <>
                 <SheetAction label="Voir le travailleur" onClick={onOpenCandidate} />
                 {candidate?.conversation_status === 'open' && <SheetAction label="Messagerie" onClick={onMessage} />}
+                {candidate?.stripe_payment_status === 'paid' && <SheetAction label="Remplacer le travailleur" onClick={() => onModeChange('replace')} />}
                 <SheetAction label="Modifier les informations non sensibles" onClick={() => onModeChange('edit')} />
                 <SheetAction label="Dupliquer la mission" onClick={onDuplicate} />
                 <SheetAction label="Annuler selon les règles" danger onClick={() => onModeChange('cancel')} />
@@ -1218,8 +1396,41 @@ function MissionManageSheet({
             <div style={{ fontSize: 11.5, color: T.sub, lineHeight: 1.5 }}>
               Annuler cette mission {candidate ? 'préviendra le travailleur concerné et libérera sa candidature' : "n'a pas de candidat engagé pour l'instant"}. Cette action est définitive.
             </div>
+            {candidate?.stripe_payment_status === 'paid' && (
+              <div style={{ fontSize: 10.5, color: T.amber, background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 10, padding: '9px 11px', lineHeight: 1.45 }}>
+                Cette mission est payée : un remboursement Stripe sera lancé automatiquement et le Wallet sera synchronisé.
+              </div>
+            )}
             <button onClick={onCancelMission} style={{ width: '100%', background: T.redBg, color: T.red, border: `1px solid ${T.redBorder}`, borderRadius: 10, padding: '12px 0', fontSize: 13, fontWeight: 900, cursor: 'pointer' }}>
-              Confirmer l'annulation
+              {candidate?.stripe_payment_status === 'paid' ? 'Annuler et rembourser' : "Confirmer l'annulation"}
+            </button>
+            <button onClick={() => onModeChange('menu')} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: T.mu, padding: '4px 0' }}>
+              Retour
+            </button>
+          </div>
+        )}
+
+        {mode === 'replace' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ fontSize: 11.5, color: T.sub, lineHeight: 1.5 }}>
+              Choisis un remplaçant parmi les candidats de la mission. Le paiement déjà réglé est transféré au remplaçant — aucun nouveau paiement, aucun remboursement.
+            </div>
+            {replacementCandidates.length === 0 ? (
+              <div style={{ fontSize: 10.5, color: T.mu, background: T.row, borderRadius: 10, padding: '11px 12px', lineHeight: 1.45 }}>
+                Aucun autre candidat en attente pour l'instant. La mission reste ouverte aux candidatures — tu peux prévenir des travailleurs proches.
+              </div>
+            ) : (
+              replacementCandidates.map((c) => (
+                <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: T.row, borderRadius: 10, padding: '10px 12px' }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.profile?.full_name || 'Candidat'}</span>
+                  <button onClick={() => candidate && onReplaceWith(c.id)} style={{ background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 8, padding: '7px 12px', fontSize: 11.5, fontWeight: 800, cursor: 'pointer', flexShrink: 0 }}>
+                    Choisir
+                  </button>
+                </div>
+              ))
+            )}
+            <button onClick={onNotifyNearby} style={{ width: '100%', background: 'none', border: `1px solid ${T.cb}`, color: T.cyan, borderRadius: 10, padding: '10px 0', fontSize: 11.5, fontWeight: 800, cursor: 'pointer' }}>
+              Prévenir des travailleurs proches
             </button>
             <button onClick={() => onModeChange('menu')} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: T.mu, padding: '4px 0' }}>
               Retour

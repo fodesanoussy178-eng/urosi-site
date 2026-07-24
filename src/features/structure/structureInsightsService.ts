@@ -10,6 +10,7 @@ export interface StructureMissionHistoryRow {
   commission_cents: number;
   total_expense_cents: number;
   paid_at: string | null;
+  archived_at: string | null;
 }
 
 export interface WeeklyStructureReview {
@@ -18,8 +19,14 @@ export interface WeeklyStructureReview {
   published_week: string;
 }
 
-export async function fetchStructureMissionHistory(structureId: string): Promise<StructureMissionHistoryRow[]> {
-  const { data, error } = await supabase.rpc('structure_mission_history', { p_structure_id: structureId });
+export async function fetchStructureMissionHistory(
+  structureId: string,
+  includeArchived = false,
+): Promise<StructureMissionHistoryRow[]> {
+  const { data, error } = await supabase.rpc('structure_mission_history', {
+    p_structure_id: structureId,
+    p_include_archived: includeArchived,
+  });
   if (error) throw error;
   return (data ?? []).map((row) => ({
     ...row,
@@ -28,6 +35,16 @@ export async function fetchStructureMissionHistory(structureId: string): Promise
     commission_cents: Number(row.commission_cents),
     total_expense_cents: Number(row.total_expense_cents),
   }));
+}
+
+export async function archiveMission(missionId: string): Promise<void> {
+  const { error } = await supabase.rpc('archive_mission', { p_mission_id: missionId });
+  if (error) throw error;
+}
+
+export async function unarchiveMission(missionId: string): Promise<void> {
+  const { error } = await supabase.rpc('unarchive_mission', { p_mission_id: missionId });
+  if (error) throw error;
 }
 
 export async function fetchWeeklyStructureReviews(structureId: string): Promise<WeeklyStructureReview[]> {

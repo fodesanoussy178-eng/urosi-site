@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import type { Mission, MissionInsert, Structure } from './types';
 
 const MISSION_COLUMNS =
-  'id, structure_id, title, detail, city, address, location, lat, lng, distance_km, scheduled_date, start_time, end_time, starts_at, ends_at, duration_minutes, duration_minutes_per_person, mission_days, sector, difficulty, is_urgent, worker_rate_cents, base_rate_cents, pricing_breakdown, is_solidaire, places, positions, slots, hourly_rate, worker_amount, price_total, worker_subtotal, service_fee, structure_total, total_worker_hours, time_slot, day_of_week, mission_category, dress_code, equipment, instructions, status, created_at';
+  'id, structure_id, title, detail, city, address, location, lat, lng, distance_km, scheduled_date, start_time, end_time, starts_at, ends_at, duration_minutes, duration_minutes_per_person, mission_days, sector, difficulty, is_urgent, worker_rate_cents, base_rate_cents, pricing_breakdown, is_solidaire, places, positions, slots, hourly_rate, worker_amount, price_total, worker_subtotal, service_fee, structure_total, total_worker_hours, time_slot, day_of_week, mission_category, dress_code, equipment, instructions, status, archived_at, created_at';
 
 export interface MissionWithStructure extends Mission {
   structure: Pick<Structure, 'name' | 'siret' | 'is_ess' | 'about' | 'verification_status'> | null;
@@ -38,6 +38,7 @@ export async function fetchMissionsForStructure(structureId: string): Promise<Mi
     .from('missions')
     .select(MISSION_COLUMNS)
     .eq('structure_id', structureId)
+    .is('archived_at', null)
     .order('created_at', { ascending: false });
   if (error) throw error;
   return data ?? [];
@@ -69,6 +70,25 @@ export interface MissionNonSensitivePatch {
 export async function updateMission(missionId: string, patch: MissionNonSensitivePatch): Promise<void> {
   const { error } = await supabase.from('missions').update(patch).eq('id', missionId);
   if (error) throw error;
+}
+
+// Remplacement (version simple) : échange l'ancien travailleur payé contre un
+// candidat en attente de la même mission. Le paiement Stripe est transféré au
+// remplaçant côté serveur (aucun nouveau paiement, aucun remboursement).
+export async function replaceMissionWorker(oldApplicationId: string, newApplicationId: string): Promise<void> {
+  const { error } = await supabase.rpc('replace_mission_worker', {
+    p_old_application_id: oldApplicationId,
+    p_new_application_id: newApplicationId,
+  });
+  if (error) throw error;
+}
+
+// Prévient des travailleurs proches (même ville) qu'une mission cherche un
+// remplaçant. Renvoie le nombre de travailleurs notifiés.
+export async function notifyReplacementSearch(missionId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('notify_replacement_search', { p_mission_id: missionId });
+  if (error) throw error;
+  return Number(data ?? 0);
 }
 
 // Annule la mission et, en cascade, toute candidature encore active dessus

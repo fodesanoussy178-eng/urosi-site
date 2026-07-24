@@ -312,6 +312,7 @@ export interface Database {
           instructions: string | null;
           price_total: number;
           status: MissionStatus;
+          archived_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -426,6 +427,10 @@ export interface Database {
           cv_status: CvStatus | null;
           cv_status_reason: string | null;
           cv_verified_at: string | null;
+          stripe_payment_intent_id: string | null;
+          stripe_payment_status: string | null;
+          stripe_charge_id: string | null;
+          stripe_checkout_session_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -1239,7 +1244,7 @@ export interface Database {
         Returns: Array<{ score: number; comment: string | null; published_week: string }>;
       };
       structure_mission_history: {
-        Args: { p_structure_id: string };
+        Args: { p_structure_id: string; p_include_archived?: boolean };
         Returns: Array<{
           mission_id: string;
           title: string;
@@ -1250,7 +1255,24 @@ export interface Database {
           commission_cents: number;
           total_expense_cents: number;
           paid_at: string | null;
+          archived_at: string | null;
         }>;
+      };
+      archive_mission: {
+        Args: { p_mission_id: string };
+        Returns: undefined;
+      };
+      unarchive_mission: {
+        Args: { p_mission_id: string };
+        Returns: undefined;
+      };
+      replace_mission_worker: {
+        Args: { p_old_application_id: string; p_new_application_id: string };
+        Returns: undefined;
+      };
+      notify_replacement_search: {
+        Args: { p_mission_id: string };
+        Returns: number;
       };
       withdraw_wallet: {
         Args: { p_amount_cents: number };

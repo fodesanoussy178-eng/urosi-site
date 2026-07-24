@@ -117,6 +117,45 @@ Deno.serve(async (req: Request) => {
         break;
       }
 
+      case "checkout.session.completed":
+      case "checkout.session.async_payment_succeeded": {
+        // Encaissement de la structure : confirme le paiement ET l'affectation
+        // du travailleur. Idempotent côté RPC (rejeu sans double traitement) et
+        // côté événement (mark_stripe_webhook_event).
+        const session = event.data.object as import("npm:stripe@17.7.0").Stripe.Checkout.Session;
+        const applicationId = session.metadata?.application_id ?? session.client_reference_id ?? undefined;
+        if (applicationId && session.payment_status === "paid") {
+          const paymentIntentId =
+            typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id ?? null;
+          const { error } = await supabase.rpc("confirm_mission_checkout_payment", {
+            p_application_id: applicationId,
+            p_session_id: session.id,
+            p_payment_intent_id: paymentIntentId,
+            p_amount_total: session.amount_total ?? null,
+            p_charge_id: null,
+          });
+          if (error) throw error;
+        }
+        break;
+      }
+
+      case "checkout.session.expired":
+      case "checkout.session.async_payment_failed": {
+        // Paiement non terminé (abandon / expiration / échec) : ne confirme
+        // rien, laisse la candidature 'pending' pour permettre une relance.
+        const session = event.data.object as import("npm:stripe@17.7.0").Stripe.Checkout.Session;
+        const applicationId = session.metadata?.application_id ?? session.client_reference_id ?? undefined;
+        if (applicationId) {
+          const { error } = await supabase.rpc("mark_mission_checkout_unpaid", {
+            p_application_id: applicationId,
+            p_session_id: session.id,
+            p_status: event.type === "checkout.session.expired" ? "expired" : "failed",
+          });
+          if (error) throw error;
+        }
+        break;
+      }
+
       case "payment_intent.succeeded": {
         const pi = event.data.object as import("npm:stripe@17.7.0").Stripe.PaymentIntent;
         const applicationId = pi.metadata?.application_id;

@@ -84,6 +84,38 @@ export function createMissionPayment(applicationId: string) {
   return invoke<MissionPaymentIntent>('stripe-create-payment', { application_id: applicationId });
 }
 
+export interface MissionCheckout {
+  url: string;
+  session_id?: string;
+  amount?: number;
+  commission_cents?: number;
+  reused?: boolean;
+}
+
+/**
+ * Crée (ou réutilise) une Stripe Checkout Session pour payer ET confirmer une
+ * mission. Le montant est calculé côté serveur : jamais transmis depuis ici.
+ * Renvoie l'URL hébergée Stripe vers laquelle rediriger la structure.
+ */
+export function createMissionCheckout(applicationId: string) {
+  return invoke<MissionCheckout>('stripe-create-checkout', { application_id: applicationId });
+}
+
+export interface MissionRefundResult {
+  refunded: boolean;
+  reason?: string;
+  already?: boolean;
+}
+
+/**
+ * Initie le remboursement Stripe de l'encaissement d'une mission (annulation
+ * d'une mission confirmée). La synchronisation Wallet/candidature se fait via
+ * le webhook `charge.refunded`. Idempotent côté serveur.
+ */
+export function requestMissionRefund(applicationId: string) {
+  return invoke<MissionRefundResult>('stripe-refund-mission', { application_id: applicationId });
+}
+
 // ── Identity (travailleur) ────────────────────────────────────────────────
 
 export interface IdentityStart {
