@@ -689,7 +689,9 @@ export function StructureApp() {
   const formSiretOk = isValidSiret(vf.siret);
   const canCreateStructure = vf.nom.trim().length >= 2 && (formFounder || formSiretOk);
   const structureVerified = isVerifiedStructure(structure);
-  const canPublishMission = structureVerified && (founderAccess || Boolean(structure?.subscription_active));
+  // Aucun abonnement structure : la seule condition pour publier est la
+  // vérification de la structure (SIRET, ou accès fondateur en test).
+  const canPublishMission = structureVerified;
 
   if (loading) {
     return <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, color: T.mu, fontSize: 12 }}>Chargement…</div>;
@@ -807,13 +809,8 @@ export function StructureApp() {
                           Vérification SIRET requise avant publication.
                         </div>
                       )}
-                      {structureVerified && !founderAccess && !structure.subscription_active && (
-                        <div style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 10, padding: '10px 12px', fontSize: 10.5, color: T.amber, lineHeight: 1.45 }}>
-                          Abonnement requis : abonne ta structure pour publier des missions.
-                        </div>
-                      )}
                       <button onClick={() => { setDuplicateSeed(null); if (canPublishMission) setShowPub(true); }} disabled={!canPublishMission} style={{ width: '100%', background: canPublishMission ? '#fff' : T.row, color: canPublishMission ? '#000' : T.mu, border: 'none', borderRadius: 11, padding: '13px 0', fontSize: 13, fontWeight: 900, cursor: canPublishMission ? 'pointer' : 'not-allowed', marginBottom: 2 }}>
-                        {!structureVerified ? 'Structure à vérifier' : !canPublishMission ? 'Abonnement requis' : '＋ Publier une mission'}
+                        {!structureVerified ? 'Structure à vérifier' : '＋ Publier une mission'}
                       </button>
                       {accueilEmpty && (
                         <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 20, textAlign: 'center', fontSize: 11, color: T.mu, lineHeight: 1.5 }}>
@@ -1183,7 +1180,6 @@ export function StructureApp() {
               <PublishModal
                 structure={structure}
                 initial={duplicateSeed}
-                founderAccess={founderAccess}
                 onClose={() => { setShowPub(false); setDuplicateSeed(null); }}
                 onPublished={(m) => {
                   setMis((l) => [m, ...l]);
@@ -1552,7 +1548,7 @@ function SheetAction({ label, onClick, danger }: { label: string; onClick: () =>
   );
 }
 
-function PublishModal({ structure, initial, founderAccess, onClose, onPublished }: { structure: Structure; initial?: Mission | null; founderAccess?: boolean; onClose: () => void; onPublished: (m: Mission) => void }) {
+function PublishModal({ structure, initial, onClose, onPublished }: { structure: Structure; initial?: Mission | null; onClose: () => void; onPublished: (m: Mission) => void }) {
   const [f, setF] = useState(() => ({
     t: initial ? `${initial.title} (copie)` : '',
     city: initial?.city ?? '',
@@ -1607,11 +1603,8 @@ function PublishModal({ structure, initial, founderAccess, onClose, onPublished 
   const summary = first
     ? `${formatLongDay(first.date)} · ${first.start}–${last?.end ?? first.end}${last && last.end < last.start ? ' +1' : ''} · ${formatHours(minutes)}`
     : '';
-  const subscriptionOk = Boolean(founderAccess) || structure.subscription_active;
   const validationMessage =
-    !subscriptionOk
-      ? "Abonnement requis : abonne ta structure pour publier des missions."
-      : f.t.trim().length < 2
+    f.t.trim().length < 2
       ? 'Renseigne le titre de la mission.'
       : f.city.trim().length < 2
         ? 'Renseigne la ville de la mission.'

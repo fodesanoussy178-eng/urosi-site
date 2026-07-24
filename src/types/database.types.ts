@@ -205,8 +205,6 @@ export interface Database {
           siret: string | null;
           is_ess: boolean;
           about: string | null;
-          subscription_active: boolean;
-          subscribed_at: string | null;
           verification_status: StructureVerificationStatus;
           verification_method: StructureVerificationMethod;
           founder_bypass: boolean;
@@ -222,8 +220,6 @@ export interface Database {
           siret?: string | null;
           is_ess?: boolean;
           about?: string | null;
-          subscription_active?: boolean;
-          subscribed_at?: string | null;
           verification_status?: StructureVerificationStatus;
           verification_method?: StructureVerificationMethod;
           founder_bypass?: boolean;
@@ -1323,10 +1319,6 @@ export interface Database {
       withdraw_wallet: {
         Args: { p_amount_cents: number };
         Returns: number;
-      };
-      subscribe_structure: {
-        Args: { p_structure_id: string };
-        Returns: undefined;
       };
       structure_stats: {
         Args: { p_structure_id: string };
