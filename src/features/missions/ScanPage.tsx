@@ -7,6 +7,7 @@ import { setStoredAuthRedirect } from '@/features/auth/authRedirect';
 import { supabase } from '@/lib/supabase';
 import { confirmAttendanceQR, fetchScanContext, type ScanContext } from './attendanceService';
 import { ScanConfirmationCard } from './ScanConfirmationCard';
+import { describeError } from '@/lib/errors';
 
 export function ScanPage() {
   const { token } = useParams<{ token: string }>();
@@ -69,7 +70,7 @@ export function ScanPage() {
     setLoading(true);
     fetchScanContext(token)
       .then(setCtx)
-      .catch((e) => setError(e instanceof Error ? e.message : 'Lecture du QR impossible.'))
+      .catch((e) => setError(describeError(e, 'la lecture du QR')))
       .finally(() => setLoading(false));
   }, [authedUserId, token]);
 
@@ -83,7 +84,7 @@ export function ScanPage() {
       const message = e instanceof Error ? e.message : '';
       if (message === 'not_authorized') setError('Ce compte n’est pas reconnu comme validateur autorisé. Demande le code de secours à un responsable de la structure.');
       else if (message === 'invalid_pin') setError('Code de secours invalide ou expiré.');
-      else setError(message || 'Validation impossible.');
+      else setError(describeError(e, 'la validation du pointage'));
     } finally {
       setBusy(false);
     }

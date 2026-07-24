@@ -5,6 +5,7 @@ import { Fld } from '@/components/ui/Fld';
 import { T, FONT, inp } from '@/components/ui/theme';
 import { useAuth } from './AuthContext';
 import { updatePassword } from './authService';
+import { describeError } from '@/lib/errors';
 
 // Page cible du lien "mot de passe oublié" : Supabase ouvre une session de
 // recuperation (detectSessionInUrl), l'utilisateur choisit un nouveau mot de
@@ -34,7 +35,7 @@ export function ResetPasswordPage() {
       await updatePassword(password);
       setDone(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Impossible de mettre à jour le mot de passe.');
+      setError(describeError(e, 'la mise à jour du mot de passe'));
     } finally {
       setBusy(false);
     }

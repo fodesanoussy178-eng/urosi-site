@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth/AuthContext';
 import { hasFounderAccess } from '@/features/auth/authService';
 import { T, FONT } from '@/components/ui/theme';
+import { describeError } from '@/lib/errors';
 import {
   createKycDocumentUrl,
   decideKyc,
@@ -39,7 +40,7 @@ export function KycReviewPage() {
     (async () => {
       const founder = await hasFounderAccess().catch(() => false);
       setAllowed(founder);
-      if (founder) await load().catch((e) => setError(e instanceof Error ? e.message : 'Chargement impossible.'));
+      if (founder) await load().catch((e) => setError(describeError(e, 'le chargement des dossiers KYC')));
     })();
   }, [load, session]);
 
@@ -53,7 +54,7 @@ export function KycReviewPage() {
       const url = await createKycDocumentUrl(row.profile_id, row.identity_document_path);
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Document inaccessible.');
+      setError(describeError(e, "l'ouverture du document"));
     }
   }
 
@@ -67,7 +68,7 @@ export function KycReviewPage() {
       await decideKyc(row.profile_id, status, reason);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Décision impossible.');
+      setError(describeError(e, "l'enregistrement de la décision"));
     } finally {
       setBusy(null);
     }

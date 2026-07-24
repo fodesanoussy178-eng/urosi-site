@@ -5,6 +5,7 @@ import { T, inp } from '@/components/ui/theme';
 import { isDemoFounderCode, rememberDemoFounderAccess } from '@/lib/founder';
 import { isUnconfirmedEmailError, requestPasswordReset, resendConfirmationEmail, signIn } from './authService';
 import { consumeStoredAuthRedirect } from './authRedirect';
+import { describeError } from '@/lib/errors';
 
 export function SignInForm() {
   const nav = useNavigate();
@@ -43,7 +44,7 @@ export function SignInForm() {
     try {
       await signIn({ email: email.trim(), password });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erreur.');
+      setError(describeError(e, 'la connexion'));
       if (isUnconfirmedEmailError(e)) setShowResend(true);
       setBusy(false);
       return;
@@ -68,7 +69,7 @@ export function SignInForm() {
       setInfo('Email de confirmation renvoyé ✓ — ouvre le lien reçu puis reconnecte-toi.');
       setShowResend(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Envoi impossible.');
+      setError(describeError(e, "l'envoi de l'email de confirmation"));
     } finally {
       setBusy(false);
     }
@@ -87,7 +88,7 @@ export function SignInForm() {
       await requestPasswordReset(email.trim());
       setInfo('Email envoyé ✓ — ouvre le lien reçu pour choisir un nouveau mot de passe.');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Envoi impossible.');
+      setError(describeError(e, "l'envoi de l'email"));
     } finally {
       setBusy(false);
     }

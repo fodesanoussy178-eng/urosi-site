@@ -4,6 +4,7 @@ import { Logo } from '@/components/ui/Logo';
 import { Fld } from '@/components/ui/Fld';
 import { T, FONT, inp } from '@/components/ui/theme';
 import { signUp } from './authService';
+import { describeError } from '@/lib/errors';
 import { AuthTabs, type AuthMode } from './AuthTabs';
 import { SignInForm } from './SignInForm';
 
@@ -46,7 +47,7 @@ export function WorkerSignupPage() {
         setInfo('Compte créé ! Vérifie ta boîte mail pour confirmer ton adresse, puis connecte-toi.');
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erreur.');
+      setError(describeError(e, 'la création du compte'));
     } finally {
       setBusy(false);
     }

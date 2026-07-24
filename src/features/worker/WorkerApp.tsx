@@ -57,6 +57,7 @@ import { splitPrice } from '@/features/pricing/priceSplit';
 import { distanceKm, formatDistance, type LatLng } from '@/lib/geo';
 import { formatDay, groupByDay } from '@/lib/slots';
 import { formatEuros, formatHours } from '@/lib/format';
+import { describeError } from '@/lib/errors';
 
 type Tab = 'flux' | 'moi' | 'profil';
 
@@ -362,7 +363,7 @@ export function WorkerApp() {
       setDetail(null);
       notif('✓ Candidature envoyée');
     } catch (e) {
-      notif(e instanceof Error ? e.message : 'Impossible de postuler.');
+      notif(describeError(e, "l'envoi de ta candidature"));
     } finally {
       setBusyId(null);
     }
@@ -394,7 +395,7 @@ export function WorkerApp() {
       await load();
       notif('Avis enregistré. Il sera visible une fois que les deux parties auront répondu (ou après quelques jours).');
     } catch (e) {
-      notif(e instanceof Error ? e.message : 'Notation impossible.');
+      notif(describeError(e, "l'enregistrement de ta note"));
     } finally {
       setRatingFor(null);
       setAutoRatingRequestId(null);
@@ -415,7 +416,7 @@ export function WorkerApp() {
         notif('Mission annulée. La structure est prévenue, sans conséquence pour toi.');
       }
     } catch (e) {
-      notif(e instanceof Error ? e.message : 'Action impossible.');
+      notif(describeError(e, 'cette action'));
     } finally {
       setAlrt(null);
     }
@@ -433,7 +434,7 @@ export function WorkerApp() {
       await load();
       notif('Signalement transmis à Support UROSI — aucun impact automatique sur ton accès.');
     } catch (e) {
-      notif(e instanceof Error ? e.message : 'Envoi impossible.');
+      notif(describeError(e, "l'envoi du signalement"));
     } finally {
       setSignal(null);
       setSigMotif(null);
@@ -535,7 +536,7 @@ export function WorkerApp() {
                 else if (state === 'capacity_full' || state === 'application_not_pending') notif('Cette mission n’est plus disponible.');
                 else notif('Cette proposition n’est plus disponible.');
               } catch (e) {
-                notif(e instanceof Error ? e.message : 'Réponse impossible.');
+                notif(describeError(e, "l'envoi de ta réponse"));
               } finally {
                 setOfferBusy(false);
                 load();

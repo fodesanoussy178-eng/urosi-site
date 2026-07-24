@@ -4,6 +4,7 @@ import { T, FONT } from '@/components/ui/theme';
 import { useBodyScrollLock } from '@/components/ui/useBodyScrollLock';
 import { confirmAttendanceQR, fetchScanContext, type ScanContext } from './attendanceService';
 import { ScanConfirmationCard } from './ScanConfirmationCard';
+import { describeError } from '@/lib/errors';
 
 // Extrait le jeton d'un contenu de QR : soit l'URL complete UROSI
 // (https://urosi.fr/scan/<token>), soit — au cas ou une douchette externe ou
@@ -122,7 +123,7 @@ export function StructureQrScanSheet({
       setMismatch(Boolean(expectedMissionId && next.mission_id && next.mission_id !== expectedMissionId));
       setCtx(next);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'QR illisible.');
+      setError(describeError(e, 'la lecture du QR'));
       setCtx({ state: 'invalid' });
     } finally {
       setBusy(false);
@@ -141,7 +142,7 @@ export function StructureQrScanSheet({
       const message = e instanceof Error ? e.message : '';
       if (message === 'not_authorized') setError('Ce compte n’est pas reconnu comme validateur autorisé. Utilise le code de secours fourni par un responsable de la structure.');
       else if (message === 'invalid_pin') setError('Code de secours invalide ou expiré.');
-      else setError(message || 'Validation impossible.');
+      else setError(describeError(e, 'la validation du pointage'));
     } finally {
       setBusy(false);
     }
