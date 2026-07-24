@@ -43,17 +43,18 @@ export async function fetchStructureRatings(structureIds: string[]): Promise<Map
   );
 }
 
-export async function fetchStructureReviews(structureId: string): Promise<StructureReview[]> {
-  const { data, error } = await supabase
-    .from('ratings')
-    .select('score, comment, created_at')
-    .eq('structure_id', structureId)
-    .eq('direction', 'worker_to_structure')
-    .not('comment', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(3);
+// Commentaires anonymisés sur une structure : jamais de nom/identifiant
+// d'auteur, publiés uniquement par lots complets d'au moins 3 avis (chaque
+// lot soumis à un délai de 5 jours côté serveur). Avec moins de 3 avis, la
+// RPC ne renvoie rien — seule la moyenne (fetchStructureRatings) est
+// disponible.
+export async function fetchStructureReviews(structureId: string, limit = 3): Promise<StructureReview[]> {
+  const { data, error } = await supabase.rpc('public_structure_reviews', {
+    p_structure_id: structureId,
+    p_limit: limit,
+  });
   if (error) throw error;
-  return (data ?? []).flatMap((review) => review.comment ? [{ ...review, comment: review.comment }] : []);
+  return (data ?? []).flatMap((review) => (review.comment ? [{ ...review, comment: review.comment }] : []));
 }
 
 // Notes RECUES par un travailleur (donnees par les structures) : c'est ce qui
@@ -155,7 +156,7 @@ export async function snoozeRatingRequest(id: string): Promise<void> {
 // on laisse quelques minutes s'ecouler (le pointage de fin vient a peine
 // d'etre valide). Passe ce delai, la demande est proposee a la prochaine
 // occasion, puis rappelee a 24h et 72h.
-export const RATING_FIRST_PROMPT_DELAY_MINUTES = 5;
+export const RATING_FIRST_PROMPT_DELAY_MINUTES = 2;
 
 // Cadence de rappel : ~5 min apres la fin, puis 24h, puis 72h apres la
 // creation. Au-dela, la demande reste accessible depuis l'historique sans

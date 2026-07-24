@@ -32,4 +32,25 @@ describe('StructureStatsSummary', () => {
     expect(screen.getByText('★ 4,8')).toBeInTheDocument();
     expect(screen.getByText('21 avis')).toBeInTheDocument();
   });
+
+  it('hides the "missions publiées" badge when the structure has none', async () => {
+    vi.mocked(fetchStructureStats).mockResolvedValue({
+      missions_total: 0,
+      missions_open: 0,
+      applications_total: 0,
+      applications_pending: 0,
+      missions_completed: 0,
+      unique_workers: 0,
+      total_paid_cents: 0,
+      total_commission_cents: 0,
+      total_bonus_cents: 0,
+      avg_rating: null,
+      ratings_count: 0,
+    });
+
+    render(<StructureStatsSummary structureId="structure-1" acceptedCount={0} decidedCount={0} />);
+
+    await screen.findByText('0 avis');
+    expect(screen.queryByText('missions publiées')).not.toBeInTheDocument();
+  });
 });

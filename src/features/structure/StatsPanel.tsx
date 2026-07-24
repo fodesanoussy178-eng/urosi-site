@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { T } from '@/components/ui/theme';
 import { formatEuros } from '@/lib/format';
 import { fetchStructureStats, type StructureStats } from '@/features/stats/statsService';
+import { fetchStructureReviews, type StructureReview } from '@/features/missions/ratingsService';
+import { describeError } from '@/lib/errors';
 
 function euros(cents: number): string {
   return formatEuros(cents).replace(' EUR', ' €');
@@ -34,13 +36,15 @@ export function StructureStatsSummary({ structureId, acceptedCount, decidedCount
   const acceptanceRate = decidedCount > 0 ? `${Math.round((acceptedCount / decidedCount) * 100)} %` : '—';
   const rating = stats.avg_rating == null ? '—' : `★ ${stats.avg_rating.toFixed(1).replace('.', ',')}`;
   const summary: [string, string][] = [
-    [String(stats.missions_total), 'missions publiées'],
+    // Badge masqué tant que la structure n'a aucune mission réellement publiée
+    // (les missions annulées ne comptent pas — cf. structure_stats).
+    ...(stats.missions_total > 0 ? ([[String(stats.missions_total), 'missions publiées']] as [string, string][]) : []),
     [acceptanceRate, 'acceptées'],
     [rating, `${stats.ratings_count} avis`],
   ];
 
   return (
-    <div aria-label="Résumé réel de la structure" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 7 }}>
+    <div aria-label="Résumé réel de la structure" style={{ display: 'grid', gridTemplateColumns: `repeat(${summary.length}, minmax(0, 1fr))`, gap: 7 }}>
       {summary.map(([value, label]) => (
         <div key={label} style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 11, padding: '12px 7px', textAlign: 'center' }}>
           <div style={{ fontSize: value.startsWith('★') ? 15 : 19, fontWeight: 900, color: value.startsWith('★') ? T.amber : T.text }}>{value}</div>
@@ -73,10 +77,14 @@ export function StructurePerformances({
   avisADonner: number;
 }) {
   const { stats, error } = useStructureStats(structureId);
+  const [showReviews, setShowReviews] = useState(false);
+  const [reviews, setReviews] = useState<StructureReview[] | null>(null);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
 
   if (error) return <div style={{ fontSize: 11, color: T.mu, textAlign: 'center', padding: 12 }}>Performances indisponibles.</div>;
   if (!stats) return <div style={{ fontSize: 11, color: T.mu, textAlign: 'center', padding: 12 }}>Chargement…</div>;
 
+  const hasReviews = stats.ratings_count > 0;
   const note = stats.avg_rating == null ? '—' : stats.avg_rating.toFixed(1).replace('.', ',');
   const tiles: [string, string][] = [
     ['Missions réalisées', String(stats.missions_completed)],
@@ -85,13 +93,36 @@ export function StructurePerformances({
     ['Avis à donner', String(avisADonner)],
   ];
 
+  function openReviews() {
+    setShowReviews(true);
+    setReviewsError(null);
+    if (reviews === null) {
+      fetchStructureReviews(structureId)
+        .then(setReviews)
+        .catch((e) => setReviewsError(describeError(e, 'le chargement des avis')));
+    }
+  }
+
   return (
     <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: '15px 14px' }}>
       <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>Performances</div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, marginBottom: 14 }}>
-        <StarRow score={stats.avg_rating} />
-        <div style={{ fontSize: 26, fontWeight: 900, color: T.text, lineHeight: 1.1 }}>{note}</div>
-        <div style={{ fontSize: 10.5, color: T.mu }}>{stats.ratings_count} avis</div>
+        {hasReviews ? (
+          <>
+            <StarRow score={stats.avg_rating} />
+            <div style={{ fontSize: 26, fontWeight: 900, color: T.text, lineHeight: 1.1 }}>{note}</div>
+            <div style={{ fontSize: 10.5, color: T.mu }}>{stats.ratings_count} avis</div>
+            <button
+              type="button"
+              onClick={openReviews}
+              style={{ marginTop: 4, background: 'none', border: 'none', color: T.sub, fontSize: 10.5, fontWeight: 800, textDecoration: 'underline', cursor: 'pointer', padding: 0 }}
+            >
+              Lire les avis
+            </button>
+          </>
+        ) : (
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.mu }}>Pas encore évaluée – 0 avis</div>
+        )}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
         {tiles.map(([l, v]) => (
@@ -101,6 +132,44 @@ export function StructurePerformances({
           </div>
         ))}
       </div>
+
+      {showReviews && (
+        <div
+          className="urosi-modal-layer urosi-bottom-sheet-layer"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Avis reçus par la structure"
+          style={{ background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+          onClick={() => setShowReviews(false)}
+        >
+          <div
+            className="urosi-bottom-sheet"
+            style={{ width: '100%', maxWidth: 420, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 26px' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <span style={{ fontSize: 14, fontWeight: 900, color: T.text }}>Avis reçus</span>
+              <button onClick={() => setShowReviews(false)} style={{ background: T.row, border: 'none', borderRadius: 6, width: 26, height: 26, cursor: 'pointer', color: T.sub, fontSize: 14 }}>×</button>
+            </div>
+            <div style={{ fontSize: 10, color: T.mu, marginBottom: 12, lineHeight: 1.5 }}>
+              Anonymisés, publiés par lots d'au moins 3 avis — aucun avis ne permet d'identifier son auteur.
+            </div>
+            {reviewsError && <div style={{ fontSize: 11, color: T.red }}>{reviewsError}</div>}
+            {!reviewsError && reviews === null && <div style={{ fontSize: 11, color: T.mu, textAlign: 'center', padding: 16 }}>Chargement…</div>}
+            {!reviewsError && reviews !== null && reviews.length === 0 && (
+              <div style={{ fontSize: 11, color: T.mu, textAlign: 'center', padding: 16 }}>
+                Aucun commentaire publié pour le moment — les commentaires ne sont révélés que par lots d'au moins 3 avis.
+              </div>
+            )}
+            {reviews?.map((r) => (
+              <div key={`${r.created_at}-${r.comment}`} style={{ borderTop: `1px solid ${T.cb}`, padding: '11px 0' }}>
+                <div style={{ color: T.amber, fontSize: 11, fontWeight: 800 }}>⭐ {r.score}/5</div>
+                <div style={{ color: T.sub, fontSize: 11.5, lineHeight: 1.55, marginTop: 4 }}>{r.comment}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
