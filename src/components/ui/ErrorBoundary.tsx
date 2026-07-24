@@ -1,22 +1,63 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { T, FONT } from '@/components/ui/theme';
 
+// Un nouveau déploiement change le nom (hashé) des fichiers JS : un onglet
+// resté ouvert depuis avant le déploiement échoue à charger un chunk
+// devenu obsolète (route chargée à la demande, cf. lazy() dans App.tsx).
+// Ce n'est pas un bug de code — un simple rechargement récupère la
+// dernière version. On le détecte pour recharger une seule fois, sans
+// jamais boucler si le rechargement ne résout rien.
+const RELOAD_GUARD_KEY = 'urosi_chunk_reload_guard';
+
+function isChunkLoadError(error: Error): boolean {
+  const message = error.message || '';
+  return /dynamically imported module|Loading chunk|Failed to fetch dynamically|error loading dynamically imported module|ChunkLoadError/i.test(message);
+}
+
 // Filet de sécurité contre les pages blanches : toute erreur de rendu non
 // rattrapée affiche un écran de reprise au lieu d'un écran vide.
-export class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
-  state = { hasError: false };
+export class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; reloading: boolean }> {
+  state = { hasError: false, reloading: false };
 
   static getDerivedStateFromError(): { hasError: boolean } {
     return { hasError: true };
   }
 
+  componentDidMount(): void {
+    // Rendu initial réussi : une éventuelle erreur passée n'a plus lieu
+    // d'être, on autorise à nouveau un futur auto-rechargement si besoin.
+    try {
+      sessionStorage.removeItem(RELOAD_GUARD_KEY);
+    } catch {
+      // ignore
+    }
+  }
+
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error('UROSI crash:', error, info.componentStack);
+    if (isChunkLoadError(error)) {
+      try {
+        if (!sessionStorage.getItem(RELOAD_GUARD_KEY)) {
+          sessionStorage.setItem(RELOAD_GUARD_KEY, '1');
+          this.setState({ reloading: true });
+          window.location.reload();
+        }
+      } catch {
+        // sessionStorage indisponible : laisse l'écran de reprise s'afficher
+      }
+    }
   }
 
   render() {
     if (!this.state.hasError) {
       return this.props.children;
+    }
+    if (this.state.reloading) {
+      return (
+        <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, color: T.sub, fontSize: 13 }}>
+          Mise à jour de l'application…
+        </div>
+      );
     }
     return (
       <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, padding: 24 }}>
