@@ -1,5 +1,5 @@
-import { Suspense, lazy, useEffect } from 'react';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Suspense, lazy, useEffect, type CSSProperties, type ReactNode } from 'react';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/features/auth/AuthContext';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { isSupabaseConfigured } from '@/lib/supabase';
@@ -23,12 +23,26 @@ const ValidatorApp = lazy(() => import('@/features/missions/ValidatorApp').then(
 const FounderAdminPage = lazy(() => import('@/features/founder/FounderAdminPage').then((m) => ({ default: m.FounderAdminPage })));
 const PaymentResultPage = lazy(() => import('@/features/payments/PaymentResultPage').then((m) => ({ default: m.PaymentResultPage })));
 
-function Centered({ text }: { text: string }) {
+function Centered({ text, children }: { text: string; children?: ReactNode }) {
   return (
-    <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, color: T.sub, fontSize: 13, padding: 24, textAlign: 'center' }}>
-      {text}
+    <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, color: T.sub, fontSize: 13, padding: 24, textAlign: 'center', gap: 14 }}>
+      <div>{text}</div>
+      {children}
     </div>
   );
+}
+
+function actionButtonStyle(primary: boolean): CSSProperties {
+  return {
+    padding: '10px 18px',
+    borderRadius: 10,
+    fontSize: 13,
+    fontWeight: 800,
+    cursor: 'pointer',
+    border: primary ? 'none' : `1px solid ${T.cb}`,
+    background: primary ? T.grad : 'transparent',
+    color: primary ? '#fff' : T.sub,
+  };
 }
 
 // Le site vitrine (/) est une page statique servie par Vercel, hors React :
@@ -41,8 +55,9 @@ function StaticHome() {
 }
 
 function AppShell() {
-  const { session, profile, loading } = useAuth();
+  const { session, profile, loading, profileMissing, profileError, refreshProfile, signOut } = useAuth();
   const location = useLocation();
+  const nav = useNavigate();
 
   // La démo est volontairement autonome : elle doit rester consultable sans
   // variables Supabase et ne déclenche aucune écriture dans les tables réelles.
@@ -79,6 +94,42 @@ function AppShell() {
         <Route path="/validation" element={<Navigate to="/connexion?next=/validation" replace />} />
         <Route path="*" element={<Navigate to="/connexion" replace />} />
       </Routes>
+    );
+  }
+
+  if (profileError) {
+    return (
+      <Centered text={profileError}>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button style={actionButtonStyle(true)} onClick={() => void refreshProfile()}>
+            Réessayer
+          </button>
+          <button style={actionButtonStyle(false)} onClick={() => void signOut()}>
+            Se déconnecter
+          </button>
+        </div>
+      </Centered>
+    );
+  }
+
+  if (profileMissing) {
+    return (
+      <Centered text="Aucun profil n'est associé à ce compte. Termine ton inscription pour continuer.">
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            style={actionButtonStyle(true)}
+            onClick={() => {
+              void signOut();
+              nav('/acces', { replace: true });
+            }}
+          >
+            Créer mon profil
+          </button>
+          <button style={actionButtonStyle(false)} onClick={() => void signOut()}>
+            Se déconnecter
+          </button>
+        </div>
+      </Centered>
     );
   }
 
