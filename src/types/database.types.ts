@@ -1266,6 +1266,14 @@ export interface Database {
         Args: { p_mission_id: string };
         Returns: undefined;
       };
+      replace_mission_worker: {
+        Args: { p_old_application_id: string; p_new_application_id: string };
+        Returns: undefined;
+      };
+      notify_replacement_search: {
+        Args: { p_mission_id: string };
+        Returns: number;
+      };
       withdraw_wallet: {
         Args: { p_amount_cents: number };
         Returns: number;

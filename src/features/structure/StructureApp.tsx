@@ -12,7 +12,7 @@ import { WalletCard } from '@/components/ui/WalletCard';
 import { fetchMyStructures, createStructure, updateStructureAbout } from './structureService';
 import { StatsPanel, StructureStatsSummary, StructurePerformances } from './StatsPanel';
 import { StructureHistoryPanel } from './StructureHistoryPanel';
-import { fetchMissionsForStructure, createMission, updateMission, cancelMission, type MissionNonSensitivePatch } from '@/features/missions/missionsService';
+import { fetchMissionsForStructure, createMission, updateMission, cancelMission, replaceMissionWorker, notifyReplacementSearch, type MissionNonSensitivePatch } from '@/features/missions/missionsService';
 import {
   fetchApplicationsForMissions,
   updateApplicationStatus,
@@ -146,7 +146,7 @@ type CandWithMission = ApplicationWithApplicant & { missionTitle: string };
 // n'a de sens que pour ces deux-la, jamais pour une mission sans candidat ou
 // deja terminee/annulee.
 type MissionBucket = 'cancelled' | 'completed' | 'in_progress' | 'accepted' | 'open';
-type ManageMode = 'menu' | 'edit' | 'cancel' | 'summary';
+type ManageMode = 'menu' | 'edit' | 'cancel' | 'summary' | 'replace';
 interface ManageState {
   mission: Mission;
   mode: ManageMode;
@@ -546,6 +546,26 @@ export function StructureApp() {
     setDuplicateSeed(mission);
     setManage(null);
     setShowPub(true);
+  }
+
+  async function confirmReplace(oldApplicationId: string, newApplicationId: string) {
+    try {
+      await replaceMissionWorker(oldApplicationId, newApplicationId);
+      await reload();
+      setManage(null);
+      notif('Remplaçant confirmé — le paiement est transféré, aucun nouveau règlement.');
+    } catch (e) {
+      notif(e instanceof Error ? e.message : 'Remplacement impossible.');
+    }
+  }
+
+  async function notifyNearbyForReplacement(missionId: string) {
+    try {
+      const count = await notifyReplacementSearch(missionId);
+      notif(count > 0 ? `${count} travailleur${count > 1 ? 's' : ''} proche${count > 1 ? 's' : ''} prévenu${count > 1 ? 's' : ''}.` : 'Aucun travailleur proche à prévenir pour le moment.');
+    } catch (e) {
+      notif(e instanceof Error ? e.message : 'Envoi impossible.');
+    }
   }
 
   async function signalerProbleme(applicationId: string) {
@@ -1127,6 +1147,9 @@ export function StructureApp() {
                 bucket={missionBucket(manage.mission)}
                 candidate={activeCandidateFor(manage.mission.id)}
                 candidateCount={candCount(manage.mission.id)}
+                replacementCandidates={(cands.get(manage.mission.id) ?? [])
+                  .filter((c) => c.status === 'pending')
+                  .map((c) => ({ ...c, missionTitle: manage.mission.title }))}
                 givenScore={(() => {
                   const c = activeCandidateFor(manage.mission.id);
                   return c ? givenRatings.get(c.id) : undefined;
@@ -1159,6 +1182,11 @@ export function StructureApp() {
                   const c = activeCandidateFor(manage.mission.id);
                   if (c) signalerProbleme(c.id);
                 }}
+                onReplaceWith={(newApplicationId) => {
+                  const c = activeCandidateFor(manage.mission.id);
+                  if (c) confirmReplace(c.id, newApplicationId);
+                }}
+                onNotifyNearby={() => notifyNearbyForReplacement(manage.mission.id)}
               />
             )}
             {scanMission && (
@@ -1240,6 +1268,7 @@ function MissionManageSheet({
   bucket,
   candidate,
   candidateCount,
+  replacementCandidates,
   givenScore,
   onClose,
   onModeChange,
@@ -1250,12 +1279,15 @@ function MissionManageSheet({
   onOpenCandidates,
   onMessage,
   onReportIssue,
+  onReplaceWith,
+  onNotifyNearby,
 }: {
   mission: Mission;
   mode: ManageMode;
   bucket: MissionBucket;
   candidate: CandWithMission | null;
   candidateCount: number;
+  replacementCandidates: CandWithMission[];
   givenScore: number | undefined;
   onClose: () => void;
   onModeChange: (m: ManageMode) => void;
@@ -1266,6 +1298,8 @@ function MissionManageSheet({
   onOpenCandidates: () => void;
   onMessage: () => void;
   onReportIssue: () => void;
+  onReplaceWith: (newApplicationId: string) => void;
+  onNotifyNearby: () => void;
 }) {
   const [edit, setEdit] = useState({
     title: mission.title,
@@ -1298,6 +1332,7 @@ function MissionManageSheet({
               <>
                 <SheetAction label="Voir le travailleur" onClick={onOpenCandidate} />
                 {candidate?.conversation_status === 'open' && <SheetAction label="Messagerie" onClick={onMessage} />}
+                {candidate?.stripe_payment_status === 'paid' && <SheetAction label="Remplacer le travailleur" onClick={() => onModeChange('replace')} />}
                 <SheetAction label="Modifier les informations non sensibles" onClick={() => onModeChange('edit')} />
                 <SheetAction label="Dupliquer la mission" onClick={onDuplicate} />
                 <SheetAction label="Annuler selon les règles" danger onClick={() => onModeChange('cancel')} />
@@ -1368,6 +1403,34 @@ function MissionManageSheet({
             )}
             <button onClick={onCancelMission} style={{ width: '100%', background: T.redBg, color: T.red, border: `1px solid ${T.redBorder}`, borderRadius: 10, padding: '12px 0', fontSize: 13, fontWeight: 900, cursor: 'pointer' }}>
               {candidate?.stripe_payment_status === 'paid' ? 'Annuler et rembourser' : "Confirmer l'annulation"}
+            </button>
+            <button onClick={() => onModeChange('menu')} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: T.mu, padding: '4px 0' }}>
+              Retour
+            </button>
+          </div>
+        )}
+
+        {mode === 'replace' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ fontSize: 11.5, color: T.sub, lineHeight: 1.5 }}>
+              Choisis un remplaçant parmi les candidats de la mission. Le paiement déjà réglé est transféré au remplaçant — aucun nouveau paiement, aucun remboursement.
+            </div>
+            {replacementCandidates.length === 0 ? (
+              <div style={{ fontSize: 10.5, color: T.mu, background: T.row, borderRadius: 10, padding: '11px 12px', lineHeight: 1.45 }}>
+                Aucun autre candidat en attente pour l'instant. La mission reste ouverte aux candidatures — tu peux prévenir des travailleurs proches.
+              </div>
+            ) : (
+              replacementCandidates.map((c) => (
+                <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: T.row, borderRadius: 10, padding: '10px 12px' }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.profile?.full_name || 'Candidat'}</span>
+                  <button onClick={() => candidate && onReplaceWith(c.id)} style={{ background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 8, padding: '7px 12px', fontSize: 11.5, fontWeight: 800, cursor: 'pointer', flexShrink: 0 }}>
+                    Choisir
+                  </button>
+                </div>
+              ))
+            )}
+            <button onClick={onNotifyNearby} style={{ width: '100%', background: 'none', border: `1px solid ${T.cb}`, color: T.cyan, borderRadius: 10, padding: '10px 0', fontSize: 11.5, fontWeight: 800, cursor: 'pointer' }}>
+              Prévenir des travailleurs proches
             </button>
             <button onClick={() => onModeChange('menu')} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: T.mu, padding: '4px 0' }}>
               Retour

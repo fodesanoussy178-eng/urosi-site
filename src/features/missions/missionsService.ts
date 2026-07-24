@@ -72,6 +72,25 @@ export async function updateMission(missionId: string, patch: MissionNonSensitiv
   if (error) throw error;
 }
 
+// Remplacement (version simple) : échange l'ancien travailleur payé contre un
+// candidat en attente de la même mission. Le paiement Stripe est transféré au
+// remplaçant côté serveur (aucun nouveau paiement, aucun remboursement).
+export async function replaceMissionWorker(oldApplicationId: string, newApplicationId: string): Promise<void> {
+  const { error } = await supabase.rpc('replace_mission_worker', {
+    p_old_application_id: oldApplicationId,
+    p_new_application_id: newApplicationId,
+  });
+  if (error) throw error;
+}
+
+// Prévient des travailleurs proches (même ville) qu'une mission cherche un
+// remplaçant. Renvoie le nombre de travailleurs notifiés.
+export async function notifyReplacementSearch(missionId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('notify_replacement_search', { p_mission_id: missionId });
+  if (error) throw error;
+  return Number(data ?? 0);
+}
+
 // Annule la mission et, en cascade, toute candidature encore active dessus
 // (en attente, acceptee ou en cours) : le travailleur est notifie via le
 // trigger de statut deja en place, sans sanction automatique de son cote.
