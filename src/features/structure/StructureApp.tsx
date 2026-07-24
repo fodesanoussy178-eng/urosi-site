@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/features/auth/AuthContext';
-import { hasFounderAccess, signOut } from '@/features/auth/authService';
+import { hasFounderAccess } from '@/features/auth/authService';
+import { StructureSettingsSheet } from './StructureSettingsSheet';
 import { T, FONT, inp } from '@/components/ui/theme';
 import { Fld } from '@/components/ui/Fld';
 import { DocModal, AideRegles, type DocKey } from '@/components/ui/DocModal';
@@ -241,7 +242,7 @@ function MissionCard({
 }
 
 export function StructureApp() {
-  const { session } = useAuth();
+  const { session, profile, refreshProfile } = useAuth();
   const [structure, setStructure] = useState<Structure | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('missions');
@@ -270,6 +271,7 @@ export function StructureApp() {
   const [showDetailedStats, setShowDetailedStats] = useState(false);
   const [scanMission, setScanMission] = useState<Mission | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
   const tr = useRef<ReturnType<typeof setTimeout>>();
 
   useBodyScrollLock(Boolean(showPub || validationMissionId || panelC || ratingCand || chatFor || docKey || manage || scanMission));
@@ -705,8 +707,7 @@ export function StructureApp() {
             <ThemeToggle />
             {session && <NotificationBell profileId={session.user.id} onDataChanged={() => reload().catch(() => undefined)} />}
             {founderAccess && <button onClick={() => window.location.assign('/fondateur')} style={{ fontSize: 10, color: T.cyan, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>Fondateur</button>}
-            <button onClick={() => setDocKey('cgu')} style={{ fontSize: 10, color: T.mu, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>? Aide</button>
-            <button onClick={() => signOut()} style={{ fontSize: 10, color: T.mu, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>Déconnexion</button>
+            <button onClick={() => setShowSettings(true)} aria-label="Réglages" title="Réglages" style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: T.mu, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 8, cursor: 'pointer' }}>⚙</button>
           </div>
         </div>
 
@@ -1262,6 +1263,18 @@ export function StructureApp() {
         )}
 
         {docKey && <DocModal dk={docKey} onClose={() => setDocKey(null)} />}
+
+        {showSettings && session && (
+          <StructureSettingsSheet
+            session={session}
+            profile={profile}
+            structure={structure}
+            onClose={() => setShowSettings(false)}
+            onProfileSaved={async () => {
+              await refreshProfile();
+            }}
+          />
+        )}
       </div>
     </div>
   );

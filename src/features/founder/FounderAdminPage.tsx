@@ -6,6 +6,7 @@ import { FONT, T } from '@/components/ui/theme';
 import { SectionErrorBoundary } from '@/components/ui/SectionErrorBoundary';
 import { founderButton } from './founderUi';
 import { enterFounderTestMode } from './testMode';
+import { describeError } from '@/lib/errors';
 import { FounderDashboardPanel } from './panels/FounderDashboardPanel';
 import { FounderAccountsPanel } from './panels/FounderAccountsPanel';
 import { FounderMissionsPanel } from './panels/FounderMissionsPanel';
@@ -62,7 +63,7 @@ export function FounderAdminPage() {
       await enterFounderTestMode(as);
       navigate('/app', { replace: true });
     } catch (e) {
-      setSwitchError(e instanceof Error ? e.message : 'Bascule impossible.');
+      setSwitchError(describeError(e, 'la bascule vers ce mode de test'));
       setSwitching(null);
     }
   }

@@ -5,6 +5,7 @@ import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { T, FONT } from '@/components/ui/theme';
 import { exitFounderTestMode } from '@/features/founder/testMode';
+import { describeError } from '@/lib/errors';
 
 // Chaque route est chargée à la demande : la démo de la landing ne télécharge
 // plus les espaces travailleur/structure/fondateur, et inversement. Aucun
@@ -60,7 +61,7 @@ function FounderTestBanner() {
       await exitFounderTestMode();
       nav('/fondateur', { replace: true });
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : 'Retour impossible — reconnecte-toi avec ton compte fondateur.');
+      window.alert(describeError(e, 'le retour au mode Fondateur'));
     } finally {
       setBusy(false);
     }

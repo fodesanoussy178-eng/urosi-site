@@ -16,6 +16,7 @@ export async function updateProfile(
     is_micro_entrepreneur?: boolean;
     city?: string | null;
     phone?: string | null;
+    address?: string | null;
     bio?: string | null;
     skills?: string[];
     public_first_name?: string | null;

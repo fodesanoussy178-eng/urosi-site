@@ -9,7 +9,7 @@
 // contrainte violée, droit refusé, erreur de syntaxe, cache de schéma…) est
 // remplacée par un message générique et clair.
 const TECHNICAL_ERROR_PATTERN =
-  /does not exist|violates .* constraint|duplicate key value|permission denied for|syntax error|schema cache|invalid input syntax/i;
+  /does not exist|violates .* constraint|duplicate key value|permission denied for|syntax error|schema cache|invalid input syntax|invalid jwt|unrecognized jwt|jwt kid|jwks|malformed jwt|invalid signature|json web token/i;
 
 function extractMessage(e: unknown): string {
   if (e instanceof Error) return e.message;
