@@ -1490,6 +1490,22 @@ function SheetAction({ label, onClick, danger }: { label: string; onClick: () =>
   );
 }
 
+// Signatures d'erreurs techniques (Postgres/PostgREST) à ne jamais montrer
+// telles quelles : colonne/relation absente, contrainte violée, droit refusé,
+// cache de schéma… Tout le reste (nos triggers métier lèvent déjà des phrases
+// françaises claires : abonnement, suspension, quotas) passe tel quel.
+const TECHNICAL_ERROR_PATTERN =
+  /does not exist|violates .* constraint|duplicate key value|permission denied for|syntax error|schema cache|invalid input syntax/i;
+
+function describeMissionPublishError(e: unknown): string {
+  // Le détail technique complet reste dans la console (support/diagnostic) ;
+  // seul un message métier lisible est montré à la structure.
+  console.error('[mission-publish]', e);
+  const message = e instanceof Error ? e.message : typeof e === 'object' && e !== null && 'message' in e ? String((e as { message?: unknown }).message ?? '') : '';
+  if (message && !TECHNICAL_ERROR_PATTERN.test(message)) return message;
+  return 'Une erreur technique empêche temporairement la publication. Réessaie dans un instant, ou contacte le support si ça persiste.';
+}
+
 function PublishModal({ structure, initial, founderAccess, onClose, onPublished }: { structure: Structure; initial?: Mission | null; founderAccess?: boolean; onClose: () => void; onPublished: (m: Mission) => void }) {
   const [f, setF] = useState(() => ({
     t: initial ? `${initial.title} (copie)` : '',
@@ -1643,7 +1659,7 @@ function PublishModal({ structure, initial, founderAccess, onClose, onPublished 
       });
       onPublished(mission);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Publication impossible.');
+      setError(describeMissionPublishError(e));
     } finally {
       setBusy(false);
     }
