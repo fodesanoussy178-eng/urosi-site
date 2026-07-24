@@ -7,16 +7,100 @@ const corsHeaders = {
 
 // Comptes de test dedies, jamais de vrais utilisateurs : le mode Fondateur
 // n'usurpe QUE ces deux identites, creees/reutilisees ici a la demande.
-const TEST_ACCOUNTS: Record<"worker" | "structure", { email: string; fullName: string }> = {
-  worker: { email: "founder-test-worker@urosi.internal", fullName: "Worker Test Fondateur" },
-  structure: { email: "founder-test-structure@urosi.internal", fullName: "Structure Test Fondateur" },
-};
+// Toutes les valeurs sont fictives et clairement identifiables comme telles.
+// Domaine @urosi.internal reserve exclusivement aux comptes de test — les
+// RPC founder_mark_test_account / founder_provision_test_structure
+// refusent d'agir sur tout autre domaine (voir migration
+// 20260724180000_founder_test_account_provisioning_rpcs.sql).
+const FAKE_SIRET = "12345678900015"; // format valide (Luhn), aucune entreprise reelle
+
+const TEST_ACCOUNTS = {
+  worker: {
+    email: "founder-test-worker@urosi.internal",
+    fullName: "Camille Testeur",
+    profile: {
+      p_city: "Lille",
+      p_phone: "+33600000001",
+      p_bio: "Compte de test Fondateur — jamais un vrai utilisateur, jamais de vraie mission.",
+      p_skills: ["service", "caisse", "manutention"],
+    },
+  },
+  structure: {
+    email: "founder-test-structure@urosi.internal",
+    fullName: "Fondateur Test (compte structure)",
+    structureName: "Bistrot Fictif Test SARL",
+    profile: {
+      p_city: "Lille",
+      p_phone: "+33600000002",
+      p_bio: "Compte propriétaire de test — usage interne Fondateur uniquement.",
+      p_address: "1 rue Fictive, 59000 Lille",
+    },
+  },
+} as const;
+
+type Role = "worker" | "structure";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+function isAlreadyRegisteredError(message: string | undefined): boolean {
+  return /already.*registered|already exists|email_exists/i.test(message ?? "");
+}
+
+// Retrouve un utilisateur auth existant par email. Repli utilise uniquement
+// quand createUser echoue avec "deja enregistre" mais que le flag
+// is_founder_test_account n'a, pour une raison quelconque (echec partiel
+// d'un appel precedent, appels concurrents), jamais ete pose — pour ne
+// JAMAIS retenter une creation en boucle sur le meme email.
+async function findAuthUserByEmail(
+  adminClient: ReturnType<typeof createClient>,
+  email: string,
+): Promise<string | undefined> {
+  const target = email.toLowerCase();
+  for (let page = 1; page <= 10; page += 1) {
+    const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage: 200 });
+    if (error || !data) return undefined;
+    const found = data.users.find((u) => (u.email ?? "").toLowerCase() === target);
+    if (found) return found.id;
+    if (data.users.length < 200) return undefined;
+  }
+  return undefined;
+}
+
+async function ensureTestUserId(
+  adminClient: ReturnType<typeof createClient>,
+  as: Role,
+): Promise<string> {
+  const target = TEST_ACCOUNTS[as];
+  const role = as === "structure" ? "structure_admin" : "worker";
+
+  const { data: existing } = await adminClient
+    .from("profiles")
+    .select("id")
+    .eq("is_founder_test_account", true)
+    .eq("role", role)
+    .maybeSingle();
+  if (existing?.id) return existing.id as string;
+
+  const { data: created, error: createError } = await adminClient.auth.admin.createUser({
+    email: target.email,
+    password: crypto.randomUUID(),
+    email_confirm: true,
+    user_metadata: { full_name: target.fullName, role },
+  });
+
+  if (created?.user) return created.user.id;
+
+  if (isAlreadyRegisteredError(createError?.message)) {
+    const recoveredId = await findAuthUserByEmail(adminClient, target.email);
+    if (recoveredId) return recoveredId;
+  }
+
+  throw new Error(createError?.message || "Création du compte de test impossible.");
 }
 
 Deno.serve(async (req) => {
@@ -31,15 +115,18 @@ Deno.serve(async (req) => {
     }
 
     const authHeader = req.headers.get("Authorization") || "";
+    // callerClient porte le VRAI jeton du fondateur : les RPC sensibles
+    // (founder_mark_test_account, founder_provision_test_structure)
+    // s'executent avec cette identite, jamais avec la cle service_role —
+    // is_founder() n'a de sens que pour une vraie session utilisateur.
     const callerClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } });
+    // adminClient (service_role) sert UNIQUEMENT a ce que seule l'API admin
+    // peut faire : creer un compte auth et generer un lien de bascule.
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     const { data: authData, error: authError } = await callerClient.auth.getUser();
     if (authError || !authData.user) return json({ error: "Non authentifié." }, 401);
 
-    // Seul un compte ayant réellement l'accès Fondateur peut déclencher une
-    // bascule de session — jamais un compte de test lui-même (has_founder_access
-    // renvoie false pour eux), jamais un compte réel quelconque.
     const { data: isFounder, error: founderError } = await callerClient.rpc("has_founder_access");
     if (founderError || !isFounder) return json({ error: "Accès Fondateur requis." }, 403);
 
@@ -49,69 +136,24 @@ Deno.serve(async (req) => {
       return json({ error: "Paramètre 'as' invalide : 'worker' ou 'structure' attendu." }, 400);
     }
 
-    const target = TEST_ACCOUNTS[as];
-    const role = as === "structure" ? "structure_admin" : "worker";
+    const target = TEST_ACCOUNTS[as as Role];
+    const testUserId = await ensureTestUserId(adminClient, as);
 
-    // Cherche le compte de test deja provisionne pour ce role.
-    const { data: existing } = await adminClient
-      .from("profiles")
-      .select("id")
-      .eq("is_founder_test_account", true)
-      .eq("role", role)
-      .maybeSingle();
+    const { error: markError } = await callerClient.rpc("founder_mark_test_account", {
+      p_user_id: testUserId,
+      p_full_name: target.fullName,
+      ...target.profile,
+    });
+    if (markError) throw new Error(markError.message);
 
-    let testUserId = existing?.id as string | undefined;
-
-    if (!testUserId) {
-      const { data: created, error: createError } = await adminClient.auth.admin.createUser({
-        email: target.email,
-        password: crypto.randomUUID(),
-        email_confirm: true,
-        user_metadata: { full_name: target.fullName, role },
+    if (as === "structure") {
+      const { error: structureError } = await callerClient.rpc("founder_provision_test_structure", {
+        p_owner_id: testUserId,
+        p_name: TEST_ACCOUNTS.structure.structureName,
+        p_siret: FAKE_SIRET,
+        p_about: "Structure fictive dédiée aux tests internes Fondateur. Jamais une vraie entreprise.",
       });
-      if (createError || !created.user) {
-        throw new Error(createError?.message || "Création du compte de test impossible.");
-      }
-      testUserId = created.user.id;
-
-      // Laisse le trigger handle_new_user créer la ligne profiles, puis la
-      // marque comme compte de test Fondateur (jamais l'inverse : un compte
-      // réel ne peut jamais recevoir ce marqueur par cette fonction).
-      const { error: profileError } = await adminClient
-        .from("profiles")
-        .update({ is_founder_test_account: true, full_name: target.fullName })
-        .eq("id", testUserId);
-      if (profileError) throw new Error(profileError.message);
-
-      if (as === "structure") {
-        const { error: structureError } = await adminClient.from("structures").insert({
-          owner_id: testUserId,
-          name: `🧪 ${target.fullName}`,
-          founder_bypass: true,
-          verification_status: "founder_bypass",
-          verification_method: "founder",
-          is_ess: false,
-        });
-        if (structureError) throw new Error(structureError.message);
-      }
-    } else if (as === "structure") {
-      // Compte deja provisionne mais sans structure (cas improbable, garde-fou).
-      const { data: existingStructure } = await adminClient
-        .from("structures")
-        .select("id")
-        .eq("owner_id", testUserId)
-        .maybeSingle();
-      if (!existingStructure) {
-        const { error: structureError } = await adminClient.from("structures").insert({
-          owner_id: testUserId,
-          name: `🧪 ${target.fullName}`,
-          founder_bypass: true,
-          verification_status: "founder_bypass",
-          verification_method: "founder",
-          is_ess: false,
-        });
-        if (structureError) throw new Error(structureError.message);
-      }
+      if (structureError) throw new Error(structureError.message);
     }
 
     const { data: link, error: linkError } = await adminClient.auth.admin.generateLink({

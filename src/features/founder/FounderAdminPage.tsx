@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/features/auth/AuthContext';
 import { hasFounderAccess } from '@/features/auth/authService';
 import { FONT, T } from '@/components/ui/theme';
+import { SectionErrorBoundary } from '@/components/ui/SectionErrorBoundary';
 import { founderButton } from './founderUi';
 import { enterFounderTestMode } from './testMode';
 import { FounderDashboardPanel } from './panels/FounderDashboardPanel';
@@ -110,7 +111,12 @@ export function FounderAdminPage() {
             <span>Mode Admin</span>
           </button>
         </div>
-        {switchError && <div style={{ color: T.red, fontSize: 11, marginBottom: 14 }}>{switchError}</div>}
+        {switchError && (
+          <div style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, borderRadius: 12, padding: 12, marginBottom: 16 }}>
+            <div style={{ color: T.red, fontSize: 12, fontWeight: 900, marginBottom: 3 }}>⚠ La bascule a échoué</div>
+            <div style={{ color: T.sub, fontSize: 11, lineHeight: 1.5 }}>{switchError} Tu es toujours dans le Centre Fondateur — rien n'a changé.</div>
+          </div>
+        )}
 
         {!active && (
           <div className="rsp-cols-2-lg" style={{ display: 'grid', gap: 10 }}>
@@ -145,7 +151,9 @@ export function FounderAdminPage() {
               ← Retour
             </button>
             <h2 style={{ fontSize: 16, margin: '0 0 12px' }}>{activeMeta[1]} {activeMeta[2]}</h2>
-            <ActivePanel />
+            <SectionErrorBoundary label={activeMeta[2]}>
+              <ActivePanel />
+            </SectionErrorBoundary>
           </div>
         )}
       </main>
