@@ -22,7 +22,6 @@ import {
 } from '@/features/missions/applicationsService';
 import {
   rate,
-  fetchRatedApplicationIds,
   fetchGivenRatingScores,
   fetchWorkerReputation,
   fetchPendingRatingRequests,
@@ -249,7 +248,6 @@ export function StructureApp() {
   const [mis, setMis] = useState<Mission[]>([]);
   const [cands, setCands] = useState<Map<string, ApplicationWithApplicant[]>>(new Map());
   const [delays, setDelays] = useState<Map<string, number>>(new Map());
-  const [ratedIds, setRatedIds] = useState<Set<string>>(new Set());
   const [unread, setUnread] = useState<Map<string, number>>(new Map());
   const [candidateReputations, setCandidateReputations] = useState<Map<string, WorkerReputation>>(new Map());
   const [candMis, setCandMis] = useState<string | null>(null);
@@ -294,16 +292,14 @@ export function StructureApp() {
     // reliquat non lu y resterait sinon bloqué indéfiniment dans le badge.
     const openConversationIds = allApps.filter((a) => a.conversation_status === 'open').map((a) => a.id);
     const candidateWorkerIds = [...new Set(allApps.map((a) => a.worker_id))];
-    const [delayMap, rated, unreadMap, pendingRatingRequests, given, reputations] = await Promise.all([
+    const [delayMap, unreadMap, pendingRatingRequests, given, reputations] = await Promise.all([
       fetchDelaysForApplications(appIds),
-      fetchRatedApplicationIds(appIds, 'structure_to_worker'),
       fetchUnreadCounts(openConversationIds, session.user.id),
       fetchPendingRatingRequests(session.user.id).catch(() => [] as RatingRequest[]),
       fetchGivenRatingScores(appIds, 'structure_to_worker').catch(() => new Map<string, number>()),
       Promise.all(candidateWorkerIds.map(async (id) => [id, await fetchWorkerReputation(id).catch(() => ({ average: null, count: 0 }))] as const)),
     ]);
     setDelays(delayMap);
-    setRatedIds(rated);
     setCandidateReputations(new Map(reputations));
     setUnread(unreadMap);
     setRatingRequests(pendingRatingRequests);
@@ -625,8 +621,24 @@ export function StructureApp() {
   const habitues = [...completedByWorker.entries()]
     .map(([workerId, list]) => ({ workerId, nom: list[0]?.profile?.full_name || 'Travailleur', fois: list.length }))
     .sort((a, b) => b.fois - a.fois);
+  // Missions réellement réalisées (pointage de fin confirmé), qu'elles soient
+  // encore en attente de paiement ou déjà payées — jamais gaté par le seul
+  // statut de paiement (cf. point 6 : la date réelle de fin fait foi).
+  const realizedByWorker = new Map<string, number>();
+  for (const c of allCands.filter((x) => x.attendance_status === 'end_confirmed')) {
+    realizedByWorker.set(c.worker_id, (realizedByWorker.get(c.worker_id) ?? 0) + 1);
+  }
   const candidatePool = candMis ? allCands.filter((c) => c.mission_id === candMis) : allCands;
-  const shownCands = [...new Map(candidatePool.map((candidate) => [candidate.worker_id, candidate])).values()];
+  const allShownCands = [...new Map(candidatePool.map((candidate) => [candidate.worker_id, candidate])).values()];
+  // Une fois la mission réellement terminée (pointage de fin confirmé), la
+  // candidature reste visible en résumé simple jusqu'à J+3 (payment_ready_at,
+  // calculé depuis l'horodatage réel de fin — jamais depuis le seul statut de
+  // paiement, qui peut rester bloqué), puis disparaît des Candidats. Les
+  // données restent dans Historique, et dans Habitués si elle y est déjà.
+  const shownCands = allShownCands.filter((c) => {
+    if (c.attendance_status !== 'end_confirmed') return true;
+    return Boolean(c.payment_ready_at) && new Date(c.payment_ready_at!).getTime() > Date.now();
+  });
   const acceptedDecisionCount = allCands.filter((candidate) => ['accepted', 'in_progress', 'payment_pending', 'completed'].includes(candidate.status)).length;
   const decidedCount = allCands.filter((candidate) => candidate.status !== 'pending' && candidate.status !== 'cancelled').length;
   const misTitle = (mid: string) => mis.find((m) => m.id === mid)?.title ?? '—';
@@ -874,6 +886,25 @@ export function StructureApp() {
                   const unreadCount = unread.get(c.id) ?? 0;
                   const timesHere = (completedByWorker.get(c.worker_id) ?? []).length;
                   const rep = candidateReputations.get(c.worker_id);
+                  // Mission réellement terminée (pointage de fin confirmé) : plus
+                  // aucun message possible (conversation déjà fermée en base par
+                  // finalize_mission_end), plus aucune action — juste un résumé,
+                  // visible jusqu'à J+3 (shownCands l'a déjà filtré au-delà).
+                  if (c.attendance_status === 'end_confirmed') {
+                    const realized = realizedByWorker.get(c.worker_id) ?? 0;
+                    return (
+                      <div key={c.id} style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 11, alignItems: 'center' }}>
+                        <div style={{ width: 38, height: 38, borderRadius: 11, background: 'hsl(24 58% 46%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 15, flexShrink: 0 }}>
+                          {(c.profile?.full_name || 'C').charAt(0).toUpperCase()}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{c.profile?.full_name || 'Candidat'}</div>
+                          <div style={{ fontSize: 10, color: T.mu, marginTop: 2 }}>{realized} mission{realized > 1 ? 's' : ''} réalisée{realized > 1 ? 's' : ''} avec vous</div>
+                        </div>
+                        <span style={{ fontSize: 9.5, fontWeight: 800, color: T.cyan, flexShrink: 0 }}>paiement J+3</span>
+                      </div>
+                    );
+                  }
                   return (
                     <div key={c.id} style={{ background: T.card, border: `1px solid ${c.status === 'accepted' ? T.greenBorder : c.status === 'rejected' ? T.redBorder : T.cb}`, borderRadius: 12, overflow: 'hidden' }}>
                       <div style={{ padding: '12px 14px', display: 'flex', gap: 11, alignItems: 'center', cursor: 'pointer' }} onClick={() => openPanel(c)}>
@@ -925,8 +956,11 @@ export function StructureApp() {
                           </button>
                         </div>
                       )}
-                      {['accepted', 'in_progress', 'payment_pending', 'completed'].includes(c.status) && (
-                        <div style={{ padding: '0 14px 12px', display: 'grid', gridTemplateColumns: c.conversation_status === 'open' && c.attendance_status === 'end_confirmed' && !ratedIds.has(c.id) ? '1fr 1fr' : '1fr', gap: 6 }}>
+                      {/* payment_pending/completed n'atteignent jamais cette carte complète
+                          (attendance_status='end_confirmed' est traité par le résumé simple
+                          ci-dessus) : seuls accepted/in_progress restent ici. */}
+                      {['accepted', 'in_progress'].includes(c.status) && (
+                        <div style={{ padding: '0 14px 12px', display: 'grid', gridTemplateColumns: '1fr', gap: 6 }}>
                           {c.conversation_status === 'open' && (
                             <button onClick={() => setChatFor(c)} style={{ position: 'relative', background: '#1d4ed815', color: '#93c5fd', border: '1px solid #1e40af', borderRadius: 8, padding: '9px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
                               💬 Message
@@ -935,11 +969,6 @@ export function StructureApp() {
                                   {unreadCount}
                                 </span>
                               )}
-                            </button>
-                          )}
-                          {c.attendance_status === 'end_confirmed' && !ratedIds.has(c.id) && (
-                            <button onClick={() => setRatingCand(c)} style={{ background: '#22d3ee15', color: T.cyan, border: '1px solid #0e7490', borderRadius: 8, padding: '9px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
-                              ★ Noter
                             </button>
                           )}
                           {c.status === 'accepted' && (
