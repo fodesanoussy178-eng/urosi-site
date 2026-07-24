@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { T } from '@/components/ui/theme';
 import { founderAdminApi, type FounderMission } from '../founderAdminService';
 import { founderButton, founderCard, founderInput, founderNotice } from '../founderUi';
+import { describeError } from '@/lib/errors';
 
 export function FounderMissionsPanel() {
   const [rows, setRows] = useState<FounderMission[]>([]);
@@ -11,7 +12,7 @@ export function FounderMissionsPanel() {
 
   const load = useCallback(async () => {
     try { setRows(await founderAdminApi.missions(search, status)); setError(''); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'Chargement impossible.'); }
+    catch (cause) { setError(describeError(cause, 'le chargement des missions')); }
   }, [search, status]);
   useEffect(() => { void load(); }, [load]);
 
@@ -21,7 +22,7 @@ export function FounderMissionsPanel() {
     const reason = window.prompt('Motif de l’intervention (obligatoire)')?.trim();
     if (!reason) return;
     try { await founderAdminApi.setMissionStatus(row.id, next, reason); await load(); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'Action impossible.'); }
+    catch (cause) { setError(describeError(cause, 'cette intervention sur la mission')); }
   }
 
   return (

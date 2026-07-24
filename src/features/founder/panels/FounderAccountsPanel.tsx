@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { T } from '@/components/ui/theme';
 import { founderAdminApi, type AccountHistory, type FounderAccounts } from '../founderAdminService';
 import { founderButton, founderCard, founderDate, founderInput, founderNotice } from '../founderUi';
+import { describeError } from '@/lib/errors';
 
 export function FounderAccountsPanel() {
   const [search, setSearch] = useState('');
@@ -13,7 +14,7 @@ export function FounderAccountsPanel() {
   const load = useCallback(async () => {
     setError('');
     try { setData(await founderAdminApi.accounts(search)); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : 'Chargement impossible.'); }
+    catch (reason) { setError(describeError(reason, 'le chargement des comptes')); }
   }, [search]);
 
   useEffect(() => { void load(); }, [load]);
@@ -24,14 +25,14 @@ export function FounderAccountsPanel() {
     if (next === 'suspended' && !reason) return;
     setBusy(profileId);
     try { await founderAdminApi.setAccountStatus(profileId, next, reason); await load(); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'Action impossible.'); }
+    catch (cause) { setError(describeError(cause, 'cette action sur le compte')); }
     finally { setBusy(''); }
   }
 
   async function openHistory(profileId: string) {
     setBusy(profileId);
     try { setHistory({ id: profileId, data: await founderAdminApi.accountHistory(profileId) }); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'Historique inaccessible.'); }
+    catch (cause) { setError(describeError(cause, "l'accès à l'historique")); }
     finally { setBusy(''); }
   }
 

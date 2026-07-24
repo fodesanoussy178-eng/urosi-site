@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { T } from '@/components/ui/theme';
 import { founderAdminApi, type FounderReport } from '../founderAdminService';
 import { founderButton, founderCard, founderDate, founderInput, founderNotice } from '../founderUi';
+import { describeError } from '@/lib/errors';
 
 const actions = [
   ['classify', 'Classer'],
@@ -19,7 +20,7 @@ export function FounderReportsPanel() {
 
   const load = useCallback(async () => {
     try { setRows(await founderAdminApi.reports(status)); setError(''); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'Chargement impossible.'); }
+    catch (cause) { setError(describeError(cause, 'le chargement des signalements')); }
   }, [status]);
   useEffect(() => { void load(); }, [load]);
 
@@ -29,7 +30,7 @@ export function FounderReportsPanel() {
     if (requiresNote && !note) return;
     setBusy(row.id);
     try { await founderAdminApi.actOnReport(row.id, action, note); await load(); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'Action impossible.'); }
+    catch (cause) { setError(describeError(cause, 'cette action sur le signalement')); }
     finally { setBusy(''); }
   }
 

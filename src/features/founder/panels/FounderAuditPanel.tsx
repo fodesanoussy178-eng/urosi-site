@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { T } from '@/components/ui/theme';
 import { founderAdminApi, type PlatformAuditEntry } from '../founderAdminService';
 import { founderButton, founderCard, founderDate, founderInput, founderNotice } from '../founderUi';
+import { describeError } from '@/lib/errors';
 
 const PAGE = 50;
 
@@ -74,7 +75,7 @@ export function FounderAuditPanel() {
           setOffset(PAGE);
           setReachedEnd(data.length < PAGE);
         })
-        .catch((cause) => setError(cause instanceof Error ? cause.message : 'Chargement impossible.'))
+        .catch((cause) => setError(describeError(cause, 'le chargement du journal')))
         .finally(() => setLoading(false));
     }, 250);
     return () => window.clearTimeout(handle);
@@ -97,7 +98,7 @@ export function FounderAuditPanel() {
         setOffset((o) => o + PAGE);
         setReachedEnd(data.length < PAGE);
       })
-      .catch((cause) => setError(cause instanceof Error ? cause.message : 'Chargement impossible.'))
+      .catch((cause) => setError(describeError(cause, 'le chargement du journal')))
       .finally(() => setLoading(false));
   }
 

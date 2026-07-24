@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { T } from '@/components/ui/theme';
 import { founderAdminApi, type FounderRevenue } from '../founderAdminService';
 import { founderCard, founderEuros, founderNotice } from '../founderUi';
+import { describeError } from '@/lib/errors';
 
 export function FounderRevenuePanel() {
   const [data, setData] = useState<FounderRevenue | null>(null);
   const [error, setError] = useState('');
-  useEffect(() => { founderAdminApi.revenue().then(setData).catch((cause) => setError(cause instanceof Error ? cause.message : 'Chargement impossible.')); }, []);
+  useEffect(() => { founderAdminApi.revenue().then(setData).catch((cause) => setError(describeError(cause, 'le chargement des revenus'))); }, []);
   if (error) return <div style={{ ...founderNotice, color: T.red }}>{error}</div>;
   if (!data) return <div style={founderNotice}>Chargement des revenus…</div>;
   const rows = [

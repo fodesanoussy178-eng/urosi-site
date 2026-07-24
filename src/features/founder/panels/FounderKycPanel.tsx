@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { T } from '@/components/ui/theme';
 import { founderAdminApi } from '../founderAdminService';
 import { founderButton, founderCard, founderDate, founderNotice } from '../founderUi';
+import { describeError } from '@/lib/errors';
 import {
   createKycDocumentUrl,
   decideKyc,
@@ -25,12 +26,12 @@ export function FounderKycPanel() {
     const entries = await Promise.all(submissions.map(async (row) => [row.profile_id, await fetchKycHistory(row.profile_id)] as const));
     setHistory(Object.fromEntries(entries));
   }, []);
-  useEffect(() => { load().catch((cause) => setError(cause instanceof Error ? cause.message : 'Chargement impossible.')); }, [load]);
+  useEffect(() => { load().catch((cause) => setError(describeError(cause, 'le chargement des dossiers KYC'))); }, [load]);
 
   async function openDocument(row: KycSubmission) {
     if (!row.identity_document_path) return;
     try { window.open(await createKycDocumentUrl(row.profile_id, row.identity_document_path), '_blank', 'noopener,noreferrer'); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'Document inaccessible.'); }
+    catch (cause) { setError(describeError(cause, "l'ouverture du document")); }
   }
 
   async function decide(row: KycSubmission, status: 'verified' | 'rejected') {
@@ -38,7 +39,7 @@ export function FounderKycPanel() {
     if (status === 'rejected' && !reason) return;
     setBusy(row.profile_id);
     try { await decideKyc(row.profile_id, status, reason); await load(); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'Décision impossible.'); }
+    catch (cause) { setError(describeError(cause, 'cette décision KYC')); }
     finally { setBusy(''); }
   }
 
@@ -47,7 +48,7 @@ export function FounderKycPanel() {
     if (!reason) return;
     setBusy(row.profile_id);
     try { await founderAdminApi.requestKycDocument(row.profile_id, reason); await load(); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'Demande impossible.'); }
+    catch (cause) { setError(describeError(cause, 'cette demande de document')); }
     finally { setBusy(''); }
   }
 
