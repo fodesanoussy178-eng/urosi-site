@@ -619,7 +619,7 @@ export function StructureApp() {
     completedByWorker.set(c.worker_id, [...(completedByWorker.get(c.worker_id) ?? []), c]);
   }
   const habitues = [...completedByWorker.entries()]
-    .map(([workerId, list]) => ({ workerId, nom: list[0]?.profile?.full_name || 'Travailleur', fois: list.length }))
+    .map(([workerId, list]) => ({ workerId, nom: list[0]?.profile?.display_name || 'Travailleur', fois: list.length }))
     .sort((a, b) => b.fois - a.fois);
   // Missions réellement réalisées (pointage de fin confirmé), qu'elles soient
   // encore en attente de paiement ou déjà payées — jamais gaté par le seul
@@ -895,10 +895,10 @@ export function StructureApp() {
                     return (
                       <div key={c.id} style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 11, alignItems: 'center' }}>
                         <div style={{ width: 38, height: 38, borderRadius: 11, background: 'hsl(24 58% 46%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 15, flexShrink: 0 }}>
-                          {(c.profile?.full_name || 'C').charAt(0).toUpperCase()}
+                          {(c.profile?.display_name || 'C').charAt(0).toUpperCase()}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{c.profile?.full_name || 'Candidat'}</div>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{c.profile?.display_name || 'Candidat'}</div>
                           <div style={{ fontSize: 10, color: T.mu, marginTop: 2 }}>{realized} mission{realized > 1 ? 's' : ''} réalisée{realized > 1 ? 's' : ''} avec vous</div>
                         </div>
                         <span style={{ fontSize: 9.5, fontWeight: 800, color: T.cyan, flexShrink: 0 }}>paiement J+3</span>
@@ -909,11 +909,11 @@ export function StructureApp() {
                     <div key={c.id} style={{ background: T.card, border: `1px solid ${c.status === 'accepted' ? T.greenBorder : c.status === 'rejected' ? T.redBorder : T.cb}`, borderRadius: 12, overflow: 'hidden' }}>
                       <div style={{ padding: '12px 14px', display: 'flex', gap: 11, alignItems: 'center', cursor: 'pointer' }} onClick={() => openPanel(c)}>
                         <div style={{ width: 38, height: 38, borderRadius: 11, background: 'hsl(24 58% 46%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 15, flexShrink: 0 }}>
-                          {(c.profile?.full_name || 'C').charAt(0).toUpperCase()}
+                          {(c.profile?.display_name || 'C').charAt(0).toUpperCase()}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{c.profile?.full_name || 'Candidat'}</span>
+                            <span style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{c.profile?.display_name || 'Candidat'}</span>
                             {timesHere > 0 && <span style={{ fontSize: 9, fontWeight: 800, color: T.amber }}>★ Habitué · {timesHere}×</span>}
                             {delay && c.status === 'accepted' && <span style={{ fontSize: 8, fontWeight: 700, color: T.amber, background: T.amberBg, borderRadius: 8, padding: '1px 6px' }}>⏱ retard {delay} min signalé</span>}
                           </div>
@@ -1066,10 +1066,10 @@ export function StructureApp() {
                 <div className="rsp-sheet-body urosi-bottom-sheet" style={{ width: '100%', maxWidth: 420, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 26px', fontFamily: FONT }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: 'flex', gap: 11, alignItems: 'center', marginBottom: 13 }}>
                     <div style={{ width: 44, height: 44, borderRadius: 12, background: 'hsl(24 58% 46%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 17, flexShrink: 0 }}>
-                      {(panelC.profile?.full_name || 'C').charAt(0).toUpperCase()}
+                      {(panelC.profile?.display_name || 'C').charAt(0).toUpperCase()}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 15, fontWeight: 900, color: T.text }}>{panelC.profile?.full_name || 'Candidat'}</div>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: T.text }}>{panelC.profile?.display_name || 'Candidat'}</div>
                       <div style={{ fontSize: 10, color: T.mu, marginTop: 2 }}>candidat sur « {misTitle(panelC.mission_id)} »</div>
                     </div>
                     <button onClick={() => setPanelC(null)} style={{ background: T.row, border: 'none', borderRadius: 6, width: 24, height: 24, cursor: 'pointer', color: T.sub, fontSize: 13 }}>×</button>
@@ -1148,7 +1148,7 @@ export function StructureApp() {
                 <div className="rsp-sheet-body urosi-bottom-sheet" style={{ width: '100%', maxWidth: 420, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 26px', fontFamily: FONT }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ fontSize: 14, fontWeight: 900, color: T.text, marginBottom: 3 }}>Mission terminée</div>
                   <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.5, marginBottom: 12 }}>
-                    Comment s'est passée votre expérience avec {ratingCand.profile?.full_name || 'ce travailleur'} ? Ta note apparaîtra dans son CV vivant une fois publiée (informative, jamais bloquante).
+                    Comment s'est passée votre expérience avec {ratingCand.profile?.display_name || 'ce travailleur'} ? Ta note apparaîtra dans son CV vivant une fois publiée (informative, jamais bloquante).
                   </div>
                   <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
                     {[1, 2, 3, 4, 5].map((n) => (
@@ -1169,7 +1169,7 @@ export function StructureApp() {
               <ChatSheet
                 applicationId={chatFor.id}
                 myId={session.user.id}
-                title={`${chatFor.profile?.full_name || 'Candidat'} — ${chatFor.missionTitle}`}
+                title={`${chatFor.profile?.display_name || 'Candidat'} — ${chatFor.missionTitle}`}
                 onClose={() => {
                   setChatFor(null);
                   loadMissionData(mis).catch(() => undefined);
@@ -1478,7 +1478,7 @@ function MissionManageSheet({
             ) : (
               replacementCandidates.map((c) => (
                 <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: T.row, borderRadius: 10, padding: '10px 12px' }}>
-                  <span style={{ fontSize: 12, fontWeight: 800, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.profile?.full_name || 'Candidat'}</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.profile?.display_name || 'Candidat'}</span>
                   <button onClick={() => candidate && onReplaceWith(c.id)} style={{ background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 8, padding: '7px 12px', fontSize: 11.5, fontWeight: 800, cursor: 'pointer', flexShrink: 0 }}>
                     Choisir
                   </button>

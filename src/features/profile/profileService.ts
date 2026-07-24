@@ -18,10 +18,20 @@ export async function updateProfile(
     phone?: string | null;
     bio?: string | null;
     skills?: string[];
+    public_first_name?: string | null;
+    show_last_name?: boolean;
   },
 ) {
   const { error } = await supabase.from('profiles').update(updates).eq('id', userId);
   if (error) throw error;
+}
+
+// File d'attente simple : aucune suppression automatique, juste
+// l'enregistrement horodaté de la demande pour traitement manuel.
+export async function requestAccountDeletion(reason?: string) {
+  const { data, error } = await supabase.rpc('request_account_deletion', { p_reason: reason ?? null });
+  if (error) throw error;
+  return data;
 }
 
 const KYC_MAX_FILE_SIZE = 10 * 1024 * 1024;

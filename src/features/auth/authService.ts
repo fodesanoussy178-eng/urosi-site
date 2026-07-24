@@ -88,6 +88,14 @@ export async function updatePassword(newPassword: string) {
   if (error) throw error;
 }
 
+// Supabase envoie une confirmation par email (à la nouvelle adresse, et selon
+// la config du projet aussi à l'ancienne) avant que le changement ne prenne
+// effet — aucune bascule immédiate côté client.
+export async function updateEmail(newEmail: string) {
+  const { error } = await supabase.auth.updateUser({ email: newEmail });
+  if (error) throw frenchAuthError(error);
+}
+
 // Renvoie l'email de confirmation d'inscription (cas « email non confirmé »).
 export async function resendConfirmationEmail(email: string) {
   const { error } = await supabase.auth.resend({ type: 'signup', email });

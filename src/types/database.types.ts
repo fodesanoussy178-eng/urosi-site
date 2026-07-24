@@ -127,6 +127,8 @@ export interface Database {
           address: string | null;
           bio: string | null;
           skills: string[];
+          public_first_name: string | null;
+          show_last_name: boolean;
           kyc_status: ProfileKycStatus;
           kyc_requested_at: string | null;
           kyc_submitted_at: string | null;
@@ -149,6 +151,8 @@ export interface Database {
           address?: string | null;
           bio?: string | null;
           skills?: string[];
+          public_first_name?: string | null;
+          show_last_name?: boolean;
           kyc_status?: ProfileKycStatus;
           kyc_requested_at?: string | null;
           kyc_submitted_at?: string | null;
@@ -162,6 +166,34 @@ export interface Database {
         };
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>;
         Relationships: [];
+      };
+      account_deletion_requests: {
+        Row: {
+          id: string;
+          user_id: string;
+          reason: string | null;
+          status: 'pending' | 'done' | 'cancelled';
+          created_at: string;
+          resolved_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          reason?: string | null;
+          status?: 'pending' | 'done' | 'cancelled';
+          created_at?: string;
+          resolved_at?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['account_deletion_requests']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'account_deletion_requests_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       structures: {
         Row: {
@@ -1194,6 +1226,14 @@ export interface Database {
       has_founder_access: {
         Args: Record<string, never>;
         Returns: boolean;
+      };
+      applicants_display_names: {
+        Args: { p_worker_ids: string[] };
+        Returns: Array<{ worker_id: string; display_name: string }>;
+      };
+      request_account_deletion: {
+        Args: { p_reason?: string | null };
+        Returns: Database['public']['Tables']['account_deletion_requests']['Row'];
       };
       submit_worker_kyc: {
         Args: {

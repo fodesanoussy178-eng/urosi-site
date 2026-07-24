@@ -92,7 +92,7 @@ export function CheckinPage() {
         {target.mission?.title} · {target.mission?.city} · {target.mission?.scheduled_date}
       </div>
       <div style={{ background: T.row, borderRadius: 11, padding: '12px 13px', marginBottom: 14 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{target.profile?.full_name || 'Travailleur'}</div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{target.profile?.display_name || 'Travailleur'}</div>
         <div style={{ fontSize: 10, color: T.mu, marginTop: 2 }}>Candidature acceptée sur cette mission</div>
       </div>
       {alreadyChecked ? (

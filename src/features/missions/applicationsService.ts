@@ -10,7 +10,26 @@ export interface ApplicationWithMission extends Application {
 }
 
 export interface ApplicationWithApplicant extends Application {
-  profile: { full_name: string } | null;
+  // Jamais le nom légal complet : uniquement le nom d'affichage calculé côté
+  // serveur (prénom, + nom de famille seulement si le travailleur l'autorise).
+  profile: { display_name: string } | null;
+}
+
+// Une seule fonction serveur (jamais un select direct sur profiles) fournit
+// le nom d'affichage d'un candidat : elle ne renvoie jamais le nom légal
+// complet sauf si le travailleur a choisi d'afficher son nom de famille.
+async function fetchDisplayNames(workerIds: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const uniqueIds = [...new Set(workerIds)];
+  if (uniqueIds.length === 0) return map;
+  const { data, error } = await supabase.rpc('applicants_display_names', { p_worker_ids: uniqueIds });
+  if (error) throw error;
+  for (const row of data ?? []) map.set(row.worker_id, row.display_name);
+  return map;
+}
+
+function attachDisplayNames<T extends { worker_id: string }>(rows: T[], names: Map<string, string>): (T & { profile: { display_name: string } | null })[] {
+  return rows.map((row) => ({ ...row, profile: names.has(row.worker_id) ? { display_name: names.get(row.worker_id)! } : null }));
 }
 
 export async function applyToMission(missionId: string, workerId: string): Promise<void> {
@@ -31,15 +50,13 @@ export async function fetchMyApplications(workerId: string): Promise<Application
 export async function fetchApplicationsForMission(missionId: string): Promise<ApplicationWithApplicant[]> {
   const { data, error } = await supabase
     .from('applications')
-    // FK explicite requise : applications a 5 FK vers profiles (worker_id,
-    // delay_confirmed_by, delay_reported_by, start_validated_by,
-    // end_validated_by). Sans le nom de contrainte, PostgREST renvoie
-    // PGRST201 (« more than one relationship was found ») et la requête échoue.
-    .select('*, profile:profiles!applications_worker_id_fkey(full_name)')
+    .select('*')
     .eq('mission_id', missionId)
     .order('created_at', { ascending: true });
   if (error) throw error;
-  return (data ?? []) as unknown as ApplicationWithApplicant[];
+  const rows = (data ?? []) as unknown as Application[];
+  const names = await fetchDisplayNames(rows.map((r) => r.worker_id));
+  return attachDisplayNames(rows, names);
 }
 
 // Variante groupee : une seule requete pour toutes les missions d'une
@@ -49,13 +66,15 @@ export async function fetchApplicationsForMissions(missionIds: string[]): Promis
   if (missionIds.length === 0) return map;
   const { data, error } = await supabase
     .from('applications')
-    // Même garde que fetchApplicationsForMission : FK explicite obligatoire.
-    .select('*, profile:profiles!applications_worker_id_fkey(full_name)')
+    .select('*')
     .in('mission_id', missionIds)
     .order('created_at', { ascending: true });
   if (error) throw error;
+  const rows = (data ?? []) as unknown as Application[];
+  const names = await fetchDisplayNames(rows.map((r) => r.worker_id));
+  const withNames = attachDisplayNames(rows, names);
   for (const id of missionIds) map.set(id, []);
-  for (const row of (data ?? []) as unknown as ApplicationWithApplicant[]) {
+  for (const row of withNames) {
     const list = map.get(row.mission_id);
     if (list) list.push(row);
     else map.set(row.mission_id, [row]);
@@ -110,7 +129,7 @@ export interface CheckinTarget {
   status: ApplicationStatus;
   checked_in_at: string | null;
   mission: Pick<Mission, 'id' | 'title' | 'city' | 'scheduled_date'> | null;
-  profile: { full_name: string } | null;
+  profile: { display_name: string } | null;
 }
 
 // Lue par la page de pointage : la RLS ne renvoie la ligne que si la
@@ -119,13 +138,15 @@ export interface CheckinTarget {
 export async function fetchCheckinTarget(applicationId: string, token: string): Promise<CheckinTarget | null> {
   const { data, error } = await supabase
     .from('applications')
-    // FK explicite obligatoire (voir fetchApplicationsForMission).
-    .select('id, worker_id, status, checked_in_at, mission:missions(id, title, city, scheduled_date), profile:profiles!applications_worker_id_fkey(full_name)')
+    .select('id, worker_id, status, checked_in_at, mission:missions(id, title, city, scheduled_date)')
     .eq('id', applicationId)
     .eq('checkin_token', token)
     .maybeSingle();
   if (error) throw error;
-  return data as unknown as CheckinTarget | null;
+  if (!data) return null;
+  const row = data as unknown as Omit<CheckinTarget, 'profile'>;
+  const names = await fetchDisplayNames([row.worker_id]);
+  return { ...row, profile: names.has(row.worker_id) ? { display_name: names.get(row.worker_id)! } : null };
 }
 
 export async function confirmCheckin(applicationId: string, token: string): Promise<void> {
