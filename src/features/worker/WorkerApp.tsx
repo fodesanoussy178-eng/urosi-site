@@ -705,24 +705,20 @@ export function WorkerApp() {
                     {showEarnings ? 'Masquer mes gains' : 'Afficher mes gains'}
                   </button>
                 </div>
-                {/* Réputation étoiles d'abord (comme côté structure) : étoiles,
-                    puis la note, puis le nombre d'avis toujours visible. */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, marginBottom: 13 }}>
-                  {receivedScores.length > 0 ? (
-                    <>
-                      <span aria-hidden="true" style={{ fontSize: 22, letterSpacing: 2, color: '#f59e0b', lineHeight: 1 }}>
-                        {[1, 2, 3, 4, 5].map((n) => (n <= Math.round(receivedAvg ?? 0) ? '★' : '☆')).join('')}
-                      </span>
-                      <div style={{ fontSize: 26, fontWeight: 900, color: T.text, lineHeight: 1.1 }}>{receivedAvg!.toFixed(1).replace('.', ',')}</div>
-                      <div style={{ fontSize: 10.5, color: T.mu }}>{receivedScores.length} avis</div>
-                    </>
-                  ) : (
-                    <div style={{ fontSize: 12, fontWeight: 700, color: T.mu }}>Pas encore évalué – 0 avis</div>
-                  )}
+                {/* Missions prouvées et note moyenne côte à côte : rien d'autre
+                    à voir ici que l'activité prouvée et la réputation. */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7, marginBottom: 7 }}>
+                  <div style={{ background: T.row, borderRadius: 9, padding: '11px 6px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 15, fontWeight: 900, color: T.text }}>{cvCount}</div>
+                    <div style={{ fontSize: 8.5, color: T.mu, marginTop: 2 }}>Missions prouvées</div>
+                  </div>
+                  <div style={{ background: T.row, borderRadius: 9, padding: '11px 6px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 15, fontWeight: 900, color: T.text }}>{receivedScores.length > 0 ? `★ ${receivedAvg!.toFixed(1).replace('.', ',')}` : '—'}</div>
+                    <div style={{ fontSize: 8.5, color: T.mu, marginTop: 2 }}>Note moyenne · {receivedScores.length} avis</div>
+                  </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7, marginBottom: 13 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 7, marginBottom: 13 }}>
                   {[
-                    ['Missions prouvées', String(cvCount)],
                     ['Gains totaux', stats ? (showEarnings ? euros(stats.earnings_total_cents) : '•••') : '—'],
                   ].map(([l, v]) => (
                     <div key={l} style={{ background: T.row, borderRadius: 9, padding: '11px 6px', textAlign: 'center' }}>

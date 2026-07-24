@@ -251,6 +251,7 @@ export function StructureApp() {
   const [delays, setDelays] = useState<Map<string, number>>(new Map());
   const [ratedIds, setRatedIds] = useState<Set<string>>(new Set());
   const [unread, setUnread] = useState<Map<string, number>>(new Map());
+  const [candidateReputations, setCandidateReputations] = useState<Map<string, WorkerReputation>>(new Map());
   const [candMis, setCandMis] = useState<string | null>(null);
   const [showPub, setShowPub] = useState(false);
   const [validationMissionId, setValidationMissionId] = useState<string | null>(null);
@@ -292,15 +293,18 @@ export function StructureApp() {
     // n'existe plus aucun moyen d'ouvrir ce fil pour le marquer lu — un
     // reliquat non lu y resterait sinon bloqué indéfiniment dans le badge.
     const openConversationIds = allApps.filter((a) => a.conversation_status === 'open').map((a) => a.id);
-    const [delayMap, rated, unreadMap, pendingRatingRequests, given] = await Promise.all([
+    const candidateWorkerIds = [...new Set(allApps.map((a) => a.worker_id))];
+    const [delayMap, rated, unreadMap, pendingRatingRequests, given, reputations] = await Promise.all([
       fetchDelaysForApplications(appIds),
       fetchRatedApplicationIds(appIds, 'structure_to_worker'),
       fetchUnreadCounts(openConversationIds, session.user.id),
       fetchPendingRatingRequests(session.user.id).catch(() => [] as RatingRequest[]),
       fetchGivenRatingScores(appIds, 'structure_to_worker').catch(() => new Map<string, number>()),
+      Promise.all(candidateWorkerIds.map(async (id) => [id, await fetchWorkerReputation(id).catch(() => ({ average: null, count: 0 }))] as const)),
     ]);
     setDelays(delayMap);
     setRatedIds(rated);
+    setCandidateReputations(new Map(reputations));
     setUnread(unreadMap);
     setRatingRequests(pendingRatingRequests);
     setGivenRatings(given);
@@ -868,6 +872,8 @@ export function StructureApp() {
                     {shownCands.map((c) => {
                   const delay = delays.get(c.id);
                   const unreadCount = unread.get(c.id) ?? 0;
+                  const timesHere = (completedByWorker.get(c.worker_id) ?? []).length;
+                  const rep = candidateReputations.get(c.worker_id);
                   return (
                     <div key={c.id} style={{ background: T.card, border: `1px solid ${c.status === 'accepted' ? T.greenBorder : c.status === 'rejected' ? T.redBorder : T.cb}`, borderRadius: 12, overflow: 'hidden' }}>
                       <div style={{ padding: '12px 14px', display: 'flex', gap: 11, alignItems: 'center', cursor: 'pointer' }} onClick={() => openPanel(c)}>
@@ -877,9 +883,13 @@ export function StructureApp() {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{c.profile?.full_name || 'Candidat'}</span>
+                            {timesHere > 0 && <span style={{ fontSize: 9, fontWeight: 800, color: T.amber }}>★ Habitué · {timesHere}×</span>}
                             {delay && c.status === 'accepted' && <span style={{ fontSize: 8, fontWeight: 700, color: T.amber, background: T.amberBg, borderRadius: 8, padding: '1px 6px' }}>⏱ retard {delay} min signalé</span>}
                           </div>
-                          <div style={{ fontSize: 10, color: T.mu, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{misTitle(c.mission_id)}</div>
+                          <div style={{ fontSize: 10, color: T.mu, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {misTitle(c.mission_id)}
+                            {rep && rep.count > 0 && <> · ★ {rep.average!.toFixed(1).replace('.', ',')} · {rep.count} mission{rep.count > 1 ? 's' : ''}</>}
+                          </div>
                         </div>
                         {c.status !== 'pending' && (
                           <span style={{ fontSize: 10, fontWeight: 800, color: c.status === 'accepted' || c.status === 'in_progress' ? T.green : c.status === 'completed' || c.status === 'payment_pending' ? T.cyan : T.red, flexShrink: 0 }}>
