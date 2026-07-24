@@ -1,17 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/features/auth/AuthContext';
-import { signOut } from '@/features/auth/authService';
-import { submitWorkerKyc, updateProfile, uploadIdentityDocument, type Profile } from '@/features/profile/profileService';
+import { submitWorkerKyc, uploadIdentityDocument, type Profile } from '@/features/profile/profileService';
 import { T, FONT, inp } from '@/components/ui/theme';
 import { Fld } from '@/components/ui/Fld';
 import { Stars } from '@/components/ui/Stars';
-import { DocModal, AideRegles, type DocKey } from '@/components/ui/DocModal';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { ChatSheet } from '@/components/ui/ChatSheet';
 import { useBodyScrollLock } from '@/components/ui/useBodyScrollLock';
 import { WalletCard } from '@/components/ui/WalletCard';
 import { PricingDetails } from '@/components/ui/PricingDetails';
+import { WorkerSettingsSheet } from './WorkerSettingsSheet';
 import {
   fetchOpenMissions,
   subscribeToMissionFeed,
@@ -75,7 +74,6 @@ function missionPriceTotalCents(mission: MissionWithStructure): number {
 
 const SHEET = { background: 'rgba(0,0,0,.82)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 1200 } as const;
 const SHEET_BODY = { width: '100%', maxWidth: 430, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 28px' } as const;
-type ProfileUpdate = Parameters<typeof updateProfile>[1];
 
 const WORKER_REPORT_MOTIFS: Record<string, string> = {
   structure_absent: 'Aucun responsable présent',
@@ -96,13 +94,6 @@ const WORKER_REPORT_MOTIFS: Record<string, string> = {
 
 function isKycReady(profile: Profile | null | undefined): boolean {
   return profile?.kyc_status === 'submitted' || profile?.kyc_status === 'verified';
-}
-
-function kycBadge(profile: Profile | null | undefined): { label: string; color: string; bg: string } {
-  if (profile?.kyc_status === 'verified') return { label: 'KYC vérifié', color: T.green, bg: T.greenBg };
-  if (profile?.kyc_status === 'submitted') return { label: 'KYC envoyé', color: T.cyan, bg: '#22d3ee15' };
-  if (profile?.kyc_status === 'rejected') return { label: 'KYC à reprendre', color: T.red, bg: T.redBg };
-  return { label: 'Après acceptation', color: T.amber, bg: T.amberBg };
 }
 
 const SECTOR_LABELS: Record<string, string> = {
@@ -203,11 +194,11 @@ export function WorkerApp() {
   const [signal, setSignal] = useState<ApplicationWithMission | null>(null);
   const [sigMotif, setSigMotif] = useState<string | null>(null);
   const [sigNote, setSigNote] = useState('');
-  const [docKey, setDocKey] = useState<DocKey | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
   const tr = useRef<ReturnType<typeof setTimeout>>();
 
-  useBodyScrollLock(Boolean(detail || structureProfile || ratingFor || chatFor || alrt || kycFor || signal || docKey || qrFor));
+  useBodyScrollLock(Boolean(detail || structureProfile || ratingFor || chatFor || alrt || kycFor || signal || qrFor));
 
   const ville = profile?.city || (session?.user.user_metadata?.city as string | undefined) || '';
   const prenom = (profile?.full_name || session?.user.email || '').split(' ')[0] || '';
@@ -358,7 +349,6 @@ export function WorkerApp() {
   const receivedAvg = receivedScores.length ? receivedScores.reduce((s, v) => s + v, 0) / receivedScores.length : null;
   const unreadTotal = [...unread.values()].reduce((s, v) => s + v, 0);
   const kycIsReady = isKycReady(profile);
-  const kycNeeded = acceptedApps.length > 0 && !kycIsReady;
 
   async function postuler(m: MissionWithStructure) {
     if (!session || appliedIds.has(m.id) || busyId) return;
@@ -521,6 +511,14 @@ export function WorkerApp() {
             <span style={{ fontSize: 11, color: T.mu, fontWeight: 700 }}>{prenom}</span>
             <ThemeToggle />
             {session && <NotificationBell profileId={session.user.id} onDataChanged={() => load()} />}
+            <button
+              type="button"
+              aria-label="Réglages"
+              onClick={() => setShowSettings(true)}
+              style={{ background: T.row, border: `1px solid ${T.cb}`, borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: T.sub, fontSize: 13 }}
+            >
+              ⚙
+            </button>
           </div>
         </div>
 
@@ -803,7 +801,7 @@ export function WorkerApp() {
             </div>
           )}
 
-          {/* ── PROFIL : wallet, stats, infos ── */}
+          {/* ── WALLET : uniquement l'argent, rien d'autre ── */}
           {tab === 'profil' && session && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <WalletCard profileId={session.user.id} mode="worker" amountsVisible={showEarnings} onAmountsVisibleChange={setShowEarnings} />
@@ -823,54 +821,6 @@ export function WorkerApp() {
                   )}
                 </div>
               )}
-              <ProfilCard
-                fullName={profile?.full_name || ''}
-                ville={ville}
-                phone={profile?.phone || ''}
-                isMicro={profile?.is_micro_entrepreneur ?? false}
-                bio={profile?.bio || ''}
-                skills={profile?.skills ?? []}
-                onSave={async (updates) => {
-                  if (!session) return;
-                  await updateProfile(session.user.id, updates);
-                  await refreshProfile();
-                  notif('Profil mis à jour ✓');
-                }}
-              />
-              {/* Compte : email + statut de vérification (le SMS arrive plus tard) */}
-              <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 15 }}>
-                <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Compte</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 12 }}>
-                  <span style={{ color: T.sub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.user.email}</span>
-                  {session.user.email_confirmed_at ? (
-                    <span style={{ fontSize: 9, fontWeight: 800, color: T.green, background: T.greenBg, borderRadius: 10, padding: '2px 8px', flexShrink: 0 }}>✓ Email vérifié</span>
-                  ) : (
-                    <span style={{ fontSize: 9, fontWeight: 800, color: T.amber, background: T.amberBg, borderRadius: 10, padding: '2px 8px', flexShrink: 0 }}>Email à confirmer</span>
-                  )}
-                </div>
-                {profile?.phone && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 12, marginTop: 7 }}>
-                    <span style={{ color: T.sub }}>{profile.phone}</span>
-                    <span style={{ fontSize: 9, fontWeight: 800, color: T.mu, background: T.row, borderRadius: 10, padding: '2px 8px', flexShrink: 0 }}>Vérification SMS bientôt</span>
-                  </div>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 12, marginTop: 7 }}>
-                  <span style={{ color: T.sub }}>Paiement + identité</span>
-                  <span style={{ fontSize: 9, fontWeight: 800, color: kycBadge(profile).color, background: kycBadge(profile).bg, borderRadius: 10, padding: '2px 8px', flexShrink: 0 }}>{kycBadge(profile).label}</span>
-                </div>
-                {kycNeeded && (
-                  <button onClick={() => setKycFor(acceptedApps[0] ?? null)} style={{ width: '100%', marginTop: 9, background: T.row, color: T.text, border: `1px solid ${T.cb}`, borderRadius: 9, padding: '9px 0', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
-                    Compléter après acceptation
-                  </button>
-                )}
-              </div>
-              <AideRegles onOpen={setDocKey} />
-              <a href="/demo?role=worker" style={{ display: 'block', padding: '8px 4px', fontSize: 11, color: T.cyan, fontWeight: 700, textDecoration: 'none' }}>
-                ▶ Voir la démo
-              </a>
-              <button onClick={() => signOut()} style={{ textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 4px', fontSize: 11, color: T.sub, fontWeight: 600 }}>
-                Se déconnecter
-              </button>
             </div>
           )}
         </div>
@@ -1149,7 +1099,14 @@ export function WorkerApp() {
           />
         )}
 
-        {docKey && <DocModal dk={docKey} onClose={() => setDocKey(null)} />}
+        {showSettings && session && (
+          <WorkerSettingsSheet
+            session={session}
+            profile={profile}
+            onClose={() => setShowSettings(false)}
+            onProfileSaved={refreshProfile}
+          />
+        )}
       </div>
     </div>
   );
@@ -1256,99 +1213,3 @@ function KycSheet({
   );
 }
 
-function ProfilCard({
-  fullName,
-  ville,
-  phone,
-  isMicro,
-  bio,
-  skills,
-  onSave,
-}: {
-  fullName: string;
-  ville: string;
-  phone: string;
-  isMicro: boolean;
-  bio: string;
-  skills: string[];
-  onSave: (updates: ProfileUpdate) => Promise<void>;
-}) {
-  const [name, setName] = useState(fullName);
-  const [micro, setMicro] = useState(isMicro);
-  const [cityText, setCityText] = useState(ville);
-  const [phoneText, setPhoneText] = useState(phone);
-  const [bioText, setBioText] = useState(bio);
-  const [skillsText, setSkillsText] = useState(skills.join(', '));
-  const [busy, setBusy] = useState(false);
-
-  return (
-    <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 15 }}>
-      <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Nom complet</div>
-      <input aria-label="Nom complet" value={name} onChange={(e) => setName(e.target.value)} style={{ ...inp, marginBottom: 12 }} />
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Ville</div>
-          <input aria-label="Ville" value={cityText} onChange={(e) => setCityText(e.target.value)} placeholder="Lille" style={{ ...inp, marginBottom: 0 }} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Téléphone</div>
-          <input aria-label="Téléphone" value={phoneText} onChange={(e) => setPhoneText(e.target.value)} placeholder="06 12 34 56 78" inputMode="tel" style={{ ...inp, marginBottom: 0 }} />
-        </div>
-      </div>
-      <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Bio (visible sur ton CV vivant)</div>
-      <textarea
-        aria-label="Bio"
-        value={bioText}
-        onChange={(e) => setBioText(e.target.value)}
-        rows={2}
-        placeholder="En deux mots, qui tu es et ce que tu cherches…"
-        style={{ ...inp, resize: 'none', lineHeight: 1.5, marginBottom: 12 }}
-      />
-      <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Compétences (séparées par des virgules)</div>
-      <input
-        aria-label="Compétences"
-        value={skillsText}
-        onChange={(e) => setSkillsText(e.target.value)}
-        placeholder="service, caisse, manutention…"
-        style={{ ...inp, marginBottom: 12 }}
-      />
-      <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Statut</div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 12 }}>
-        <button onClick={() => setMicro(false)} style={{ background: !micro ? '#fff' : T.row, color: !micro ? '#000' : T.sub, border: `1px solid ${!micro ? '#fff' : T.cb}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
-          Particulier
-        </button>
-        <button onClick={() => setMicro(true)} style={{ background: micro ? '#fff' : T.row, color: micro ? '#000' : T.sub, border: `1px solid ${micro ? '#fff' : T.cb}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
-          Micro-entrepreneur
-        </button>
-      </div>
-      <div style={{ fontSize: 9.5, color: T.mu, lineHeight: 1.5, marginBottom: 12 }}>
-        Si tu n'es pas micro-entrepreneur, le plafond légal de 3 jours consécutifs chez la même structure s'applique automatiquement.
-      </div>
-      <button
-        onClick={async () => {
-          setBusy(true);
-          try {
-            await onSave({
-              full_name: name,
-              is_micro_entrepreneur: micro,
-              city: cityText.trim() || null,
-              phone: phoneText.trim() || null,
-              bio: bioText.trim() || null,
-              skills: skillsText
-                .split(',')
-                .map((s) => s.trim())
-                .filter(Boolean)
-                .slice(0, 12),
-            });
-          } finally {
-            setBusy(false);
-          }
-        }}
-        disabled={busy}
-        style={{ width: '100%', background: busy ? T.row : '#fff', color: busy ? T.mu : '#000', border: 'none', borderRadius: 10, padding: '12px 0', fontSize: 13, fontWeight: 900, cursor: 'pointer' }}
-      >
-        {busy ? '…' : 'Enregistrer'}
-      </button>
-    </div>
-  );
-}
