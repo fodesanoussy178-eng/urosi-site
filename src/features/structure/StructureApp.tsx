@@ -657,6 +657,10 @@ export function StructureApp() {
   const accueilEmpty = accueilSections.length === 0;
   // Mission active pour le code de secours : la première acceptée ou en cours.
   const pinMission = mis.find((m) => ['accepted', 'in_progress'].includes(missionBucket(m))) ?? null;
+  // Badge de l'onglet "Missions" : doit correspondre exactement à ce qui y
+  // est affiché (les 4 sections ci-dessus), jamais aux annulées/terminées
+  // qui n'y apparaissent jamais (elles vivent dans l'Historique).
+  const activeMissionsCount = mis.filter((m) => missionBucket(m) !== 'cancelled' && missionBucket(m) !== 'completed').length;
 
   const formFounder = founderAccess;
   const formSiretOk = isValidSiret(vf.siret);
@@ -748,7 +752,7 @@ export function StructureApp() {
                 >
                   {(
                     [
-                      ['missions', 'Missions', mis.length],
+                      ['missions', 'Missions', activeMissionsCount],
                       ['candidats', 'Candidats', pending.length + unreadTotal],
                       ['habitues', 'Habitués', habitues.length],
                       ['historique', 'Historique', 0],
