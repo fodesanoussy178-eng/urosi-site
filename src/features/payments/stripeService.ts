@@ -70,6 +70,23 @@ export function fetchStripeBalance() {
   return invoke<StripeBalance>('stripe-connect-balance');
 }
 
+export interface SetupPaymentMethodResult {
+  client_secret: string;
+  customer_id: string;
+}
+
+/**
+ * Enregistre le moyen de paiement d'une structure (SetupIntent, aucun débit).
+ * Appelé une seule fois, à la première publication d'une mission rémunérée —
+ * jamais pour une structure qui ne publie que du solidaire.
+ */
+export function setupStructurePaymentMethod(structureId?: string, requestId?: string) {
+  return invoke<SetupPaymentMethodResult>('stripe-setup-payment-method', {
+    structure_id: structureId,
+    request_id: requestId,
+  });
+}
+
 // ── Paiement d'une mission (structure) ────────────────────────────────────
 
 export interface MissionPaymentIntent {

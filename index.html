@@ -536,21 +536,20 @@
               </div>
             </div>
           </div>
-          <div style="font-size:9px;color:var(--mu);font-weight:900;text-transform:uppercase">Durée · plafond 5 h</div>
+          <div style="font-size:9px;color:var(--mu);font-weight:900;text-transform:uppercase">Durée par jour · jusqu'à 3 jours consécutifs</div>
           <div class="duration-row">
-            <button class="duration-btn" type="button" data-duration="1">1h</button>
             <button class="duration-btn" type="button" data-duration="2">2h</button>
-            <button class="duration-btn on" type="button" data-duration="3">3h</button>
             <button class="duration-btn" type="button" data-duration="4">4h</button>
-            <button class="duration-btn" type="button" data-duration="5">5h</button>
+            <button class="duration-btn on" type="button" data-duration="6">6h</button>
+            <button class="duration-btn" type="button" data-duration="8">8h</button>
           </div>
           <button class="solid-toggle" type="button" data-solid-toggle><span id="demoSolidCheck">○</span> Mission solidaire — 0 €, sans commission</button>
           <div id="demoSolidNote" class="p-row" style="display:none;color:var(--green);background:var(--green-bg);border:1px solid #b8dcc3">Mission association : le montant passe à 0 €, mais elle compte dans le CV vivant.</div>
           <div class="summary-box">
-            <div class="summary-row"><span>Rémunération × <span id="summaryPlaces">2</span></span><strong id="summaryPay">30 €</strong></div>
-            <div class="summary-row"><span>Commission structure 18 %</span><strong id="summaryFee">5 €</strong></div>
-            <div class="summary-row summary-total"><span>Total wallet</span><strong id="summaryTotal">35 €</strong></div>
-            <div id="summarySolde" style="color:var(--green);font-size:10.5px;font-weight:900;margin-top:7px">✓ Solde suffisant (1480 € dispo)</div>
+            <div class="summary-row"><span>Rémunération × <span id="summaryPlaces">2</span></span><strong id="summaryPay">30,00 €</strong></div>
+            <div class="summary-row"><span>Commission structure 18 % HT</span><strong id="summaryFee">5,40 €</strong></div>
+            <div class="summary-row summary-total"><span>Total facturé à la structure</span><strong id="summaryTotal">35,40 €</strong></div>
+            <div id="summarySolde" style="color:var(--green);font-size:10.5px;font-weight:900;margin-top:7px">✓ Moyen de paiement enregistré — prélevé seulement à la validation de présence</div>
           </div>
           <button class="p-btn p-white" data-demo-publish>Publier la mission</button>
         </div>
@@ -910,7 +909,7 @@
         var demoMissionType = 'Renfort service';
         var demoPrice = 15;
         var demoPlaces = 2;
-        var demoDuration = 3;
+        var demoDuration = 6;
         var suggestedPrices = {
           'Renfort service': 15,
           'Runner': 13,
@@ -975,17 +974,20 @@
           if (placesEl) placesEl.textContent = String(demoPlaces);
           var summaryPlaces = document.getElementById('summaryPlaces');
           if (summaryPlaces) summaryPlaces.textContent = String(demoPlaces);
-          var pay = isAsso ? 0 : demoPrice * demoPlaces;
-          var fee = isAsso ? 0 : Math.round(pay * 0.18);
-          var total = pay + fee;
+          // Calcul en centimes (comme cote serveur) pour eviter tout ecart
+          // d'arrondi entre la demo et le vrai calcul de commission.
+          var payCents = isAsso ? 0 : demoPrice * demoPlaces * 100;
+          var feeCents = isAsso ? 0 : Math.round(payCents * 0.18);
+          var totalCents = payCents + feeCents;
+          var euros = function (cents) { return (cents / 100).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; };
           var summaryPay = document.getElementById('summaryPay');
           var summaryFee = document.getElementById('summaryFee');
           var summaryTotal = document.getElementById('summaryTotal');
           var summarySolde = document.getElementById('summarySolde');
-          if (summaryPay) summaryPay.textContent = pay + ' €';
-          if (summaryFee) summaryFee.textContent = fee + ' €';
-          if (summaryTotal) summaryTotal.textContent = total + ' €';
-          if (summarySolde) summarySolde.textContent = isAsso ? '✓ Mission ESS sans avance wallet' : '✓ Solde suffisant (1480 € dispo)';
+          if (summaryPay) summaryPay.textContent = euros(payCents);
+          if (summaryFee) summaryFee.textContent = euros(feeCents);
+          if (summaryTotal) summaryTotal.textContent = euros(totalCents);
+          if (summarySolde) summarySolde.textContent = isAsso ? '✓ Mission solidaire — aucun moyen de paiement demandé' : '✓ Moyen de paiement enregistré — prélevé seulement à la validation de présence';
         }
         function setDemoKind(kind) {
           demoKind = kind === 'asso' ? 'asso' : 'paid';

@@ -39,6 +39,7 @@ export type ReportMotif = 'absent' | 'conditions' | 'securite' | 'autre';
 export type DisputeStatus = 'open' | 'reviewing' | 'resolved' | 'rejected';
 export type AttendanceStatus = 'not_started' | 'start_confirmed' | 'end_confirmed' | 'remote_pending' | 'paper_pending' | 'disputed';
 export type AttendanceMethod = 'qr' | 'manual' | 'remote' | 'paper' | 'support';
+export type WorkerPaidStatus = 'solidaire_only' | 'conversion_pending' | 'paid_eligible';
 export type AttendanceEventType =
   | 'start_requested'
   | 'start_confirmed'
@@ -155,6 +156,18 @@ export interface Database {
           identity_document_uploaded_at: string | null;
           identity_document_delete_after: string | null;
           created_at: string;
+          stripe_account_id: string | null;
+          stripe_payouts_enabled: boolean;
+          stripe_identity_status: string;
+          paid_status: WorkerPaidStatus;
+          siret: string | null;
+          siret_verified_at: string | null;
+          siret_last_checked_at: string | null;
+          siret_check_attempts: number;
+          stripe_requirements_pending: boolean;
+          conversion_started_at: string | null;
+          unlocked_at: string | null;
+          unlock_notified_at: string | null;
         };
         Insert: {
           id: string;
@@ -180,6 +193,18 @@ export interface Database {
           identity_document_uploaded_at?: string | null;
           identity_document_delete_after?: string | null;
           created_at?: string;
+          stripe_account_id?: string | null;
+          stripe_payouts_enabled?: boolean;
+          stripe_identity_status?: string;
+          paid_status?: WorkerPaidStatus;
+          siret?: string | null;
+          siret_verified_at?: string | null;
+          siret_last_checked_at?: string | null;
+          siret_check_attempts?: number;
+          stripe_requirements_pending?: boolean;
+          conversion_started_at?: string | null;
+          unlocked_at?: string | null;
+          unlock_notified_at?: string | null;
         };
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>;
         Relationships: [];
@@ -244,6 +269,8 @@ export interface Database {
           verified_at: string | null;
           verified_by: string | null;
           created_at: string;
+          stripe_customer_id: string | null;
+          stripe_default_payment_method_id: string | null;
         };
         Insert: {
           id?: string;
@@ -276,6 +303,8 @@ export interface Database {
           verified_at?: string | null;
           verified_by?: string | null;
           created_at?: string;
+          stripe_customer_id?: string | null;
+          stripe_default_payment_method_id?: string | null;
         };
         Update: Partial<Database['public']['Tables']['structures']['Insert']>;
         Relationships: [
@@ -393,6 +422,15 @@ export interface Database {
           status: MissionStatus;
           archived_at: string | null;
           created_at: string;
+          no_salaried_substitution: boolean;
+          payment_authorization_status: string;
+          stripe_payment_intent_id: string | null;
+          authorization_amount_cents: number | null;
+          authorized_at: string | null;
+          authorization_attempts: number;
+          authorization_failed_reason: string | null;
+          captured_amount_cents: number | null;
+          captured_at: string | null;
         };
         Insert: {
           id?: string;
@@ -437,6 +475,7 @@ export interface Database {
           instructions?: string | null;
           status?: MissionStatus;
           created_at?: string;
+          no_salaried_substitution?: boolean;
         };
         Update: Partial<Database['public']['Tables']['missions']['Insert']>;
         Relationships: [

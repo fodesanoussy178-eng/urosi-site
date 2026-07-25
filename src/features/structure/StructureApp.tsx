@@ -10,6 +10,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { ChatSheet } from '@/components/ui/ChatSheet';
 import { useBodyScrollLock } from '@/components/ui/useBodyScrollLock';
 import { WalletCard } from '@/components/ui/WalletCard';
+import { StructurePaymentMethodSheet } from '@/components/ui/StructurePaymentMethodSheet';
 import { fetchMyStructures, createStructure, updateStructureAbout, requestStructureVerification } from './structureService';
 import { StatsPanel, StructureStatsSummary, StructurePerformances } from './StatsPanel';
 import { StructureHistoryPanel } from './StructureHistoryPanel';
@@ -1582,6 +1583,7 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
     instructions: initial?.instructions ?? '',
     positions: initial?.positions ?? 1,
     solid: initial?.is_solidaire ?? false,
+    noSalariedSubstitution: initial?.no_salaried_substitution ?? false,
   }));
   // Duplique la structure des creneaux (nombre de jours, heures) mais jamais
   // les dates : reprend a partir de demain, jamais dans le passe.
@@ -1596,6 +1598,7 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
     });
   });
   const [showDetail, setShowDetail] = useState(false);
+  const [showPaymentSetup, setShowPaymentSetup] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -1641,7 +1644,9 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
                   ? 'La mission dépasse la durée maximale autorisée par UROSI.'
                   : rateInvalid
                     ? 'Renseigne un tarif valide.'
-                    : null;
+                    : f.solid && !f.noSalariedSubstitution
+                      ? "Coche l'attestation : une mission solidaire ne doit pas remplacer un poste salarié."
+                      : null;
   const ok = !validationMessage && !busy;
 
   function setSlot(i: number, patch: Partial<MissionSlot>) {
@@ -1669,6 +1674,13 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
   async function publish() {
     if (!ok) {
       setError(validationMessage);
+      return;
+    }
+    // Moyen de paiement demande UNE SEULE FOIS, uniquement pour une mission
+    // remuneree, jamais pour une mission solidaire : jamais de SetupIntent,
+    // jamais d'ecran de paiement pour une association qui ne publie que du 0€.
+    if (!f.solid && !structure.stripe_default_payment_method_id) {
+      setShowPaymentSetup(true);
       return;
     }
     setError(null);
@@ -1714,6 +1726,7 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
         equipment: f.equipment.trim() || null,
         instructions: f.instructions.trim() || null,
         is_solidaire: f.solid,
+        no_salaried_substitution: f.solid ? f.noSalariedSubstitution : false,
       });
       onPublished(mission);
     } catch (e) {
@@ -1797,7 +1810,7 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
           </div>
         </Fld>
 
-        {structure.is_ess && (
+        {structure.is_association && (
           <Fld label="Type de mission">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
               <button onClick={() => setF((x) => ({ ...x, solid: false }))} style={{ background: !f.solid ? '#fff' : T.row, color: !f.solid ? '#000' : T.sub, border: `1px solid ${!f.solid ? '#fff' : T.cb}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
@@ -1807,6 +1820,17 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
                 Solidaire
               </button>
             </div>
+            {f.solid && (
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 10, fontSize: 10.5, color: T.sub, lineHeight: 1.5, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={f.noSalariedSubstitution}
+                  onChange={(e) => setF((x) => ({ ...x, noSalariedSubstitution: e.target.checked }))}
+                  style={{ marginTop: 2 }}
+                />
+                J'atteste que cette mission solidaire ne remplace pas un poste salarié.
+              </label>
+            )}
           </Fld>
         )}
 
@@ -1878,6 +1902,16 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
           </button>
         </div>
       </div>
+      {showPaymentSetup && (
+        <StructurePaymentMethodSheet
+          structureId={structure.id}
+          onClose={() => setShowPaymentSetup(false)}
+          onSaved={() => {
+            setShowPaymentSetup(false);
+            void publish();
+          }}
+        />
+      )}
     </div>
   );
 }

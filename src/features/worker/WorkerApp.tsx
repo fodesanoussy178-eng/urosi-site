@@ -11,6 +11,9 @@ import { useBodyScrollLock } from '@/components/ui/useBodyScrollLock';
 import { WalletCard } from '@/components/ui/WalletCard';
 import { PricingDetails } from '@/components/ui/PricingDetails';
 import { WorkerSettingsSheet } from './WorkerSettingsSheet';
+import { useWorkerAccess } from './useWorkerAccess';
+import { UnlockPaidMissions } from './UnlockPaidMissions';
+import { MissionActionButton } from './MissionActionButton';
 import {
   fetchOpenMissions,
   subscribeToMissionFeed,
@@ -312,9 +315,11 @@ export function WorkerApp() {
   const [sigNote, setSigNote] = useState('');
   const [toast, setToast] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showUnlock, setShowUnlock] = useState(false);
   const tr = useRef<ReturnType<typeof setTimeout>>();
+  const access = useWorkerAccess();
 
-  useBodyScrollLock(Boolean(detail || structureProfile || ratingFor || chatFor || alrt || kycFor || signal || qrFor));
+  useBodyScrollLock(Boolean(detail || structureProfile || ratingFor || chatFor || alrt || kycFor || signal || qrFor || showUnlock));
 
   const ville = profile?.city || (session?.user.user_metadata?.city as string | undefined) || '';
   const prenom = (profile?.full_name || session?.user.email || '').split(' ')[0] || '';
@@ -598,14 +603,14 @@ export function WorkerApp() {
           </div>
           <div style={{ color: T.mu, fontSize: 10.5, marginTop: 5 }}>📍 {m.city || 'MEL'}</div>
           <div style={{ pointerEvents: 'auto', marginTop: 11 }}>
-            <button
-              type="button"
-              disabled={isBusy}
-              onClick={() => void postuler(m)}
-              style={{ width: '100%', background: m.is_solidaire ? '#16a34a' : '#fff', color: m.is_solidaire ? '#fff' : '#000', border: 'none', borderRadius: 9, padding: '10px 0', fontSize: 13, fontWeight: 900, cursor: isBusy ? 'wait' : 'pointer', opacity: isBusy ? 0.65 : 1 }}
-            >
-              {isBusy ? 'Envoi…' : m.is_solidaire ? 'Participer' : 'Accepter'}
-            </button>
+            <MissionActionButton
+              mission={m}
+              access={access}
+              busy={isBusy}
+              variant="card"
+              onApply={() => void postuler(m)}
+              onUnlock={() => setShowUnlock(true)}
+            />
           </div>
         </div>
       </article>
@@ -1015,12 +1020,14 @@ export function WorkerApp() {
                   return distance != null ? ` · ${formatDistance(distance)}` : '';
                 })()}
               </section>
-              <button
-                onClick={() => postuler(detail)}
-                style={{ width: '100%', background: detail.is_solidaire ? T.green : '#fff', color: detail.is_solidaire ? '#06100a' : '#000', border: 'none', borderRadius: 10, padding: '12px 0', fontSize: 14, fontWeight: 900, cursor: 'pointer', marginBottom: 12 }}
-              >
-                {detail.is_solidaire ? 'Participer' : 'Accepter'}
-              </button>
+              <MissionActionButton
+                mission={detail}
+                access={access}
+                busy={busyId === detail.id}
+                variant="detail"
+                onApply={() => void postuler(detail)}
+                onUnlock={() => setShowUnlock(true)}
+              />
               <details style={{ borderTop: `1px solid ${T.cb}`, paddingTop: 12 }}>
                 <summary style={{ color: T.text, fontSize: 12, fontWeight: 900, cursor: 'pointer', padding: '3px 0 10px' }}>Voir les détails</summary>
                 <div style={{ display: 'grid', gap: 13, color: T.sub, fontSize: 11, lineHeight: 1.65 }}>
@@ -1211,6 +1218,8 @@ export function WorkerApp() {
             onProfileSaved={refreshProfile}
           />
         )}
+
+        {showUnlock && <UnlockPaidMissions access={access} onClose={() => setShowUnlock(false)} />}
       </div>
     </div>
   );
