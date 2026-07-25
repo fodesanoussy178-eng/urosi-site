@@ -10,6 +10,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { ChatSheet } from '@/components/ui/ChatSheet';
 import { useBodyScrollLock } from '@/components/ui/useBodyScrollLock';
 import { WalletCard } from '@/components/ui/WalletCard';
+import { StructurePaymentMethodSheet } from '@/components/ui/StructurePaymentMethodSheet';
 import { fetchMyStructures, createStructure, updateStructureAbout, requestStructureVerification } from './structureService';
 import { StatsPanel, StructureStatsSummary, StructurePerformances } from './StatsPanel';
 import { StructureHistoryPanel } from './StructureHistoryPanel';
@@ -1596,6 +1597,7 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
     });
   });
   const [showDetail, setShowDetail] = useState(false);
+  const [showPaymentSetup, setShowPaymentSetup] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -1669,6 +1671,13 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
   async function publish() {
     if (!ok) {
       setError(validationMessage);
+      return;
+    }
+    // Moyen de paiement demande UNE SEULE FOIS, uniquement pour une mission
+    // remuneree, jamais pour une mission solidaire : jamais de SetupIntent,
+    // jamais d'ecran de paiement pour une association qui ne publie que du 0€.
+    if (!f.solid && !structure.stripe_default_payment_method_id) {
+      setShowPaymentSetup(true);
       return;
     }
     setError(null);
@@ -1878,6 +1887,16 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
           </button>
         </div>
       </div>
+      {showPaymentSetup && (
+        <StructurePaymentMethodSheet
+          structureId={structure.id}
+          onClose={() => setShowPaymentSetup(false)}
+          onSaved={() => {
+            setShowPaymentSetup(false);
+            void publish();
+          }}
+        />
+      )}
     </div>
   );
 }

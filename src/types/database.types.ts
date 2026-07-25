@@ -244,6 +244,8 @@ export interface Database {
           verified_at: string | null;
           verified_by: string | null;
           created_at: string;
+          stripe_customer_id: string | null;
+          stripe_default_payment_method_id: string | null;
         };
         Insert: {
           id?: string;
@@ -276,6 +278,8 @@ export interface Database {
           verified_at?: string | null;
           verified_by?: string | null;
           created_at?: string;
+          stripe_customer_id?: string | null;
+          stripe_default_payment_method_id?: string | null;
         };
         Update: Partial<Database['public']['Tables']['structures']['Insert']>;
         Relationships: [

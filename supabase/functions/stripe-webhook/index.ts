@@ -98,6 +98,72 @@ Deno.serve(async (req: Request) => {
         break;
       }
 
+      case "setup_intent.succeeded": {
+        // Moyen de paiement structure enregistré (SetupIntent, aucun débit) :
+        // rattaché au Customer et retenu comme moyen par défaut ici, jamais
+        // à la simple création du SetupIntent côté edge function.
+        const setupIntent = event.data.object as import("npm:stripe@17.7.0").Stripe.SetupIntent;
+        const customerId = typeof setupIntent.customer === "string" ? setupIntent.customer : setupIntent.customer?.id;
+        const paymentMethodId =
+          typeof setupIntent.payment_method === "string" ? setupIntent.payment_method : setupIntent.payment_method?.id;
+        if (customerId && paymentMethodId) {
+          const { error } = await supabase.rpc("set_structure_default_payment_method", {
+            p_stripe_customer_id: customerId,
+            p_payment_method_id: paymentMethodId,
+          });
+          if (error) throw error;
+        }
+        break;
+      }
+
+      case "setup_intent.setup_failed": {
+        const setupIntent = event.data.object as import("npm:stripe@17.7.0").Stripe.SetupIntent;
+        const customerId = typeof setupIntent.customer === "string" ? setupIntent.customer : setupIntent.customer?.id;
+        if (customerId) {
+          const { error } = await supabase.rpc("notify_structure_setup_failed", {
+            p_stripe_customer_id: customerId,
+            p_reason: setupIntent.last_setup_error?.message ?? null,
+          });
+          if (error) throw error;
+        }
+        break;
+      }
+
+      case "transfer.created": {
+        // Observabilité uniquement : le crédit travailleur est déjà enregistré
+        // de façon synchrone par release-due-payments (record_stripe_mission_payment).
+        // Aucune action DB nécessaire ici, mais loggé pour audit.
+        const transfer = event.data.object as import("npm:stripe@17.7.0").Stripe.Transfer;
+        console.log("transfer.created", transfer.id, transfer.amount, transfer.destination);
+        break;
+      }
+
+      case "transfer.failed": {
+        // Asynchrone : le Transfer avait réussi à la création puis a échoué
+        // côté Stripe (compte fermé, devise refusée…). Jamais silencieux.
+        const transfer = event.data.object as import("npm:stripe@17.7.0").Stripe.Transfer;
+        const { error } = await supabase.rpc("record_transfer_failure", {
+          p_transfer_id: transfer.id,
+          p_reason: (transfer as unknown as { failure_message?: string }).failure_message ?? "transfer_failed",
+        });
+        if (error) throw error;
+        break;
+      }
+
+      case "payout.paid":
+      case "payout.failed":
+      case "payout.canceled": {
+        const payout = event.data.object as import("npm:stripe@17.7.0").Stripe.Payout;
+        const status = event.type.split(".").pop()!; // paid | failed | canceled
+        const { error } = await supabase.rpc("update_worker_payout_status", {
+          p_stripe_payout_id: payout.id,
+          p_status: status,
+          p_failure_reason: payout.failure_message ?? null,
+        });
+        if (error) throw error;
+        break;
+      }
+
       case "identity.verification_session.verified":
       case "identity.verification_session.processing":
       case "identity.verification_session.requires_input":
