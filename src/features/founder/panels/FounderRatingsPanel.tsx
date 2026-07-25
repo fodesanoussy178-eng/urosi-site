@@ -31,11 +31,20 @@ const directionOptions = [
 // sens ou l'autre — exige un motif et est journalise (jamais de modification
 // silencieuse).
 function actionsFor(row: FounderRating): Array<[RatingModerationAction, string]> {
-  return [
+  const actions: Array<[RatingModerationAction, string]> = [
     [row.is_hidden ? 'unhide' : 'hide', row.is_hidden ? 'Lever le masquage' : 'Masquer'],
     [row.is_cancelled ? 'uncancel' : 'cancel', row.is_cancelled ? "Lever l'annulation" : 'Annuler'],
     [row.is_flagged ? 'unflag' : 'flag', row.is_flagged ? 'Retirer le signalement' : 'Signaler'],
   ];
+  // Exception Fondateur/test : ne s'applique jamais a la regle publique reelle
+  // (les autres notes ne sont pas affectees) — previsualisation reversible
+  // d'une note encore en attente, jamais proposee si deja publique/annulee.
+  if (row.test_force_visible) {
+    actions.push(['unforce_test_preview', 'Réinitialiser le test']);
+  } else if (!row.is_publicly_visible && !row.is_cancelled) {
+    actions.push(['force_test_preview', "Forcer l'affichage test"]);
+  }
+  return actions;
 }
 
 function publicStatusLabel(row: FounderRating): string {
@@ -127,6 +136,11 @@ export function FounderRatingsPanel() {
               <div style={{ color: T.mu, fontSize: 10, marginTop: 4 }}>
                 {row.mission_title ?? 'Mission supprimée'} · {row.author_name ?? 'Auteur inconnu'} · {founderDate(row.created_at)}
               </div>
+              {row.test_force_visible && (
+                <div style={{ display: 'inline-block', background: T.row, border: `1px solid ${T.cyan}`, borderRadius: 6, padding: '2px 7px', color: T.cyan, fontSize: 9.5, fontWeight: 900, marginTop: 4 }}>
+                  🧪 AFFICHAGE FORCÉ — DONNÉE DE TEST/STAGING, PAS UNE VRAIE PUBLICATION
+                </div>
+              )}
               {row.comment && <p style={{ color: T.sub, fontSize: 12 }}>{row.comment}</p>}
               {!row.is_publicly_visible && !row.is_cancelled && (
                 <div style={{ color: T.cyan, fontSize: 10 }}>Publication prévue le {founderDate(row.scheduled_publish_at)}</div>

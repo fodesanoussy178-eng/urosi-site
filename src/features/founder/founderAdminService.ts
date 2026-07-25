@@ -146,7 +146,15 @@ export interface AccountHistory {
 }
 
 export type RatingDirection = 'worker_to_structure' | 'structure_to_worker';
-export type RatingModerationAction = 'hide' | 'unhide' | 'cancel' | 'uncancel' | 'flag' | 'unflag';
+export type RatingModerationAction =
+  | 'hide'
+  | 'unhide'
+  | 'cancel'
+  | 'uncancel'
+  | 'flag'
+  | 'unflag'
+  | 'force_test_preview'
+  | 'unforce_test_preview';
 export type FounderRatingStatusFilter = 'visible' | 'hidden' | 'cancelled' | 'flagged' | 'pending';
 
 export interface FounderRating {
@@ -158,6 +166,7 @@ export interface FounderRating {
   is_hidden: boolean;
   is_cancelled: boolean;
   is_flagged: boolean;
+  test_force_visible: boolean;
   moderation_reason: string | null;
   moderated_at: string | null;
   moderated_by_name: string | null;
@@ -195,6 +204,7 @@ export interface ModeratedRatingRow {
   is_hidden: boolean;
   is_cancelled: boolean;
   is_flagged: boolean;
+  test_force_visible: boolean;
   moderation_reason: string | null;
   moderated_by: string | null;
   moderated_at: string | null;

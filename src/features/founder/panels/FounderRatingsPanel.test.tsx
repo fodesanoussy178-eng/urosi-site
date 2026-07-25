@@ -20,6 +20,7 @@ const pendingRating: FounderRating = {
   is_hidden: false,
   is_cancelled: false,
   is_flagged: false,
+  test_force_visible: false,
   moderation_reason: null,
   moderated_at: null,
   moderated_by_name: null,
@@ -120,5 +121,49 @@ describe('FounderRatingsPanel', () => {
 
     expect(await screen.findByText(/Moyenne interne : 4.2\/5 sur 5 note\(s\)/)).toBeInTheDocument();
     expect(founderAdminApi.ratingSubjectStats).toHaveBeenCalledWith('worker_to_structure', 'structure-1');
+  });
+
+  it("propose de forcer l'affichage test pour une note encore en attente, avec motif obligatoire", async () => {
+    vi.spyOn(window, 'prompt').mockReturnValue('Verification visuelle avant mise en prod');
+    vi.mocked(founderAdminApi.moderateRating).mockResolvedValue({} as never);
+    render(<FounderRatingsPanel />);
+
+    fireEvent.click(await screen.findByText("Forcer l'affichage test"));
+
+    await waitFor(() =>
+      expect(founderAdminApi.moderateRating).toHaveBeenCalledWith(
+        'rating-1',
+        'force_test_preview',
+        'Verification visuelle avant mise en prod',
+      ),
+    );
+  });
+
+  it("n'offre jamais de forcer l'affichage d'une note déjà publique ou annulée", async () => {
+    vi.mocked(founderAdminApi.ratings).mockResolvedValue([
+      { ...pendingRating, is_publicly_visible: true },
+    ]);
+    render(<FounderRatingsPanel />);
+    await screen.findByText(/Renfort du midi/);
+
+    expect(screen.queryByText("Forcer l'affichage test")).not.toBeInTheDocument();
+  });
+
+  it("affiche un badge test/staging et permet de réinitialiser le test une fois forcé", async () => {
+    vi.mocked(founderAdminApi.ratings).mockResolvedValue([
+      { ...pendingRating, test_force_visible: true, moderation_reason: 'Verification visuelle avant mise en prod', moderated_by_name: 'Fondateur' },
+    ]);
+    vi.spyOn(window, 'prompt').mockReturnValue('Fin de la verification');
+    vi.mocked(founderAdminApi.moderateRating).mockResolvedValue({} as never);
+    render(<FounderRatingsPanel />);
+
+    expect(await screen.findByText(/AFFICHAGE FORCÉ/)).toBeInTheDocument();
+    expect(screen.queryByText("Forcer l'affichage test")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Réinitialiser le test'));
+
+    await waitFor(() =>
+      expect(founderAdminApi.moderateRating).toHaveBeenCalledWith('rating-1', 'unforce_test_preview', 'Fin de la verification'),
+    );
   });
 });

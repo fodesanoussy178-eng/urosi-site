@@ -876,6 +876,7 @@ export interface Database {
           is_hidden: boolean;
           is_cancelled: boolean;
           is_flagged: boolean;
+          test_force_visible: boolean;
           moderation_reason: string | null;
           moderated_by: string | null;
           moderated_at: string | null;
@@ -895,6 +896,7 @@ export interface Database {
           is_hidden?: boolean;
           is_cancelled?: boolean;
           is_flagged?: boolean;
+          test_force_visible?: boolean;
           moderation_reason?: string | null;
           moderated_by?: string | null;
           moderated_at?: string | null;
