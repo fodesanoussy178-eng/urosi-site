@@ -99,10 +99,24 @@ export interface PricingAdjustment {
   amount_cents: number;
 }
 
+// Deux sources possibles en base, formes differentes :
+//  - compute_mission_pricing() (regles configurables) : base_cents/adjustments/total_cents.
+//  - missions_apply_slots() (formulaire structure_schedule_form, le chemin
+//    reellement emprunte par la publication actuelle) : pas de champ
+//    `adjustments` du tout. Tout code lisant `adjustments` doit donc verifier
+//    sa presence (Array.isArray), jamais supposer qu'il existe.
 export interface PricingBreakdown {
-  base_cents: number;
-  adjustments: PricingAdjustment[];
-  total_cents: number;
+  base_cents?: number;
+  adjustments?: PricingAdjustment[];
+  total_cents?: number;
+  source?: string;
+  worker_amount?: number;
+  worker_subtotal?: number;
+  service_fee?: number;
+  structure_total?: number;
+  positions?: number;
+  duration_minutes_per_person?: number;
+  total_worker_hours?: number;
 }
 
 // Creneau d'une mission (planning par journee, 3 jours max).
