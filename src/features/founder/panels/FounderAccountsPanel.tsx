@@ -3,6 +3,23 @@ import { T } from '@/components/ui/theme';
 import { founderAdminApi, type AccountHistory, type FounderAccounts } from '../founderAdminService';
 import { founderButton, founderCard, founderDate, founderInput, founderNotice } from '../founderUi';
 import { describeError } from '@/lib/errors';
+import type { WorkerPaidStatus } from '@/types/database.types';
+
+function paidStatusLabel(status: WorkerPaidStatus): string {
+  switch (status) {
+    case 'paid_eligible': return 'débloquées';
+    case 'conversion_pending': return 'démarche en cours';
+    default: return 'solidaire uniquement';
+  }
+}
+
+function paidStatusColor(status: WorkerPaidStatus, theme: typeof T): string {
+  switch (status) {
+    case 'paid_eligible': return theme.green;
+    case 'conversion_pending': return theme.amber;
+    default: return theme.mu;
+  }
+}
 
 export function FounderAccountsPanel() {
   const [search, setSearch] = useState('');
@@ -52,6 +69,13 @@ export function FounderAccountsPanel() {
                 <strong>{row.full_name || 'Compte sans nom'}</strong>
                 <div style={{ color: T.mu, fontSize: 10 }}>{row.email} · {row.role} · KYC {row.kyc_status}</div>
                 <div style={{ color: row.account_status === 'active' ? T.green : T.red, fontSize: 10, marginTop: 4 }}>{row.account_status}</div>
+                {row.role === 'worker' && (
+                  <div style={{ color: T.mu, fontSize: 10, marginTop: 4 }}>
+                    Missions rémunérées : <span style={{ color: paidStatusColor(row.paid_status, T), fontWeight: 800 }}>{paidStatusLabel(row.paid_status)}</span>
+                    {row.siret && <> · SIRET {row.siret}{row.siret_verified_at ? ' (vérifié)' : ' (en attente)'}</>}
+                    {row.stripe_requirements_pending && !row.stripe_payouts_enabled && <> · régression Stripe</>}
+                  </div>
+                )}
               </div>
               <div style={{ display: 'flex', gap: 7 }}>
                 <button disabled={busy === row.id} onClick={() => openHistory(row.id)} style={founderButton}>Historique ({row.history_count})</button>

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import type { WorkerPaidStatus } from '@/types/database.types';
 
 export type AccountStatus = 'active' | 'suspended';
 
@@ -26,6 +27,17 @@ export interface FounderProfileAccount {
   kyc_status: string;
   history_count: number;
   created_at: string;
+  /**
+   * Module 3 — toujours dérivé côté base (compute_worker_paid_status),
+   * jamais écrit ici : le centre Fondateur ne fait qu'observer cet état,
+   * il ne peut pas contourner la policy RLS "applications: worker apply".
+   */
+  paid_status: WorkerPaidStatus;
+  siret: string | null;
+  siret_verified_at: string | null;
+  stripe_payouts_enabled: boolean;
+  stripe_requirements_pending: boolean;
+  unlocked_at: string | null;
 }
 
 export interface FounderStructureAccount {
