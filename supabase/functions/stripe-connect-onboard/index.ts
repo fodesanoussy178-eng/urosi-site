@@ -50,9 +50,10 @@ Deno.serve(async (req: Request) => {
         business_type: "individual",
         default_currency: "eur",
         capabilities: { transfers: { requested: true } },
-        // Versements automatiques : Stripe reverse le solde vers l'IBAN du
-        // travailleur chaque jour, sans action manuelle.
-        settings: { payouts: { schedule: { interval: "daily" } } },
+        // Versements MANUELS : Stripe ne reverse jamais seul le solde. Le
+        // travailleur declenche lui-meme un virement ("Demander un virement")
+        // via stripe-request-payout — sinon le bouton n'aurait aucun sens.
+        settings: { payouts: { schedule: { interval: "manual" } } },
         metadata: { profile_id: user.id },
       });
       assertNotLive(account.livemode);
