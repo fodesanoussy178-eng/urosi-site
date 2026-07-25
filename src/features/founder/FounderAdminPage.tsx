@@ -12,6 +12,7 @@ import { FounderAccountsPanel } from './panels/FounderAccountsPanel';
 import { FounderMissionsPanel } from './panels/FounderMissionsPanel';
 import { FounderKycPanel } from './panels/FounderKycPanel';
 import { FounderReportsPanel } from './panels/FounderReportsPanel';
+import { FounderRatingsPanel } from './panels/FounderRatingsPanel';
 import { FounderRevenuePanel } from './panels/FounderRevenuePanel';
 import { FounderAuditPanel } from './panels/FounderAuditPanel';
 import { FounderLabPanel } from './panels/FounderLabPanel';
@@ -22,6 +23,7 @@ const sections = [
   ['missions', '🧭', 'Missions', 'Interventions et statuts'],
   ['kyc', '🪪', 'KYC', "Dossiers d'identité à traiter"],
   ['reports', '⚠️', 'Signalements', 'Litiges et incidents'],
+  ['ratings', '⭐', 'Évaluations', 'Notes travailleurs ↔ structures'],
   ['revenue', '💶', 'Revenus', 'Commissions UROSI'],
   ['audit', '📜', 'Journal', 'Historique des actions'],
   ['lab', '🧪', 'Laboratoire', 'Scénarios de test internes'],
@@ -35,6 +37,7 @@ const PANELS: Record<SectionKey, ComponentType> = {
   missions: FounderMissionsPanel,
   kyc: FounderKycPanel,
   reports: FounderReportsPanel,
+  ratings: FounderRatingsPanel,
   revenue: FounderRevenuePanel,
   audit: FounderAuditPanel,
   lab: FounderLabPanel,
