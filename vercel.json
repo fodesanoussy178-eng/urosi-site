@@ -9,6 +9,7 @@
   "rewrites": [
     { "source": "/cgu", "destination": "/cgu.html" },
     { "source": "/confidentialite", "destination": "/confidentialite.html" },
+    { "source": "/mentions-legales", "destination": "/mentions-legales.html" },
     { "source": "/(.*)", "destination": "/app.html" }
   ]
 }

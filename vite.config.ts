@@ -19,7 +19,7 @@ function localAppRoutes(): Plugin {
 // Deux pages :
 //  - index.html : site vitrine + démo interactive (aucune donnée réelle)
 //  - app.html   : l'application React (routes internes /app, /connexion, etc.)
-//  - cgu.html / confidentialite.html : pages légales statiques
+//  - cgu.html / confidentialite.html / mentions-legales.html : pages légales statiques
 export default defineConfig({
   plugins: [localAppRoutes(), react()],
   resolve: {
@@ -34,6 +34,7 @@ export default defineConfig({
         app: path.resolve(__dirname, 'app.html'),
         cgu: path.resolve(__dirname, 'cgu.html'),
         confidentialite: path.resolve(__dirname, 'confidentialite.html'),
+        mentionsLegales: path.resolve(__dirname, 'mentions-legales.html'),
       },
       output: {
         // Les gros vendors changent rarement : les isoler stabilise le cache
