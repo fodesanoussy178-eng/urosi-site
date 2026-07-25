@@ -29,8 +29,15 @@ export interface WorkerAccess {
   siretVerified: boolean;
   siretAwaitingPropagation: boolean;
   stripeOnboardingNeeded: boolean;
+  /** Progression personnelle affichée à titre valorisant, jamais une condition de déblocage. */
   solidaireCount: number;
+  /**
+   * Étapes réellement nécessaires au déblocage (SIRET + Stripe). La mission
+   * solidaire n'y figure jamais : c'est une rampe d'accès facultative, pas
+   * un prérequis. Voir progressPercent, calculé uniquement sur ces étapes.
+   */
   steps: UnlockStep[];
+  progressPercent: number;
   refresh: () => Promise<void>;
   startStripeOnboarding: () => Promise<void>;
 }
@@ -114,20 +121,15 @@ export function useWorkerAccess(): WorkerAccess {
     const siretVerified = Boolean(profile?.siret_verified_at);
     const stripeReady = Boolean(profile?.stripe_payouts_enabled);
 
+    // Seules les étapes légalement/techniquement nécessaires comptent ici :
+    // ni la mission solidaire, ni le CV vivant, ni les avis n'y figurent —
+    // ce sont des éléments de valorisation du parcours, jamais une condition.
     const steps: UnlockStep[] = [
-      { key: 'account', label: 'Compte créé', done: true },
-      {
-        key: 'solidaire',
-        label:
-          solidaireCount > 0
-            ? `${solidaireCount} mission${solidaireCount > 1 ? 's' : ''} solidaire${solidaireCount > 1 ? 's' : ''} réalisée${solidaireCount > 1 ? 's' : ''}`
-            : 'Première mission solidaire',
-        done: solidaireCount > 0,
-      },
-      { key: 'cv', label: 'CV vivant en construction', done: solidaireCount > 0 },
-      { key: 'siret', label: "Activité d'indépendant créée", done: siretVerified },
-      { key: 'stripe', label: 'Compte de paiement activé', done: stripeReady },
+      { key: 'account', label: 'Compte UROSI créé', done: true },
+      { key: 'siret', label: 'Activité indépendante vérifiée', done: siretVerified },
+      { key: 'stripe', label: 'Paiements Stripe activés', done: stripeReady },
     ];
+    const progressPercent = Math.round((steps.filter((s) => s.done).length / steps.length) * 100);
 
     return {
       loading,
@@ -140,6 +142,7 @@ export function useWorkerAccess(): WorkerAccess {
       stripeOnboardingNeeded: siretVerified && !stripeReady,
       solidaireCount,
       steps,
+      progressPercent,
       refresh: load,
       startStripeOnboarding,
     };

@@ -48,7 +48,7 @@ export function MissionActionButton({
           ...base,
         }}
       >
-        🔓 Débloquer pour postuler
+        Débloquer les missions rémunérées
       </button>
     );
   }
