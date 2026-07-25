@@ -1203,7 +1203,7 @@ export function StructureApp() {
                   setShowPub(false);
                   setDuplicateSeed(null);
                   setTab('missions');
-                  notif(`« ${m.title} » publiée${m.pricing_breakdown && m.pricing_breakdown.adjustments.length > 0 ? ` à ${euros(m.worker_rate_cents)} (rémunération boostée)` : ''}.`);
+                  notif(`« ${m.title} » publiée${m.pricing_breakdown && Array.isArray(m.pricing_breakdown.adjustments) && m.pricing_breakdown.adjustments.length > 0 ? ` à ${euros(m.worker_rate_cents)} (rémunération boostée)` : ''}.`);
                 }}
               />
             )}
