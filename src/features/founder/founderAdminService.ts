@@ -145,6 +145,61 @@ export interface AccountHistory {
   admin_actions: Array<Record<string, unknown>>;
 }
 
+export type RatingDirection = 'worker_to_structure' | 'structure_to_worker';
+export type RatingModerationAction = 'hide' | 'unhide' | 'cancel' | 'uncancel' | 'flag' | 'unflag';
+export type FounderRatingStatusFilter = 'visible' | 'hidden' | 'cancelled' | 'flagged' | 'pending';
+
+export interface FounderRating {
+  id: string;
+  direction: RatingDirection;
+  score: number;
+  comment: string | null;
+  created_at: string;
+  is_hidden: boolean;
+  is_cancelled: boolean;
+  is_flagged: boolean;
+  moderation_reason: string | null;
+  moderated_at: string | null;
+  moderated_by_name: string | null;
+  mission_id: string | null;
+  mission_title: string | null;
+  author_name: string | null;
+  structure_id: string;
+  structure_name: string;
+  worker_id: string;
+  worker_name: string;
+  is_publicly_visible: boolean;
+  scheduled_publish_at: string | null;
+}
+
+export interface FounderRatingSubjectStats {
+  average: number | null;
+  count: number;
+  hidden_count: number;
+  flagged_count: number;
+  cancelled_count: number;
+}
+
+export interface ModeratedRatingRow {
+  id: string;
+  application_id: string;
+  structure_id: string;
+  worker_id: string;
+  score: number;
+  created_at: string;
+  direction: RatingDirection;
+  comment: string | null;
+  mission_id: string | null;
+  reviewer_id: string | null;
+  status: 'pending' | 'published';
+  is_hidden: boolean;
+  is_cancelled: boolean;
+  is_flagged: boolean;
+  moderation_reason: string | null;
+  moderated_by: string | null;
+  moderated_at: string | null;
+}
+
 type RpcResponse = PromiseLike<{ data: unknown; error: { message: string } | null }>;
 const rpc = supabase.rpc.bind(supabase) as unknown as (
   name: string,
@@ -197,4 +252,14 @@ export const founderAdminApi = {
     call<void>('founder_admin_request_kyc_document', { p_profile_id: profileId, p_reason: reason }),
   labStatus: () => call<FounderLabStatus>('founder_admin_lab_status'),
   createLabScenario: (entityType: string) => call<LabScenario>('founder_admin_lab_create', { p_entity_type: entityType }),
+  ratings: (direction?: RatingDirection, status?: FounderRatingStatusFilter, limit = 200) =>
+    call<FounderRating[]>('founder_ratings_list', {
+      p_direction: direction ?? null,
+      p_status: status ?? null,
+      p_limit: limit,
+    }),
+  ratingSubjectStats: (direction: RatingDirection, subjectId: string) =>
+    call<FounderRatingSubjectStats>('founder_rating_subject_stats', { p_direction: direction, p_subject_id: subjectId }),
+  moderateRating: (ratingId: string, action: RatingModerationAction, reason: string) =>
+    call<ModeratedRatingRow>('founder_moderate_rating', { p_rating_id: ratingId, p_action: action, p_reason: reason }),
 };

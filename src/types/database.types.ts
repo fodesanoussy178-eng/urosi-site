@@ -873,6 +873,12 @@ export interface Database {
           comment: string | null;
           status: RatingVisibilityStatus;
           created_at: string;
+          is_hidden: boolean;
+          is_cancelled: boolean;
+          is_flagged: boolean;
+          moderation_reason: string | null;
+          moderated_by: string | null;
+          moderated_at: string | null;
         };
         Insert: {
           id?: string;
@@ -886,6 +892,12 @@ export interface Database {
           comment?: string | null;
           status?: RatingVisibilityStatus;
           created_at?: string;
+          is_hidden?: boolean;
+          is_cancelled?: boolean;
+          is_flagged?: boolean;
+          moderation_reason?: string | null;
+          moderated_by?: string | null;
+          moderated_at?: string | null;
         };
         Update: Partial<Database['public']['Tables']['ratings']['Insert']>;
         Relationships: [
@@ -906,6 +918,13 @@ export interface Database {
           {
             foreignKeyName: 'ratings_worker_id_fkey';
             columns: ['worker_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'ratings_moderated_by_fkey';
+            columns: ['moderated_by'];
             isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
