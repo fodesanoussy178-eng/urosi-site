@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import type { Mission, MissionInsert, Structure } from './types';
 
 const MISSION_COLUMNS =
-  'id, structure_id, title, detail, city, address, location, lat, lng, distance_km, scheduled_date, start_time, end_time, starts_at, ends_at, duration_minutes, duration_minutes_per_person, mission_days, sector, difficulty, is_urgent, worker_rate_cents, base_rate_cents, pricing_breakdown, is_solidaire, places, positions, slots, hourly_rate, worker_amount, price_total, worker_subtotal, service_fee, structure_total, total_worker_hours, time_slot, day_of_week, mission_category, dress_code, equipment, instructions, status, archived_at, created_at';
+  'id, structure_id, title, detail, city, address, location, lat, lng, distance_km, scheduled_date, start_time, end_time, starts_at, ends_at, duration_minutes, duration_minutes_per_person, mission_days, sector, difficulty, is_urgent, worker_rate_cents, base_rate_cents, pricing_breakdown, is_solidaire, no_salaried_substitution, places, positions, slots, hourly_rate, worker_amount, price_total, worker_subtotal, service_fee, structure_total, total_worker_hours, time_slot, day_of_week, mission_category, dress_code, equipment, instructions, status, archived_at, created_at, payment_authorization_status, stripe_payment_intent_id, authorization_amount_cents, authorized_at, authorization_attempts, authorization_failed_reason, captured_amount_cents, captured_at';
 
 export interface MissionWithStructure extends Mission {
   structure: Pick<

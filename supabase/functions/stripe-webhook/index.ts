@@ -95,6 +95,22 @@ Deno.serve(async (req: Request) => {
           p_payouts_enabled: account.payouts_enabled,
         });
         if (error) throw error;
+
+        // Régression (Module 3) : Stripe redemande des pièces après un
+        // déblocage déjà obtenu. currently_due/past_due non vides => en
+        // attente. compute_worker_paid_status redescend déjà l'état seul
+        // via payouts_enabled ; ce flag ne sert qu'à distinguer côté UI
+        // "jamais complété" de "régression après déblocage".
+        const requirements = account.requirements;
+        const pending = Boolean(
+          (requirements?.currently_due?.length ?? 0) > 0 ||
+            (requirements?.past_due?.length ?? 0) > 0,
+        );
+        const { error: reqErr } = await supabase.rpc("set_worker_stripe_requirements_pending", {
+          p_account_id: account.id,
+          p_pending: pending,
+        });
+        if (reqErr) throw reqErr;
         break;
       }
 
