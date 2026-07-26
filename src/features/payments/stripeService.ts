@@ -70,6 +70,17 @@ export function fetchStripeBalance() {
   return invoke<StripeBalance>('stripe-connect-balance');
 }
 
+export interface PayoutResult {
+  payout_id: string;
+  amount_cents: number;
+  status: string;
+}
+
+/** Demande le virement du solde Stripe disponible vers le compte bancaire du travailleur. */
+export function requestWorkerPayout() {
+  return invoke<PayoutResult>('stripe-request-payout');
+}
+
 export interface SetupPaymentMethodResult {
   client_secret: string;
   customer_id: string;
