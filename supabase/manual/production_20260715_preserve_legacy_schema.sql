@@ -3,7 +3,7 @@
 -- Le schema public de juillet 2026 precede le modele suivi par les migrations
 -- du depot. Il est conserve integralement et rendu inaccessible aux clients,
 -- puis un schema public vide est recree avec les ACL Supabase standard.
--- Ce script ne doit etre execute qu'une seule fois, avant 0001_schema.sql.
+-- Ce script ne doit etre execute qu'une seule fois, avant 20260715101904_repo_0001_schema.sql.
 
 do $$
 begin

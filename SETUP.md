@@ -50,7 +50,7 @@ comptes `auth.users` avec un mot de passe connu (`demo-password`).
   `profiles.phone`. Pour l'auth par SMS (OTP), brancher un provider Twilio /
   MessageBird dans Authentication -> Providers -> Phone.
 
-Le trigger `handle_new_user` (migration `0002_functions.sql`) cree
+Le trigger `handle_new_user` (migration `20260715101908_repo_0002_functions.sql`) cree
 automatiquement la ligne `profiles` a chaque inscription, avec le `role`
 passe dans les metadonnees (`worker` / `structure_admin`) via
 `supabase.auth.signUp({ options: { data: { role } } })`.

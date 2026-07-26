@@ -5,7 +5,7 @@
 
 ## 1. Modèle économique → correspondance Stripe
 
-D'après `src/features/pricing/priceSplit.ts` et la migration `0009_wallet_payments.sql` :
+D'après `src/features/pricing/priceSplit.ts` et la migration `20260715101929_repo_0009_wallet_payments.sql` :
 
 - La **structure** (entreprise/association) paie `totalStructureCents = brut + commission` (commission plateforme configurable, aujourd'hui **18 %** — `platform_settings.commission_pct`).
 - Le **travailleur** reçoit `netWorkerCents = brut` (rémunération non amputée en V1).
@@ -43,7 +43,7 @@ Le dépôt a été conçu pour brancher un PSP plus tard. On **câble Stripe dan
 - `supabase/functions/release-due-payments/index.ts` — sélectionne déjà les candidatures `payment_pending` échues et appelle `release_payment_ready_mission` en `service_role`. C'est là que se déclenchera le **Transfer** Stripe.
 - `private.guard_simulated_payment` — bloque `provider='internal'` hors staging → à faire accepter `provider='stripe'`.
 - `process_mission_payment` (security definer, idempotent) — écriture centralisée au grand livre ; aucun client n'écrit directement dans `wallets`/`wallet_transactions`/`payments`. On garde ce principe : les Edge Functions Stripe appellent des RPC `security definer`.
-- Tables KYC déjà là (`0016_kyc_siret_verification`, `harden_worker_kyc`, `kyc_access_log`) + panneau de revue KYC Fondateur → alimenté par Stripe Identity.
+- Tables KYC déjà là (`20260715102037_repo_0016_kyc_siret_verification`, `harden_worker_kyc`, `kyc_access_log`) + panneau de revue KYC Fondateur → alimenté par Stripe Identity.
 
 ## 3. Où vit le code
 

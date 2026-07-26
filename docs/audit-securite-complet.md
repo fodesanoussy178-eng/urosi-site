@@ -71,7 +71,7 @@ Les autres RPC d'action (`confirm_attendance_qr`, `create_mission_qr_token`, `re
 3. **Acceptation** → `applications` UPDATE `owns_mission()`.
 4. **Pointage début** → `confirm_attendance_qr` / `validate_mission_attendance_core` → `status='in_progress'` (migration `20260726105929_neutral_payment_wording.sql`).
 5. **Pointage fin** → `status='payment_pending'`, `payment_ready_at = now()+interval '3 days'` (même migration).
-6. **Libération J+3** → `release_payment_ready_mission(uuid)` (service_role) → trigger `trg_pay_on_completion` → `process_mission_payment` qui insère un paiement `provider='internal'` (`0009_wallet_payments.sql`).
+6. **Libération J+3** → `release_payment_ready_mission(uuid)` (service_role) → trigger `trg_pay_on_completion` → `process_mission_payment` qui insère un paiement `provider='internal'` (`20260715101929_repo_0009_wallet_payments.sql`).
 7. **Garde** → `private.guard_simulated_payment` **bloque** tout `provider='internal'` hors staging (`20260715131604_foundation_security_hardening.sql`).
 
 **Où le flux s'arrête aujourd'hui (prouvé) :**
@@ -99,8 +99,8 @@ Les autres RPC d'action (`confirm_attendance_qr`, `create_mission_qr_token`, `re
 
 **Objets SQL** :
 - 🔴 Schéma **`rls_private`** + fonction **`can_rate_finished_application`** présents en prod (utilisés par les policies `ratings`), **absents du dépôt** (`grep rls_private supabase/` = rien). → **Le dépôt ne peut pas reproduire l'autorisation de notation de la prod.**
-- ✅ Vues `reliability_index`, `platform_revenue_total` : versionnées (`0002_functions.sql`, `20260715091205…`).
-- ✅ Buckets Storage `attendance-evidence` (privé), `kyc-documents` (privé) : policies présentes dans les migrations (`0015`, `0016`, `20260714134755`, `20260715150000`).
+- ✅ Vues `reliability_index`, `platform_revenue_total` : versionnées (`20260715101908_repo_0002_functions.sql`, `20260715102113…`).
+- ✅ Buckets Storage `attendance-evidence` (privé), `kyc-documents` (privé) : policies présentes dans les migrations (`20260715102034_repo_0015`, `20260715102037_repo_0016`, `20260715102052_repo_20260714134755`, `20260715131604`).
 
 **Edge Functions** (`list_edge_functions` vs `supabase/functions/`) :
 - 🔴 **`verify-structure`** : **déployée en prod, absente du dépôt** (code de vérification de structure non versionné/non revu).
@@ -142,7 +142,7 @@ Tests existants (12 fichiers) : pricing/commission (`pricingService.test`, `comm
 - **`unindexed_foreign_keys` ×32** : jointures et cascades lentes à l'échelle. *(advisor.)*
 - **`multiple_permissive_policies` ×36** : plusieurs policies évaluées par requête. *(advisor.)*
 - **Flux worker chargé côté client** : `WorkerApp` fait `fetchOpenMissions()` puis trie par distance en JS (`distanceKm`, `WorkerApp.tsx`). À grand volume de missions ouvertes, transfert + tri O(n) côté client → pagination/tri serveur nécessaire. *(preuve : code ; impact non mesuré.)*
-- **Realtime** : `0012_realtime_missions.sql` active le temps réel sur les missions ; 10 000 abonnés simultanés → charge Realtime à dimensionner. *(non vérifié : config/plan.)*
+- **Realtime** : `20260715101958_repo_0012_realtime_missions.sql` active le temps réel sur les missions ; 10 000 abonnés simultanés → charge Realtime à dimensionner. *(non vérifié : config/plan.)*
 
 ### 🟢 Amélioration
 - 52 index inutilisés (normal à vide, à réévaluer avec du trafic).

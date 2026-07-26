@@ -89,8 +89,8 @@ Supabase (migrations, auth, variables d'environnement).
 - L'indice de fiabilite (`reliability_index`) est calcule en base et n'est
   jamais utilise pour filtrer l'acces aux missions.
 
-Voir `supabase/migrations/0001_schema.sql` (schema), `0002_functions.sql`
-(triggers/fonctions) et `0003_rls.sql` (policies) pour le detail.
+Voir `supabase/migrations/20260715101904_repo_0001_schema.sql` (schema), `20260715101908_repo_0002_functions.sql`
+(triggers/fonctions) et `20260715101909_repo_0003_rls.sql` (policies) pour le detail.
 
 ## Hors perimetre (roadmap)
 

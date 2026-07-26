@@ -1,13 +1,10 @@
--- Document 4 — archivage des missions + notification CV.
---
--- ARCHIVAGE : une mission terminée peut être archivée. L'archivage la masque
--- des listes principales (accueil, historique par défaut) mais conserve toutes
--- les données. Une mission avec une candidature encore active ne peut pas être
--- archivée. La suppression reste interdite dès qu'il existe paiement / pointage
--- / avis (guard_mission_lifecycle, inchangé) : archiver est la seule voie.
---
--- NOTIFICATION CV : à la fin de mission, le travailleur est prévenu que la
--- mission a été ajoutée à son CV vivant (en cours de vérification).
+-- Hotfix production : le frontend deploye (main, PR #63) attend deja le
+-- schema du Document 4, absent de cette base. Consequence observee dans les
+-- logs : POST/GET /rest/v1/missions -> 400 "column missions.archived_at does
+-- not exist" (publication de mission cassee), et RPC structure_mission_history
+-- appelee avec un 2e parametre inexistant -> 404. Reprise verbatim de la
+-- migration deja validee sur staging (20260723110000), purement additive,
+-- aucune regle metier modifiee.
 
 alter table public.missions
   add column if not exists archived_at timestamptz;
@@ -16,10 +13,6 @@ create index if not exists missions_archived_idx
   on public.missions (structure_id)
   where archived_at is not null;
 
--- Le garde du cycle de vie tolère une écriture « de confiance » posée
--- uniquement par les RPC d'archivage (mêmes règles que le drapeau
--- notifications) : sans lui, archiver une mission déjà clôturée serait bloqué
--- par la lecture seule.
 create or replace function public.guard_mission_lifecycle()
 returns trigger
 language plpgsql security definer set search_path to ''
@@ -102,8 +95,6 @@ begin
 end;
 $$;
 
--- Historique : exclut les missions archivées par défaut ; p_include_archived
--- permet de consulter l'archive. Ajoute archived_at à la sortie.
 drop function if exists public.structure_mission_history(uuid);
 create function public.structure_mission_history(
   p_structure_id uuid,
@@ -142,8 +133,6 @@ begin
 end;
 $function$;
 
--- Fin de mission : prévient aussi le travailleur que la mission a rejoint son
--- CV vivant (en cours de vérification).
 create or replace function private.finalize_mission_end(p_application_id uuid)
 returns void
 language plpgsql security definer set search_path = public
@@ -160,7 +149,7 @@ begin
   for update of a;
 
   if not found or v.cv_status is not null then
-    return; -- deja finalisee : ne rien refaire (idempotence).
+    return;
   end if;
 
   update public.applications
@@ -192,3 +181,8 @@ begin
   );
 end;
 $$;
+
+-- Grant manquant (present sur staging, absent en prod) : la policy RLS
+-- "reviewer reads own" restreint deja aux lignes de l'appelant ; sans ce
+-- grant, PostgREST renvoie 403 avant meme d'evaluer la policy.
+grant select on public.rating_requests to authenticated;
