@@ -1,7 +1,7 @@
 # Note technique — File d'attente et redistribution après annulation (app réelle)
 
 > Statut : IMPLÉMENTÉ le 16/07/2026 (spécification validée par le fondateur).
-> Migration `20260716140000_mission_waitlist_offers.sql`, tâche planifiée
+> Migration `20260726110035_mission_waitlist_offers.sql`, tâche planifiée
 > `supabase/functions/process-spot-offers` (à planifier toutes les minutes,
 > service_role), front `spotOffersService.ts` + bannière dans `WorkerApp`.
 > Décisions retenues : capacité totale = places + 3 ; offre à confirmer

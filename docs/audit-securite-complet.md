@@ -69,10 +69,10 @@ Les autres RPC d'action (`confirm_attendance_qr`, `create_mission_qr_token`, `re
 1. **Création mission** → `missions` INSERT, policy `is_structure_owner` (`pg_policies`).
 2. **Candidature** → `applications` INSERT `worker_id=auth.uid() AND mission_is_open()`.
 3. **Acceptation** → `applications` UPDATE `owns_mission()`.
-4. **Pointage début** → `confirm_attendance_qr` / `validate_mission_attendance_core` → `status='in_progress'` (migration `20260716130000_neutral_payment_wording.sql`).
+4. **Pointage début** → `confirm_attendance_qr` / `validate_mission_attendance_core` → `status='in_progress'` (migration `20260726105929_neutral_payment_wording.sql`).
 5. **Pointage fin** → `status='payment_pending'`, `payment_ready_at = now()+interval '3 days'` (même migration).
 6. **Libération J+3** → `release_payment_ready_mission(uuid)` (service_role) → trigger `trg_pay_on_completion` → `process_mission_payment` qui insère un paiement `provider='internal'` (`0009_wallet_payments.sql`).
-7. **Garde** → `private.guard_simulated_payment` **bloque** tout `provider='internal'` hors staging (`20260715150000_foundation_security_hardening.sql`).
+7. **Garde** → `private.guard_simulated_payment` **bloque** tout `provider='internal'` hors staging (`20260715131604_foundation_security_hardening.sql`).
 
 **Où le flux s'arrête aujourd'hui (prouvé) :**
 - **Aucun déclencheur J+3** : `cron.job` n'existe pas → **pg_cron non activé** (erreur `relation "cron.job" does not exist`) ; l'edge function `release-due-payments` **n'est pas déployée** (`list_edge_functions` = `verify-structure`, `psp` uniquement).
