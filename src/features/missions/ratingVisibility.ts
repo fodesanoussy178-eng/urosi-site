@@ -1,5 +1,5 @@
 // Miroir pur (sans I/O) de private.rating_visibility() cote SQL
-// (supabase/migrations/20260725200000_bilateral_rating_visibility_and_moderation.sql).
+// (supabase/migrations/20260726111920_bilateral_rating_visibility_and_moderation.sql).
 // Sert de filet de securite pour verifier la regle de visibilite publique
 // bilaterale (travailleur <-> structure) independamment de la base de
 // donnees. Ne remplace jamais la RPC serveur (seule source de verite), mais
