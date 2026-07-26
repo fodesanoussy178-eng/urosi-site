@@ -1374,6 +1374,10 @@ export interface Database {
         Args: { p_profile_id: string; p_status: 'verified' | 'rejected'; p_reason?: string | null };
         Returns: undefined;
       };
+      founder_test_accounts_list: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
       log_kyc_document_access: {
         Args: { p_profile_id: string; p_document_path: string; p_purpose?: 'manual_review' | 'compliance_review' | 'support_review' };
         Returns: undefined;

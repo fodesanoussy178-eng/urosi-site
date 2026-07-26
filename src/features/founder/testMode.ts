@@ -20,6 +20,29 @@ interface TestModeResponse {
   error?: string;
 }
 
+export type FounderTestMode = 'create' | 'switch';
+
+export interface FounderTestAccountSummary {
+  id: string;
+  full_name: string;
+  email: string;
+  created_at: string;
+  structure_id?: string;
+  structure_name?: string;
+}
+
+export interface FounderTestAccountsList {
+  workers: FounderTestAccountSummary[];
+  structures: FounderTestAccountSummary[];
+}
+
+/** Liste tous les comptes de test Fondateur existants (workers + structures). */
+export async function listFounderTestAccounts(): Promise<FounderTestAccountsList> {
+  const { data, error } = await supabase.rpc('founder_test_accounts_list');
+  if (error) throw new Error(error.message);
+  return (data as unknown as FounderTestAccountsList) ?? { workers: [], structures: [] };
+}
+
 export function hasStashedFounderSession(): boolean {
   try {
     return sessionStorage.getItem(STASH_KEY) !== null;
@@ -36,8 +59,10 @@ async function stashCurrentSession(): Promise<void> {
   sessionStorage.setItem(STASH_KEY, JSON.stringify(stash));
 }
 
-async function invokeTestMode(as: 'worker' | 'structure'): Promise<string> {
-  const { data, error } = await supabase.functions.invoke<TestModeResponse>('founder-test-mode', { body: { as } });
+async function invokeTestMode(as: 'worker' | 'structure', mode: FounderTestMode, accountId?: string): Promise<string> {
+  const { data, error } = await supabase.functions.invoke<TestModeResponse>('founder-test-mode', {
+    body: { as, mode, account_id: accountId },
+  });
   if (error) {
     let message = error.message;
     const context = (error as { context?: Response }).context;
@@ -55,11 +80,19 @@ async function invokeTestMode(as: 'worker' | 'structure'): Promise<string> {
   return data.token_hash;
 }
 
-/** Passe la session active sur le compte de test worker/structure dédié. */
-export async function enterFounderTestMode(as: 'worker' | 'structure'): Promise<void> {
+/**
+ * Passe la session active sur un compte de test worker/structure.
+ * mode='create' en crée toujours un nouveau ; mode='switch' (défaut) bascule
+ * vers un compte de test existant (accountId requis dans ce cas).
+ */
+export async function enterFounderTestMode(
+  as: 'worker' | 'structure',
+  mode: FounderTestMode = 'switch',
+  accountId?: string,
+): Promise<void> {
   await stashCurrentSession();
   try {
-    const tokenHash = await invokeTestMode(as);
+    const tokenHash = await invokeTestMode(as, mode, accountId);
     const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'magiclink' });
     if (error) throw error;
   } catch (e) {
