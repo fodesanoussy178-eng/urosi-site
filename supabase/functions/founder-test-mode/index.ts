@@ -12,31 +12,39 @@ const corsHeaders = {
 // exclusivement aux comptes de test — les RPC founder_mark_test_account /
 // founder_provision_test_structure refusent d'agir sur tout autre domaine
 // (voir migration 20260724180012_founder_test_account_provisioning_rpcs.sql).
-const FAKE_SIRET = "12345678900015"; // format valide (Luhn), aucune entreprise reelle
 
-const TEST_ACCOUNT_TEMPLATES = {
-  worker: {
-    fullName: "Camille Testeur",
-    profile: {
-      p_city: "Lille",
-      p_phone: "+33600000001",
-      p_bio: "Compte de test Fondateur — jamais un vrai utilisateur, jamais de vraie mission.",
-      p_skills: ["service", "caisse", "manutention"],
-    },
-  },
-  structure: {
-    fullName: "Fondateur Test (compte structure)",
+// Un nouveau compte de test travailleur pioche un prenom dans ce pool
+// (au lieu de toujours "Camille Testeur") — le Fondateur peut aussi le
+// renommer ensuite depuis le Centre Fondateur (founder_rename_test_account).
+const WORKER_NAME_POOL = [
+  "Camille Testeur",
+  "Thomas Testeur",
+  "Léa Testeur",
+  "Nora Testeur",
+  "Yanis Testeur",
+  "Chloé Testeur",
+] as const;
+
+const WORKER_PROFILE_TEMPLATE = {
+  p_city: "Lille",
+  p_phone: "+33600000001",
+  p_bio: "Compte de test Fondateur — jamais un vrai utilisateur, jamais de vraie mission.",
+  p_skills: ["service", "caisse", "manutention"],
+};
+
+const STRUCTURE_OWNER_FULL_NAME = "Fondateur Test (compte structure)";
+
+// Un nouveau compte de test structure pioche parmi plusieurs profils
+// realistes (commerce classique, association/ESS, services...) plutot que
+// toujours le meme "Bistrot Fictif" — chaque profil officiel est
+// entierement fictif et coherent avec apply_structure_siret_verification
+// (structure_type/is_ess derives de legal_category_code cote reel ; ici
+// poses directement puisque founder_provision_test_structure ne relance
+// pas cette derivation). SIRET Luhn-valides mais tous sequentiels/fictifs.
+const STRUCTURE_TEMPLATES = [
+  {
     structureName: "Bistrot Fictif Test SARL",
-    profile: {
-      p_city: "Lille",
-      p_phone: "+33600000002",
-      p_bio: "Compte propriétaire de test — usage interne Fondateur uniquement.",
-      p_address: "1 rue Fictive, 59000 Lille",
-    },
-    // Profil officiel entierement fictif : simule le resultat d'une vraie
-    // verification SIRET sans jamais appeler le registre. Coherent avec
-    // apply_structure_siret_verification (structure_type/is_association
-    // derives de legal_category_code, jamais un choix manuel).
+    siret: "12345678900015",
     official: {
       p_siren: "123456789",
       p_trade_name: "Bistrot Fictif",
@@ -52,7 +60,67 @@ const TEST_ACCOUNT_TEMPLATES = {
       p_is_association: false,
     },
   },
-} as const;
+  {
+    structureName: "Épicerie Solidaire des Tanneurs",
+    siret: "23456789000111",
+    official: {
+      p_siren: "234567890",
+      p_trade_name: "Épicerie Solidaire des Tanneurs",
+      p_naf_code: "88.99B",
+      p_naf_label: "Action sociale sans hébergement n.c.a.",
+      p_legal_form: "Association loi 1901",
+      p_postal_code: "59100",
+      p_city: "Roubaix",
+      p_address: "12 rue des Tanneurs",
+      p_established_at: "2015-09-01",
+      p_structure_type: "association",
+      p_legal_category_code: "9220",
+      p_is_association: true,
+    },
+  },
+  {
+    structureName: "Nova Facility Services SAS",
+    siret: "34567890001124",
+    official: {
+      p_siren: "345678900",
+      p_trade_name: "Nova Facility Services",
+      p_naf_code: "81.21Z",
+      p_naf_label: "Nettoyage courant des bâtiments",
+      p_legal_form: "SAS",
+      p_postal_code: "59200",
+      p_city: "Tourcoing",
+      p_address: "45 avenue Fictive",
+      p_established_at: "2020-01-15",
+      p_structure_type: "entreprise",
+      p_legal_category_code: "5710",
+      p_is_association: false,
+    },
+  },
+  {
+    structureName: "Comptoir Frais SASU",
+    siret: "45678900011230",
+    official: {
+      p_siren: "456789000",
+      p_trade_name: "Comptoir Frais",
+      p_naf_code: "47.11D",
+      p_naf_label: "Commerce de détail de produits surgelés",
+      p_legal_form: "SASU",
+      p_postal_code: "59650",
+      p_city: "Villeneuve-d'Ascq",
+      p_address: "8 rue du Marché",
+      p_established_at: "2019-06-01",
+      p_structure_type: "entreprise",
+      p_legal_category_code: "5785",
+      p_is_association: false,
+    },
+  },
+] as const;
+
+type StructureTemplate = (typeof STRUCTURE_TEMPLATES)[number];
+
+function pickRandom<T>(pool: readonly T[]): T {
+  return pool[Math.floor(Math.random() * pool.length)];
+}
 
 type Role = "worker" | "structure";
 type Mode = "create" | "switch";
@@ -92,8 +160,8 @@ async function findAuthUserByEmail(
 async function createNewTestUser(
   adminClient: ReturnType<typeof createClient>,
   as: Role,
+  fullName: string,
 ): Promise<string> {
-  const template = TEST_ACCOUNT_TEMPLATES[as];
   const role = as === "structure" ? "structure_admin" : "worker";
   const suffix = crypto.randomUUID().replace(/-/g, "").slice(0, 8);
   const email = `founder-test-${as}-${suffix}@urosi.internal`;
@@ -102,7 +170,7 @@ async function createNewTestUser(
     email,
     password: crypto.randomUUID(),
     email_confirm: true,
-    user_metadata: { full_name: template.fullName, role },
+    user_metadata: { full_name: fullName, role },
   });
   if (created?.user) return created.user.id;
 
@@ -179,26 +247,54 @@ Deno.serve(async (req) => {
       return json({ error: "account_id requis pour basculer vers un compte existant." }, 400);
     }
 
-    const template = TEST_ACCOUNT_TEMPLATES[as as Role];
+    // Choix pioche UNE fois, avant creation : reutilise pour user_metadata,
+    // founder_mark_test_account et founder_provision_test_structure sans
+    // repiocher (les trois doivent decrire le meme compte).
+    const chosenWorkerName = as === "worker" ? pickRandom(WORKER_NAME_POOL) : "";
+    const chosenStructure: StructureTemplate | null = as === "structure" ? pickRandom(STRUCTURE_TEMPLATES) : null;
+
     const testUserId =
       mode === "create"
-        ? await createNewTestUser(adminClient, as as Role)
+        ? await createNewTestUser(
+            adminClient,
+            as as Role,
+            as === "structure" ? STRUCTURE_OWNER_FULL_NAME : chosenWorkerName,
+          )
         : await resolveExistingTestUserId(callerClient, as as Role, accountId!);
 
-    const { error: markError } = await callerClient.rpc("founder_mark_test_account", {
-      p_user_id: testUserId,
-      p_full_name: template.fullName,
-      ...template.profile,
-    });
-    if (markError) throw new Error(markError.message);
+    // founder_mark_test_account ecrase full_name sans condition (pas de
+    // coalesce) : ne JAMAIS l'appeler en mode 'switch', sous peine
+    // d'ecraser a chaque bascule un renommage fait depuis le Centre
+    // Fondateur (founder_rename_test_account) par le nom par defaut.
+    if (mode === "create") {
+      const ownerProfile =
+        as === "worker"
+          ? WORKER_PROFILE_TEMPLATE
+          : {
+              p_city: chosenStructure!.official.p_city,
+              p_phone: "+33600000002",
+              p_bio: "Compte propriétaire de test — usage interne Fondateur uniquement.",
+              p_address: chosenStructure!.official.p_address,
+            };
+      const { error: markError } = await callerClient.rpc("founder_mark_test_account", {
+        p_user_id: testUserId,
+        p_full_name: as === "structure" ? STRUCTURE_OWNER_FULL_NAME : chosenWorkerName,
+        ...ownerProfile,
+      });
+      if (markError) throw new Error(markError.message);
+    }
 
     if (as === "structure") {
+      // Idempotent des deux cotes (founder_provision_test_structure comme
+      // founder_provision_test_mission renvoient l'existant sans ecraser) :
+      // sans risque de repasser ici aussi en mode 'switch'.
+      const struct = chosenStructure!;
       const { data: testStructure, error: structureError } = await callerClient.rpc("founder_provision_test_structure", {
         p_owner_id: testUserId,
-        p_name: TEST_ACCOUNT_TEMPLATES.structure.structureName,
-        p_siret: FAKE_SIRET,
+        p_name: struct.structureName,
+        p_siret: struct.siret,
         p_about: "Structure fictive dédiée aux tests internes Fondateur. Jamais une vraie entreprise.",
-        ...TEST_ACCOUNT_TEMPLATES.structure.official,
+        ...struct.official,
       });
       if (structureError) throw new Error(structureError.message);
 

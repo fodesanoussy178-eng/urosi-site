@@ -1378,6 +1378,10 @@ export interface Database {
         Args: Record<string, never>;
         Returns: Json;
       };
+      founder_rename_test_account: {
+        Args: { p_account_id: string; p_as: 'worker' | 'structure'; p_name: string };
+        Returns: undefined;
+      };
       log_kyc_document_access: {
         Args: { p_profile_id: string; p_document_path: string; p_purpose?: 'manual_review' | 'compliance_review' | 'support_review' };
         Returns: undefined;

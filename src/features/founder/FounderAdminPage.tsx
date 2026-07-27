@@ -4,8 +4,14 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { hasFounderAccess } from '@/features/auth/authService';
 import { FONT, T } from '@/components/ui/theme';
 import { SectionErrorBoundary } from '@/components/ui/SectionErrorBoundary';
-import { founderButton, founderCard, founderDate } from './founderUi';
-import { enterFounderTestMode, listFounderTestAccounts, type FounderTestAccountsList, type FounderTestAccountSummary } from './testMode';
+import { founderButton, founderCard, founderDate, founderInput } from './founderUi';
+import {
+  enterFounderTestMode,
+  listFounderTestAccounts,
+  renameFounderTestAccount,
+  type FounderTestAccountsList,
+  type FounderTestAccountSummary,
+} from './testMode';
 import { describeError } from '@/lib/errors';
 import { FounderDashboardPanel } from './panels/FounderDashboardPanel';
 import { FounderAccountsPanel } from './panels/FounderAccountsPanel';
@@ -130,6 +136,9 @@ function TestAccountsSwitcher() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [switchError, setSwitchError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [renameError, setRenameError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -153,6 +162,35 @@ function TestAccountsSwitcher() {
       navigate('/app', { replace: true });
     } catch (e) {
       setSwitchError(describeError(e, 'la bascule vers ce mode de test'));
+      setBusyKey(null);
+    }
+  }
+
+  function startEdit(acc: FounderTestAccountSummary) {
+    setRenameError(null);
+    setEditingId(acc.id);
+    setEditValue(acc.structure_name ?? acc.full_name);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditValue('');
+  }
+
+  async function saveEdit(as: 'worker' | 'structure') {
+    const accountId = editingId;
+    const name = editValue.trim();
+    if (!accountId || !name) return;
+    setBusyKey(`rename-${accountId}`);
+    setRenameError(null);
+    try {
+      await renameFounderTestAccount(as, accountId, name);
+      setEditingId(null);
+      setEditValue('');
+      await load();
+    } catch (e) {
+      setRenameError(describeError(e, 'le renommage de ce compte'));
+    } finally {
       setBusyKey(null);
     }
   }
@@ -184,35 +222,72 @@ function TestAccountsSwitcher() {
               {accounts && accounts.length === 0 && (
                 <div style={{ fontSize: 11, color: T.mu }}>Aucun compte de test pour l'instant.</div>
               )}
-              {(accounts ?? []).map((acc) => (
-                <div
-                  key={acc.id}
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '7px 0', borderTop: `1px solid ${T.cb}` }}
-                >
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: 11.5, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {acc.structure_name ?? acc.full_name}
-                    </div>
-                    <div style={{ fontSize: 9, color: T.mu }}>{founderDate(acc.created_at)}</div>
+              {(accounts ?? []).map((acc) =>
+                editingId === acc.id ? (
+                  <div key={acc.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 0', borderTop: `1px solid ${T.cb}` }}>
+                    <input
+                      autoFocus
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') void saveEdit(role);
+                        if (e.key === 'Escape') cancelEdit();
+                      }}
+                      style={{ ...founderInput, padding: '6px 9px', fontSize: 11 }}
+                    />
+                    <button
+                      type="button"
+                      disabled={busyKey !== null || !editValue.trim()}
+                      onClick={() => void saveEdit(role)}
+                      style={{ ...founderButton, flexShrink: 0, opacity: !editValue.trim() ? 0.5 : 1 }}
+                    >
+                      {busyKey === `rename-${acc.id}` ? '…' : '✓'}
+                    </button>
+                    <button type="button" onClick={cancelEdit} style={{ ...founderButton, flexShrink: 0 }}>
+                      ✕
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    disabled={busyKey !== null}
-                    onClick={() => go(role, 'switch', acc.id, acc.id)}
-                    style={{ ...founderButton, opacity: busyKey && busyKey !== acc.id ? 0.5 : 1, flexShrink: 0 }}
+                ) : (
+                  <div
+                    key={acc.id}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '7px 0', borderTop: `1px solid ${T.cb}` }}
                   >
-                    {busyKey === acc.id ? '…' : 'Tester'}
-                  </button>
-                </div>
-              ))}
+                    <button
+                      type="button"
+                      onClick={() => startEdit(acc)}
+                      title="Renommer"
+                      style={{ minWidth: 0, flex: 1, background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', color: 'inherit' }}
+                    >
+                      <div style={{ fontSize: 11.5, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {acc.structure_name ?? acc.full_name} <span style={{ color: T.mu, fontWeight: 400 }}>✎</span>
+                      </div>
+                      <div style={{ fontSize: 9, color: T.mu }}>{founderDate(acc.created_at)}</div>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyKey !== null}
+                      onClick={() => go(role, 'switch', acc.id, acc.id)}
+                      style={{ ...founderButton, opacity: busyKey && busyKey !== acc.id ? 0.5 : 1, flexShrink: 0 }}
+                    >
+                      {busyKey === acc.id ? '…' : 'Tester'}
+                    </button>
+                  </div>
+                ),
+              )}
             </div>
           );
         })}
       </div>
       {switchError && (
-        <div style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, borderRadius: 12, padding: 12 }}>
+        <div style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, borderRadius: 12, padding: 12, marginBottom: renameError ? 8 : 0 }}>
           <div style={{ color: T.red, fontSize: 12, fontWeight: 900, marginBottom: 3 }}>⚠ La bascule a échoué</div>
           <div style={{ color: T.sub, fontSize: 11, lineHeight: 1.5 }}>{switchError} Tu es toujours dans le Centre Fondateur — rien n'a changé.</div>
+        </div>
+      )}
+      {renameError && (
+        <div style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, borderRadius: 12, padding: 12 }}>
+          <div style={{ color: T.red, fontSize: 12, fontWeight: 900, marginBottom: 3 }}>⚠ Le renommage a échoué</div>
+          <div style={{ color: T.sub, fontSize: 11, lineHeight: 1.5 }}>{renameError}</div>
         </div>
       )}
     </div>
