@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/features/auth/AuthContext';
-import { hasFounderAccess } from '@/features/auth/authService';
+import { hasFounderAccess, isFounderTestAccountViewer } from '@/features/auth/authService';
 import { StructureSettingsSheet } from './StructureSettingsSheet';
 import { T, FONT, inp } from '@/components/ui/theme';
 import { Fld } from '@/components/ui/Fld';
@@ -267,6 +267,7 @@ export function StructureApp() {
   const [docKey, setDocKey] = useState<DocKey | null>(null);
   const [vf, setVf] = useState({ nom: '', siret: '' });
   const [founderAccess, setFounderAccess] = useState(false);
+  const [testAccountBypass, setTestAccountBypass] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [manage, setManage] = useState<ManageState | null>(null);
   const [givenRatings, setGivenRatings] = useState<Map<string, number>>(new Map());
@@ -347,6 +348,9 @@ export function StructureApp() {
         // ne doit jamais piloter un contournement de verification en prod.
         const founder = await hasFounderAccess().catch(() => false);
         setFounderAccess(founder);
+        // Distinct de founder : reste vrai en mode test Fondateur (session
+        // basculee sur un faux compte, has_founder_access() y renvoie false).
+        isFounderTestAccountViewer().then(setTestAccountBypass).catch(() => setTestAccountBypass(false));
         let mine = await fetchMyStructures(session.user.id);
         if (mine.length === 0) {
           const meta = session.user.user_metadata as Record<string, string | boolean | null>;
@@ -385,12 +389,12 @@ export function StructureApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
-  async function createFromForm() {
+  async function createFromForm(bypassSiret = false) {
     if (!session) return;
-    const founder = founderAccess;
+    const founder = founderAccess || bypassSiret;
     const siretOk = isValidSiret(vf.siret);
     if (!(vf.nom.trim().length >= 2 && (founder || siretOk))) {
-      notif('SIRET valide requis.');
+      notif(founder ? 'Nom de structure requis.' : 'SIRET valide requis.');
       return;
     }
     try {
@@ -753,9 +757,22 @@ export function StructureApp() {
                 </div>
               )}
             </Fld>
-            <button onClick={createFromForm} disabled={!canCreateStructure} style={{ width: '100%', background: canCreateStructure ? '#fff' : T.row, color: canCreateStructure ? '#000' : T.mu, border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: canCreateStructure ? 'pointer' : 'not-allowed', marginTop: 4 }}>
+            <button onClick={() => createFromForm()} disabled={!canCreateStructure} style={{ width: '100%', background: canCreateStructure ? '#fff' : T.row, color: canCreateStructure ? '#000' : T.mu, border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: canCreateStructure ? 'pointer' : 'not-allowed', marginTop: 4 }}>
               {canCreateStructure ? 'Enregistrer ma structure' : 'SIRET valide requis'}
             </button>
+            {/* Reserve aux comptes de test Fondateur (is_founder_test_account) —
+                jamais affiche pour un vrai utilisateur, meme en lisant le
+                code source : le controle serveur (isFounderTestAccountViewer)
+                verifie le profil actuellement connecte, pas une valeur locale. */}
+            {testAccountBypass && (
+              <button
+                onClick={() => createFromForm(true)}
+                disabled={vf.nom.trim().length < 2}
+                style={{ width: '100%', background: 'none', color: T.cyan, border: `1px dashed ${T.cb}`, borderRadius: 10, padding: '10px 0', fontSize: 11.5, fontWeight: 800, cursor: vf.nom.trim().length < 2 ? 'not-allowed' : 'pointer', marginTop: 8, opacity: vf.nom.trim().length < 2 ? 0.5 : 1 }}
+              >
+                🧪 Passer cette étape (compte de test Fondateur)
+              </button>
+            )}
           </div>
         ) : (
           <>

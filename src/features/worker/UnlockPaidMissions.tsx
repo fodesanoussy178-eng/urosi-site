@@ -15,7 +15,7 @@
 //     travailler gratuitement avant d'avoir le droit d'être payé ;
 //   - sortie « continuer avec les missions solidaires » toujours offerte,
 //     sans culpabilisation.
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { T, FONT, inp } from '@/components/ui/theme';
 import { supabase } from '@/lib/supabase';
 import { describeError } from '@/lib/errors';
@@ -26,6 +26,23 @@ export function UnlockPaidMissions({ access, onClose }: { access: WorkerAccess; 
   const [feedback, setFeedback] = useState<{ kind: 'pending' | 'error' | 'ok'; message: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const siretInputRef = useRef<HTMLInputElement>(null);
+
+  // Micro-animation au moment precis du deblocage (transition false -> true
+  // de canApplyToPaid), jamais rejouee si l'ecran est simplement rouvert sur
+  // un compte deja debloque.
+  const wasUnlocked = useRef(access.canApplyToPaid);
+  const [justUnlocked, setJustUnlocked] = useState(false);
+  useEffect(() => {
+    if (access.canApplyToPaid && !wasUnlocked.current) {
+      setJustUnlocked(true);
+      const timer = setTimeout(() => setJustUnlocked(false), 1600);
+      wasUnlocked.current = access.canApplyToPaid;
+      return () => clearTimeout(timer);
+    }
+    wasUnlocked.current = access.canApplyToPaid;
+  }, [access.canApplyToPaid]);
+  const reduceMotion = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const playUnlockAnim = justUnlocked && !reduceMotion;
 
   async function submitSiret() {
     setBusy(true);
@@ -123,7 +140,28 @@ export function UnlockPaidMissions({ access, onClose }: { access: WorkerAccess; 
 
         {access.canApplyToPaid ? (
           <div style={{ marginTop: 14, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 12, padding: 13 }}>
-            <div style={{ fontWeight: 900, fontSize: 12.5, color: T.text }}>Missions rémunérées débloquées</div>
+            {playUnlockAnim && (
+              <style>{`
+                @keyframes urosiUnlockPop { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.18); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+                @keyframes urosiUnlockRing { 0% { transform: scale(.6); opacity: .55; } 100% { transform: scale(2.6); opacity: 0; } }
+              `}</style>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+              <span
+                aria-hidden="true"
+                style={{
+                  position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 22, height: 22, borderRadius: '50%', background: T.green, color: '#fff', fontSize: 13, fontWeight: 900, flexShrink: 0,
+                  animation: playUnlockAnim ? 'urosiUnlockPop .5s cubic-bezier(.34,1.56,.64,1)' : undefined,
+                }}
+              >
+                ✓
+                {playUnlockAnim && (
+                  <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `2px solid ${T.green}`, animation: 'urosiUnlockRing 1s ease-out' }} />
+                )}
+              </span>
+              <div style={{ fontWeight: 900, fontSize: 12.5, color: T.text }}>Missions rémunérées débloquées</div>
+            </div>
             <p style={{ marginTop: 4, fontSize: 11.5, color: T.sub, lineHeight: 1.5 }}>
               Tu peux maintenant postuler aux missions rémunérées, en plus des missions solidaires.
             </p>
