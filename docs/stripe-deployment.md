@@ -13,7 +13,7 @@
 ## 1. Migration de base de données
 
 ```bash
-supabase db push        # applique 20260719190000_stripe_integration_foundations.sql
+supabase db push        # applique 20260726110112_stripe_integration_foundations.sql
 ```
 
 Ajoute : colonnes Connect/Identity sur `profiles`, `stripe_customer_id` sur

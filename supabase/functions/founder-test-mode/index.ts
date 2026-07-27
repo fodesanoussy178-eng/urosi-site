@@ -11,7 +11,7 @@ const corsHeaders = {
 // identifiables comme telles. Domaine @urosi.internal reserve
 // exclusivement aux comptes de test — les RPC founder_mark_test_account /
 // founder_provision_test_structure refusent d'agir sur tout autre domaine
-// (voir migration 20260724180000_founder_test_account_provisioning_rpcs.sql).
+// (voir migration 20260724180012_founder_test_account_provisioning_rpcs.sql).
 const FAKE_SIRET = "12345678900015"; // format valide (Luhn), aucune entreprise reelle
 
 const TEST_ACCOUNT_TEMPLATES = {

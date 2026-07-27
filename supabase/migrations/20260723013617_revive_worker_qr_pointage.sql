@@ -2,7 +2,7 @@
 -- temporaire (mission_qr_tokens / create_mission_qr_token / confirm_attendance_qr,
 -- deja construits en 0015 mais jamais branches a l'UI), et la STRUCTURE qui
 -- scanne puis confirme. Remplace l'ancien flux ou la structure affichait un
--- QR + PIN fixe par mission (20260716120000_mission_qr_dynamic_pin.sql), qui
+-- QR + PIN fixe par mission (20260716114000_mission_qr_dynamic_pin.sql), qui
 -- reste en base uniquement comme secours d'identite (voir plus bas).
 --
 -- Secours explicitement prevu si la structure ne peut pas etre reconnue
