@@ -240,6 +240,7 @@ Deno.serve(async (req) => {
     const mode: Mode = body?.mode === "create" ? "create" : body?.mode === "delete" ? "delete" : "switch";
     const accountId = typeof body?.account_id === "string" ? body.account_id : undefined;
     const pairedStructureId = typeof body?.paired_structure_id === "string" ? body.paired_structure_id : undefined;
+    const isSolidaireMission = body?.is_solidaire === true;
 
     if (as !== "worker" && as !== "structure") {
       return json({ error: "Paramètre 'as' invalide : 'worker' ou 'structure' attendu." }, 400);
@@ -325,6 +326,7 @@ Deno.serve(async (req) => {
       if (testStructure?.id) {
         const { error: missionError } = await callerClient.rpc("founder_provision_test_mission", {
           p_structure_id: testStructure.id,
+          p_is_solidaire: isSolidaireMission,
         });
         if (missionError) throw new Error(missionError.message);
       }
