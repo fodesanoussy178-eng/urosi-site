@@ -19,6 +19,7 @@ import { useEffect, useRef, useState } from 'react';
 import { T, FONT, inp } from '@/components/ui/theme';
 import { supabase } from '@/lib/supabase';
 import { describeError } from '@/lib/errors';
+import { isFounderTestAccountViewer } from '@/features/auth/authService';
 import type { WorkerAccess } from './useWorkerAccess';
 
 export function UnlockPaidMissions({ access, onClose }: { access: WorkerAccess; onClose: () => void }) {
@@ -26,6 +27,31 @@ export function UnlockPaidMissions({ access, onClose }: { access: WorkerAccess; 
   const [feedback, setFeedback] = useState<{ kind: 'pending' | 'error' | 'ok'; message: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const siretInputRef = useRef<HTMLInputElement>(null);
+
+  // Reserve aux comptes de test Fondateur : verifie is_founder_test_account
+  // du profil connecte (cote serveur, jamais un indicateur local) — permet
+  // de passer l'etape SIRET/Stripe reelle, impossible a simuler legitimement
+  // pour un compte fictif.
+  const [testAccountBypass, setTestAccountBypass] = useState(false);
+  const [bypassBusy, setBypassBusy] = useState(false);
+  const [bypassError, setBypassError] = useState<string | null>(null);
+  useEffect(() => {
+    isFounderTestAccountViewer().then(setTestAccountBypass).catch(() => setTestAccountBypass(false));
+  }, []);
+
+  async function bypassUnlock() {
+    setBypassBusy(true);
+    setBypassError(null);
+    try {
+      const { error } = await supabase.rpc('founder_bypass_worker_unlock');
+      if (error) throw error;
+      await access.refresh();
+    } catch (cause) {
+      setBypassError(describeError(cause, 'le passage de cette étape'));
+    } finally {
+      setBypassBusy(false);
+    }
+  }
 
   // Micro-animation au moment precis du deblocage (transition false -> true
   // de canApplyToPaid), jamais rejouee si l'ecran est simplement rouvert sur
@@ -185,6 +211,19 @@ export function UnlockPaidMissions({ access, onClose }: { access: WorkerAccess; 
             >
               Continuer avec les missions solidaires
             </button>
+            {testAccountBypass && (
+              <button
+                type="button"
+                onClick={() => void bypassUnlock()}
+                disabled={bypassBusy}
+                style={{ width: '100%', background: 'none', color: T.cyan, border: `1px dashed ${T.cb}`, borderRadius: 10, padding: '10px 0', fontSize: 11.5, fontWeight: 800, cursor: bypassBusy ? 'not-allowed' : 'pointer', opacity: bypassBusy ? 0.5 : 1 }}
+              >
+                {bypassBusy ? '…' : '🧪 Passer cette étape (compte de test Fondateur)'}
+              </button>
+            )}
+            {bypassError && (
+              <p role="status" style={{ margin: 0, fontSize: 11.5, lineHeight: 1.5, color: T.red }}>{bypassError}</p>
+            )}
           </div>
         )}
 
