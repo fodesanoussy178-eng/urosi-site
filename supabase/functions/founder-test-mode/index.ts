@@ -273,7 +273,13 @@ Deno.serve(async (req) => {
     // founder_mark_test_account et founder_provision_test_structure sans
     // repiocher (les trois doivent decrire le meme compte).
     const chosenWorkerName = as === "worker" ? pickRandom(WORKER_NAME_POOL) : "";
-    const chosenStructure: StructureTemplate | null = as === "structure" ? pickRandom(STRUCTURE_TEMPLATES) : null;
+    // Une mission solidaire ne peut appartenir qu'a une structure association
+    // (trg_solidaire_association_only, cf. missions) : ne piocher que parmi
+    // les templates association dans ce cas, jamais un template quelconque.
+    const eligibleStructureTemplates = isSolidaireMission
+      ? STRUCTURE_TEMPLATES.filter((t) => t.official.p_is_association)
+      : STRUCTURE_TEMPLATES;
+    const chosenStructure: StructureTemplate | null = as === "structure" ? pickRandom(eligibleStructureTemplates) : null;
 
     const testUserId =
       mode === "create"
