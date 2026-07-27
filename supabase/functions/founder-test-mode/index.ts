@@ -115,22 +115,23 @@ async function createNewTestUser(
 }
 
 // Bascule vers un compte de test deja cree : verifie qu'il existe bien et
-// correspond au role demande avant d'agir dessus.
+// correspond au role demande avant d'agir dessus. Passe par la RPC
+// founder_resolve_test_account (session du fondateur), le meme chemin deja
+// utilise avec succes par founder_test_accounts_list — plutot qu'une
+// requete PostgREST brute via la cle service_role, qui echouait en
+// production sans raison identifiee.
 async function resolveExistingTestUserId(
-  adminClient: ReturnType<typeof createClient>,
+  callerClient: ReturnType<typeof createClient>,
   as: Role,
   accountId: string,
 ): Promise<string> {
-  const role = as === "structure" ? "structure_admin" : "worker";
-  const { data, error } = await adminClient
-    .from("profiles")
-    .select("id")
-    .eq("id", accountId)
-    .eq("is_founder_test_account", true)
-    .eq("role", role)
-    .maybeSingle();
-  if (error || !data) throw new Error("Compte de test introuvable.");
-  return data.id as string;
+  const { data, error } = await callerClient.rpc("founder_resolve_test_account", {
+    p_account_id: accountId,
+    p_as: as,
+  });
+  if (error) throw new Error(`Compte de test introuvable (erreur technique : ${error.message}).`);
+  if (!data) throw new Error("Compte de test introuvable.");
+  return data as string;
 }
 
 Deno.serve(async (req) => {
@@ -182,7 +183,7 @@ Deno.serve(async (req) => {
     const testUserId =
       mode === "create"
         ? await createNewTestUser(adminClient, as as Role)
-        : await resolveExistingTestUserId(adminClient, as as Role, accountId!);
+        : await resolveExistingTestUserId(callerClient, as as Role, accountId!);
 
     const { error: markError } = await callerClient.rpc("founder_mark_test_account", {
       p_user_id: testUserId,

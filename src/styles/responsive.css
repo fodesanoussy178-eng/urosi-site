@@ -67,28 +67,6 @@
     overflow-y: auto;
   }
 
-  /* Centre Fondateur : barre latérale fixe + zone principale large. */
-  .rsp-founder-main {
-    max-width: 1240px !important;
-    display: grid;
-    grid-template-columns: 220px minmax(0, 1fr);
-    column-gap: 24px;
-    align-items: start;
-  }
-  .rsp-founder-main > header {
-    grid-column: 1 / -1;
-  }
-  .rsp-founder-nav {
-    flex-direction: column !important;
-    overflow-x: visible !important;
-    position: sticky;
-    top: 20px;
-  }
-  .rsp-founder-nav > button {
-    width: 100%;
-    text-align: left;
-  }
-
   /* Espace Structure : vraie barre laterale desktop (pas une vue mobile
      simplement etiree) — actif en permanence a ce breakpoint, sans dependre
      d'un bascule manuel comme le format de la demo. */
