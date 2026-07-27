@@ -142,17 +142,13 @@ function TestAccountsSwitcher() {
   const [renameError, setRenameError] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [pairStructureId, setPairStructureId] = useState('');
   const [missionType, setMissionType] = useState<'paid' | 'solidaire'>('paid');
+  const [provisionNow, setProvisionNow] = useState(true);
 
   const load = useCallback(async () => {
     try {
-      const next = await listFounderTestAccounts();
-      setData(next);
+      setData(await listFounderTestAccounts());
       setLoadError(null);
-      setPairStructureId((current) =>
-        current && next.structures.some((s) => s.structure_id === current) ? current : (next.structures[0]?.structure_id ?? ''),
-      );
     } catch (e) {
       setLoadError(describeError(e, 'la liste des comptes de test'));
     }
@@ -168,10 +164,8 @@ function TestAccountsSwitcher() {
     setSwitchError(null);
     try {
       const options =
-        mode === 'create'
-          ? as === 'worker'
-            ? { pairedStructureId: pairStructureId }
-            : { isSolidaire: missionType === 'solidaire' }
+        mode === 'create' && as === 'structure'
+          ? { isSolidaire: missionType === 'solidaire', provisionNow }
           : undefined;
       await enterFounderTestMode(as, mode, accountId, options);
       navigate('/app', { replace: true });
@@ -229,7 +223,6 @@ function TestAccountsSwitcher() {
     ['worker', '👷 Travailleurs de test', data?.workers],
     ['structure', '🏢 Structures de test', data?.structures],
   ];
-  const hasStructures = (data?.structures.length ?? 0) > 0;
 
   return (
     <div style={{ marginBottom: 18 }}>
@@ -237,47 +230,43 @@ function TestAccountsSwitcher() {
       <div className="rsp-cols-2-lg" style={{ display: 'grid', gap: 10, marginBottom: 8 }}>
         {roles.map(([role, label, accounts]) => {
           const createKey = `create-${role}`;
-          const canCreateWorker = role !== 'worker' || hasStructures;
           return (
             <div key={role} style={founderCard}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 8 }}>
                 <strong style={{ fontSize: 12 }}>{label}</strong>
                 <button
                   type="button"
-                  disabled={busyKey !== null || !canCreateWorker}
-                  title={canCreateWorker ? undefined : 'Crée d\'abord une structure de test'}
+                  disabled={busyKey !== null}
                   onClick={() => go(role, 'create', undefined, createKey)}
-                  style={{ ...founderButton, opacity: (busyKey && busyKey !== createKey) || !canCreateWorker ? 0.5 : 1, flexShrink: 0 }}
+                  style={{ ...founderButton, opacity: busyKey && busyKey !== createKey ? 0.5 : 1, flexShrink: 0 }}
                 >
                   {busyKey === createKey ? '…' : '+ Nouveau'}
                 </button>
               </div>
-              {role === 'worker' && hasStructures && (
-                <select
-                  value={pairStructureId}
-                  onChange={(e) => setPairStructureId(e.target.value)}
-                  style={{ ...founderInput, padding: '6px 9px', fontSize: 10.5, marginBottom: 8 }}
-                >
-                  {(data?.structures ?? []).map((s) => (
-                    <option key={s.structure_id} value={s.structure_id}>
-                      Rattacher à : {s.structure_name}
-                    </option>
-                  ))}
-                </select>
-              )}
-              {role === 'worker' && !hasStructures && (
-                <div style={{ fontSize: 10.5, color: T.mu, marginBottom: 8 }}>Crée d'abord une structure de test.</div>
-              )}
               {role === 'structure' && (
-                <div style={{ display: 'flex', gap: 10, marginBottom: 8, fontSize: 10.5, color: T.sub }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
-                    <input type="radio" name="mission-type" checked={missionType === 'paid'} onChange={() => setMissionType('paid')} />
-                    Mission rémunérée
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
-                    <input type="radio" name="mission-type" checked={missionType === 'solidaire'} onChange={() => setMissionType('solidaire')} />
-                    Mission solidaire
-                  </label>
+                <div style={{ marginBottom: 8, fontSize: 10.5, color: T.sub }}>
+                  <div style={{ display: 'flex', gap: 10, marginBottom: 6 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+                      <input type="radio" name="provision-mode" checked={provisionNow} onChange={() => setProvisionNow(true)} />
+                      Structure déjà vérifiée
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+                      <input type="radio" name="provision-mode" checked={!provisionNow} onChange={() => setProvisionNow(false)} />
+                      Structure à vérifier (parcours réel)
+                    </label>
+                  </div>
+                  {provisionNow && (
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+                        <input type="radio" name="mission-type" checked={missionType === 'paid'} onChange={() => setMissionType('paid')} />
+                        Mission rémunérée
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+                        <input type="radio" name="mission-type" checked={missionType === 'solidaire'} onChange={() => setMissionType('solidaire')} />
+                        Mission solidaire
+                      </label>
+                    </div>
+                  )}
                 </div>
               )}
               {accounts && accounts.length === 0 && (
@@ -345,7 +334,6 @@ function TestAccountsSwitcher() {
                       </div>
                       <div style={{ fontSize: 9, color: T.mu, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {founderDate(acc.created_at)}
-                        {role === 'worker' && acc.paired_structure_name ? ` · 🏢 ${acc.paired_structure_name}` : ''}
                       </div>
                     </button>
                     <button

@@ -239,17 +239,20 @@ Deno.serve(async (req) => {
     const as = body?.as;
     const mode: Mode = body?.mode === "create" ? "create" : body?.mode === "delete" ? "delete" : "switch";
     const accountId = typeof body?.account_id === "string" ? body.account_id : undefined;
-    const pairedStructureId = typeof body?.paired_structure_id === "string" ? body.paired_structure_id : undefined;
     const isSolidaireMission = body?.is_solidaire === true;
+    // Par defaut, une nouvelle structure de test est immediatement
+    // provisionnee/verifiee (acces instantane). provision_now=false laisse
+    // le profil sans structure : l'appli reelle affiche alors le vrai
+    // formulaire d'inscription (nom + SIRET), avec le bouton de bypass
+    // reserve aux comptes de test (StructureApp.tsx) — sinon inaccessible,
+    // puisqu'une structure auto-provisionnee est deja verifiee des la creation.
+    const provisionNow = body?.provision_now !== false;
 
     if (as !== "worker" && as !== "structure") {
       return json({ error: "Paramètre 'as' invalide : 'worker' ou 'structure' attendu." }, 400);
     }
     if ((mode === "switch" || mode === "delete") && !accountId) {
       return json({ error: "account_id requis pour cette opération." }, 400);
-    }
-    if (mode === "create" && as === "worker" && !pairedStructureId) {
-      return json({ error: "Choisis d'abord une structure de test à laquelle rattacher ce travailleur." }, 400);
     }
 
     if (mode === "delete") {
@@ -308,15 +311,16 @@ Deno.serve(async (req) => {
         p_user_id: testUserId,
         p_full_name: as === "structure" ? STRUCTURE_OWNER_FULL_NAME : chosenWorkerName,
         ...ownerProfile,
-        ...(as === "worker" ? { p_paired_test_structure_id: pairedStructureId } : {}),
       });
       if (markError) throw new Error(markError.message);
     }
 
-    if (as === "structure") {
+    if (as === "structure" && (mode !== "create" || provisionNow)) {
       // Idempotent des deux cotes (founder_provision_test_structure comme
       // founder_provision_test_mission renvoient l'existant sans ecraser) :
-      // sans risque de repasser ici aussi en mode 'switch'.
+      // sans risque de repasser ici aussi en mode 'switch'. En mode 'create'
+      // avec provision_now=false, on saute completement ce bloc : le profil
+      // reste sans structure, pour atterrir sur le vrai formulaire.
       const struct = chosenStructure!;
       const { data: testStructure, error: structureError } = await callerClient.rpc("founder_provision_test_structure", {
         p_owner_id: testUserId,

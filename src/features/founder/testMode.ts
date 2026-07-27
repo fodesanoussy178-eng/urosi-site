@@ -29,8 +29,6 @@ export interface FounderTestAccountSummary {
   created_at: string;
   structure_id?: string;
   structure_name?: string;
-  paired_structure_id?: string;
-  paired_structure_name?: string;
 }
 
 export interface FounderTestAccountsList {
@@ -76,10 +74,15 @@ async function stashCurrentSession(): Promise<void> {
 }
 
 export interface FounderTestCreateOptions {
-  /** Requis pour créer un worker : la structure de test à laquelle ce worker est rattaché, seule dont il verra les missions. */
-  pairedStructureId?: string;
-  /** Uniquement pour créer une structure : type de la mission auto-créée (par défaut rémunérée). */
+  /** Uniquement pour créer une structure : type de la mission auto-créée (par défaut rémunérée). Ignoré si provisionNow=false. */
   isSolidaire?: boolean;
+  /**
+   * Uniquement pour créer une structure (par défaut true) : si false, la
+   * structure n'est PAS auto-provisionnée/vérifiée — le compte atterrit sur
+   * le vrai formulaire d'inscription (nom + SIRET) de l'appli réelle, avec
+   * son bouton de bypass réservé aux comptes de test.
+   */
+  provisionNow?: boolean;
 }
 
 async function invokeTestMode(
@@ -93,8 +96,8 @@ async function invokeTestMode(
       as,
       mode,
       account_id: accountId,
-      paired_structure_id: options?.pairedStructureId,
       is_solidaire: options?.isSolidaire,
+      provision_now: options?.provisionNow,
     },
   });
   if (error) {
