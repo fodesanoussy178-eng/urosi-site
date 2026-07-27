@@ -6,17 +6,16 @@ const corsHeaders = {
 };
 
 // Comptes de test dedies, jamais de vrais utilisateurs : le mode Fondateur
-// n'usurpe QUE ces deux identites, creees/reutilisees ici a la demande.
-// Toutes les valeurs sont fictives et clairement identifiables comme telles.
-// Domaine @urosi.internal reserve exclusivement aux comptes de test — les
-// RPC founder_mark_test_account / founder_provision_test_structure
-// refusent d'agir sur tout autre domaine (voir migration
-// 20260724180012_founder_test_account_provisioning_rpcs.sql).
+// n'usurpe QUE des comptes de ce domaine, crees a la demande (un ou
+// plusieurs par role). Toutes les valeurs sont fictives et clairement
+// identifiables comme telles. Domaine @urosi.internal reserve
+// exclusivement aux comptes de test — les RPC founder_mark_test_account /
+// founder_provision_test_structure refusent d'agir sur tout autre domaine
+// (voir migration 20260724180012_founder_test_account_provisioning_rpcs.sql).
 const FAKE_SIRET = "12345678900015"; // format valide (Luhn), aucune entreprise reelle
 
-const TEST_ACCOUNTS = {
+const TEST_ACCOUNT_TEMPLATES = {
   worker: {
-    email: "founder-test-worker@urosi.internal",
     fullName: "Camille Testeur",
     profile: {
       p_city: "Lille",
@@ -26,7 +25,6 @@ const TEST_ACCOUNTS = {
     },
   },
   structure: {
-    email: "founder-test-structure@urosi.internal",
     fullName: "Fondateur Test (compte structure)",
     structureName: "Bistrot Fictif Test SARL",
     profile: {
@@ -57,6 +55,7 @@ const TEST_ACCOUNTS = {
 } as const;
 
 type Role = "worker" | "structure";
+type Mode = "create" | "switch";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -70,10 +69,8 @@ function isAlreadyRegisteredError(message: string | undefined): boolean {
 }
 
 // Retrouve un utilisateur auth existant par email. Repli utilise uniquement
-// quand createUser echoue avec "deja enregistre" mais que le flag
-// is_founder_test_account n'a, pour une raison quelconque (echec partiel
-// d'un appel precedent, appels concurrents), jamais ete pose — pour ne
-// JAMAIS retenter une creation en boucle sur le meme email.
+// quand createUser echoue avec "deja enregistre" (collision improbable sur
+// le suffixe aleatoire) pour ne jamais retenter une creation en boucle.
 async function findAuthUserByEmail(
   adminClient: ReturnType<typeof createClient>,
   email: string,
@@ -89,36 +86,51 @@ async function findAuthUserByEmail(
   return undefined;
 }
 
-async function ensureTestUserId(
+// Cree TOUJOURS un nouveau compte de test (email suffixe aleatoire) : le
+// Fondateur peut ainsi avoir plusieurs profils/structures de test au lieu
+// d'un seul figé.
+async function createNewTestUser(
   adminClient: ReturnType<typeof createClient>,
   as: Role,
 ): Promise<string> {
-  const target = TEST_ACCOUNTS[as];
+  const template = TEST_ACCOUNT_TEMPLATES[as];
   const role = as === "structure" ? "structure_admin" : "worker";
-
-  const { data: existing } = await adminClient
-    .from("profiles")
-    .select("id")
-    .eq("is_founder_test_account", true)
-    .eq("role", role)
-    .maybeSingle();
-  if (existing?.id) return existing.id as string;
+  const suffix = crypto.randomUUID().replace(/-/g, "").slice(0, 8);
+  const email = `founder-test-${as}-${suffix}@urosi.internal`;
 
   const { data: created, error: createError } = await adminClient.auth.admin.createUser({
-    email: target.email,
+    email,
     password: crypto.randomUUID(),
     email_confirm: true,
-    user_metadata: { full_name: target.fullName, role },
+    user_metadata: { full_name: template.fullName, role },
   });
-
   if (created?.user) return created.user.id;
 
   if (isAlreadyRegisteredError(createError?.message)) {
-    const recoveredId = await findAuthUserByEmail(adminClient, target.email);
+    const recoveredId = await findAuthUserByEmail(adminClient, email);
     if (recoveredId) return recoveredId;
   }
 
   throw new Error(createError?.message || "Création du compte de test impossible.");
+}
+
+// Bascule vers un compte de test deja cree : verifie qu'il existe bien et
+// correspond au role demande avant d'agir dessus.
+async function resolveExistingTestUserId(
+  adminClient: ReturnType<typeof createClient>,
+  as: Role,
+  accountId: string,
+): Promise<string> {
+  const role = as === "structure" ? "structure_admin" : "worker";
+  const { data, error } = await adminClient
+    .from("profiles")
+    .select("id")
+    .eq("id", accountId)
+    .eq("is_founder_test_account", true)
+    .eq("role", role)
+    .maybeSingle();
+  if (error || !data) throw new Error("Compte de test introuvable.");
+  return data.id as string;
 }
 
 Deno.serve(async (req) => {
@@ -139,7 +151,7 @@ Deno.serve(async (req) => {
     // is_founder() n'a de sens que pour une vraie session utilisateur.
     const callerClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } });
     // adminClient (service_role) sert UNIQUEMENT a ce que seule l'API admin
-    // peut faire : creer un compte auth et generer un lien de bascule.
+    // peut faire : creer/retrouver un compte auth et generer un lien de bascule.
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     // verify_jwt est desactive au niveau de la passerelle pour cette fonction :
@@ -156,27 +168,36 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const as = body?.as;
+    const mode: Mode = body?.mode === "create" ? "create" : "switch";
+    const accountId = typeof body?.account_id === "string" ? body.account_id : undefined;
+
     if (as !== "worker" && as !== "structure") {
       return json({ error: "Paramètre 'as' invalide : 'worker' ou 'structure' attendu." }, 400);
     }
+    if (mode === "switch" && !accountId) {
+      return json({ error: "account_id requis pour basculer vers un compte existant." }, 400);
+    }
 
-    const target = TEST_ACCOUNTS[as as Role];
-    const testUserId = await ensureTestUserId(adminClient, as);
+    const template = TEST_ACCOUNT_TEMPLATES[as as Role];
+    const testUserId =
+      mode === "create"
+        ? await createNewTestUser(adminClient, as as Role)
+        : await resolveExistingTestUserId(adminClient, as as Role, accountId!);
 
     const { error: markError } = await callerClient.rpc("founder_mark_test_account", {
       p_user_id: testUserId,
-      p_full_name: target.fullName,
-      ...target.profile,
+      p_full_name: template.fullName,
+      ...template.profile,
     });
     if (markError) throw new Error(markError.message);
 
     if (as === "structure") {
       const { data: testStructure, error: structureError } = await callerClient.rpc("founder_provision_test_structure", {
         p_owner_id: testUserId,
-        p_name: TEST_ACCOUNTS.structure.structureName,
+        p_name: TEST_ACCOUNT_TEMPLATES.structure.structureName,
         p_siret: FAKE_SIRET,
         p_about: "Structure fictive dédiée aux tests internes Fondateur. Jamais une vraie entreprise.",
-        ...TEST_ACCOUNTS.structure.official,
+        ...TEST_ACCOUNT_TEMPLATES.structure.official,
       });
       if (structureError) throw new Error(structureError.message);
 
@@ -190,9 +211,14 @@ Deno.serve(async (req) => {
       }
     }
 
+    const { data: userRecord, error: userError } = await adminClient.auth.admin.getUserById(testUserId);
+    if (userError || !userRecord?.user?.email) {
+      throw new Error(userError?.message || "Compte de test introuvable côté authentification.");
+    }
+
     const { data: link, error: linkError } = await adminClient.auth.admin.generateLink({
       type: "magiclink",
-      email: target.email,
+      email: userRecord.user.email,
     });
     if (linkError || !link) throw new Error(linkError?.message || "Génération du lien de bascule impossible.");
 
