@@ -29,6 +29,8 @@ export interface FounderTestAccountSummary {
   created_at: string;
   structure_id?: string;
   structure_name?: string;
+  paired_structure_id?: string;
+  paired_structure_name?: string;
 }
 
 export interface FounderTestAccountsList {
@@ -73,9 +75,14 @@ async function stashCurrentSession(): Promise<void> {
   sessionStorage.setItem(STASH_KEY, JSON.stringify(stash));
 }
 
-async function invokeTestMode(as: 'worker' | 'structure', mode: FounderTestMode, accountId?: string): Promise<string> {
+async function invokeTestMode(
+  as: 'worker' | 'structure',
+  mode: FounderTestMode,
+  accountId?: string,
+  pairedStructureId?: string,
+): Promise<string> {
   const { data, error } = await supabase.functions.invoke<TestModeResponse>('founder-test-mode', {
-    body: { as, mode, account_id: accountId },
+    body: { as, mode, account_id: accountId, paired_structure_id: pairedStructureId },
   });
   if (error) {
     let message = error.message;
@@ -98,21 +105,46 @@ async function invokeTestMode(as: 'worker' | 'structure', mode: FounderTestMode,
  * Passe la session active sur un compte de test worker/structure.
  * mode='create' en crée toujours un nouveau ; mode='switch' (défaut) bascule
  * vers un compte de test existant (accountId requis dans ce cas).
+ * pairedStructureId : requis pour créer un worker (as='worker', mode='create')
+ * — la structure de test à laquelle ce worker est rattaché, seule dont il
+ * verra les missions.
  */
 export async function enterFounderTestMode(
   as: 'worker' | 'structure',
   mode: FounderTestMode = 'switch',
   accountId?: string,
+  pairedStructureId?: string,
 ): Promise<void> {
   await stashCurrentSession();
   try {
-    const tokenHash = await invokeTestMode(as, mode, accountId);
+    const tokenHash = await invokeTestMode(as, mode, accountId, pairedStructureId);
     const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'magiclink' });
     if (error) throw error;
   } catch (e) {
     sessionStorage.removeItem(STASH_KEY);
     throw e;
   }
+}
+
+/** Supprime définitivement un compte de test (worker ou structure) et tout ce qui en dépend. */
+export async function deleteFounderTestAccount(as: 'worker' | 'structure', accountId: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke<TestModeResponse>('founder-test-mode', {
+    body: { as, mode: 'delete', account_id: accountId },
+  });
+  if (error) {
+    let message = error.message;
+    const context = (error as { context?: Response }).context;
+    if (context && typeof context.json === 'function') {
+      try {
+        const body = await context.json();
+        if (body?.error) message = body.error;
+      } catch {
+        // garde le message par défaut si le corps n'est pas du JSON exploitable
+      }
+    }
+    throw new Error(message);
+  }
+  if (data?.error) throw new Error(data.error);
 }
 
 /** Restaure la session Fondateur mise de côté avant la bascule. */

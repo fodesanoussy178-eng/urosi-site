@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { T } from '@/components/ui/theme';
 import { founderAdminApi, type AccountHistory, type FounderAccounts } from '../founderAdminService';
 import { founderButton, founderCard, founderDate, founderInput, founderNotice } from '../founderUi';
@@ -28,9 +28,32 @@ export function FounderAccountsPanel() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
 
+  // Micro-animation sur le badge "débloquées" quand un rechargement detecte
+  // qu'un worker vient de passer a paid_eligible depuis le chargement
+  // precedent (jamais sur le tout premier chargement : pas de reference).
+  const prevPaidStatusRef = useRef<Map<string, WorkerPaidStatus> | null>(null);
+  const [justUnlockedIds, setJustUnlockedIds] = useState<Set<string>>(new Set());
+
   const load = useCallback(async () => {
     setError('');
-    try { setData(await founderAdminApi.accounts(search)); }
+    try {
+      const next = await founderAdminApi.accounts(search);
+      const prevMap = prevPaidStatusRef.current;
+      if (prevMap) {
+        const newlyUnlocked = new Set<string>();
+        for (const row of next.profiles) {
+          if (row.role === 'worker' && row.paid_status === 'paid_eligible' && prevMap.get(row.id) && prevMap.get(row.id) !== 'paid_eligible') {
+            newlyUnlocked.add(row.id);
+          }
+        }
+        if (newlyUnlocked.size > 0) {
+          setJustUnlockedIds(newlyUnlocked);
+          setTimeout(() => setJustUnlockedIds(new Set()), 1600);
+        }
+      }
+      prevPaidStatusRef.current = new Map(next.profiles.filter((r) => r.role === 'worker').map((r) => [r.id, r.paid_status]));
+      setData(next);
+    }
     catch (reason) { setError(describeError(reason, 'le chargement des comptes')); }
   }, [search]);
 
@@ -71,7 +94,21 @@ export function FounderAccountsPanel() {
                 <div style={{ color: row.account_status === 'active' ? T.green : T.red, fontSize: 10, marginTop: 4 }}>{row.account_status}</div>
                 {row.role === 'worker' && (
                   <div style={{ color: T.mu, fontSize: 10, marginTop: 4 }}>
-                    Missions rémunérées : <span style={{ color: paidStatusColor(row.paid_status, T), fontWeight: 800 }}>{paidStatusLabel(row.paid_status)}</span>
+                    Missions rémunérées :{' '}
+                    {justUnlockedIds.has(row.id) && (
+                      <style>{'@keyframes urosiFounderUnlockPop { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.3); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }'}</style>
+                    )}
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        color: paidStatusColor(row.paid_status, T),
+                        fontWeight: 800,
+                        animation: justUnlockedIds.has(row.id) ? 'urosiFounderUnlockPop .5s cubic-bezier(.34,1.56,.64,1)' : undefined,
+                      }}
+                    >
+                      {justUnlockedIds.has(row.id) ? '✓ ' : ''}
+                      {paidStatusLabel(row.paid_status)}
+                    </span>
                     {row.siret && <> · SIRET {row.siret}{row.siret_verified_at ? ' (vérifié)' : ' (en attente)'}</>}
                     {row.stripe_requirements_pending && !row.stripe_payouts_enabled && <> · régression Stripe</>}
                   </div>

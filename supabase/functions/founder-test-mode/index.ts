@@ -123,7 +123,7 @@ function pickRandom<T>(pool: readonly T[]): T {
 }
 
 type Role = "worker" | "structure";
-type Mode = "create" | "switch";
+type Mode = "create" | "switch" | "delete";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -237,14 +237,35 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const as = body?.as;
-    const mode: Mode = body?.mode === "create" ? "create" : "switch";
+    const mode: Mode = body?.mode === "create" ? "create" : body?.mode === "delete" ? "delete" : "switch";
     const accountId = typeof body?.account_id === "string" ? body.account_id : undefined;
+    const pairedStructureId = typeof body?.paired_structure_id === "string" ? body.paired_structure_id : undefined;
 
     if (as !== "worker" && as !== "structure") {
       return json({ error: "Paramètre 'as' invalide : 'worker' ou 'structure' attendu." }, 400);
     }
-    if (mode === "switch" && !accountId) {
-      return json({ error: "account_id requis pour basculer vers un compte existant." }, 400);
+    if ((mode === "switch" || mode === "delete") && !accountId) {
+      return json({ error: "account_id requis pour cette opération." }, 400);
+    }
+    if (mode === "create" && as === "worker" && !pairedStructureId) {
+      return json({ error: "Choisis d'abord une structure de test à laquelle rattacher ce travailleur." }, 400);
+    }
+
+    if (mode === "delete") {
+      // Verifie d'abord que le compte existe et est bien un compte de test
+      // (meme garde-fou que la bascule), puis supprime le profil (cascade
+      // structure/missions/etc.) et enfin le compte auth — dans cet ordre,
+      // pour ne jamais laisser un profil de test orphelin si l'un des deux
+      // echoue.
+      const resolvedId = await resolveExistingTestUserId(callerClient, as as Role, accountId!);
+      const { error: deleteProfileError } = await callerClient.rpc("founder_delete_test_account", {
+        p_account_id: resolvedId,
+        p_as: as,
+      });
+      if (deleteProfileError) throw new Error(deleteProfileError.message);
+      const { error: deleteAuthError } = await adminClient.auth.admin.deleteUser(resolvedId);
+      if (deleteAuthError) throw new Error(deleteAuthError.message);
+      return json({ ok: true });
     }
 
     // Choix pioche UNE fois, avant creation : reutilise pour user_metadata,
@@ -280,6 +301,7 @@ Deno.serve(async (req) => {
         p_user_id: testUserId,
         p_full_name: as === "structure" ? STRUCTURE_OWNER_FULL_NAME : chosenWorkerName,
         ...ownerProfile,
+        ...(as === "worker" ? { p_paired_test_structure_id: pairedStructureId } : {}),
       });
       if (markError) throw new Error(markError.message);
     }

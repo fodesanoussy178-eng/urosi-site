@@ -74,6 +74,21 @@ export async function hasFounderAccess(): Promise<boolean> {
   return Boolean(data);
 }
 
+// Distinct de hasFounderAccess() : reste vrai en mode test Fondateur (le
+// compte impersonné a is_founder_test_account=true) alors que
+// has_founder_access() renvoie false une fois la session basculée sur le
+// faux compte (ce n'est plus le jeton réel du fondateur). Sert à afficher
+// des raccourcis de test (ex. passer la vérification SIRET) uniquement sur
+// des comptes qui ne peuvent jamais être de vrais utilisateurs.
+export async function isFounderTestAccountViewer(): Promise<boolean> {
+  const { data: userData } = await supabase.auth.getUser();
+  const userId = userData.user?.id;
+  if (!userId) return false;
+  const { data, error } = await supabase.from('profiles').select('is_founder_test_account').eq('id', userId).maybeSingle();
+  if (error) return false;
+  return Boolean(data?.is_founder_test_account);
+}
+
 // Envoie l'email de reinitialisation. L'URL /reinitialisation doit etre dans
 // la liste des Redirect URLs du projet Supabase (cf. SETUP.md).
 export async function requestPasswordReset(email: string) {

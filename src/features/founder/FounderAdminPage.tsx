@@ -6,6 +6,7 @@ import { FONT, T } from '@/components/ui/theme';
 import { SectionErrorBoundary } from '@/components/ui/SectionErrorBoundary';
 import { founderButton, founderCard, founderDate, founderInput } from './founderUi';
 import {
+  deleteFounderTestAccount,
   enterFounderTestMode,
   listFounderTestAccounts,
   renameFounderTestAccount,
@@ -139,11 +140,18 @@ function TestAccountsSwitcher() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [renameError, setRenameError] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [pairStructureId, setPairStructureId] = useState('');
 
   const load = useCallback(async () => {
     try {
-      setData(await listFounderTestAccounts());
+      const next = await listFounderTestAccounts();
+      setData(next);
       setLoadError(null);
+      setPairStructureId((current) =>
+        current && next.structures.some((s) => s.structure_id === current) ? current : (next.structures[0]?.structure_id ?? ''),
+      );
     } catch (e) {
       setLoadError(describeError(e, 'la liste des comptes de test'));
     }
@@ -158,7 +166,7 @@ function TestAccountsSwitcher() {
     setBusyKey(key);
     setSwitchError(null);
     try {
-      await enterFounderTestMode(as, mode, accountId);
+      await enterFounderTestMode(as, mode, accountId, as === 'worker' && mode === 'create' ? pairStructureId : undefined);
       navigate('/app', { replace: true });
     } catch (e) {
       setSwitchError(describeError(e, 'la bascule vers ce mode de test'));
@@ -168,6 +176,7 @@ function TestAccountsSwitcher() {
 
   function startEdit(acc: FounderTestAccountSummary) {
     setRenameError(null);
+    setConfirmDeleteId(null);
     setEditingId(acc.id);
     setEditValue(acc.structure_name ?? acc.full_name);
   }
@@ -195,10 +204,25 @@ function TestAccountsSwitcher() {
     }
   }
 
+  async function confirmDelete(as: 'worker' | 'structure', accountId: string) {
+    setBusyKey(`delete-${accountId}`);
+    setDeleteError(null);
+    try {
+      await deleteFounderTestAccount(as, accountId);
+      setConfirmDeleteId(null);
+      await load();
+    } catch (e) {
+      setDeleteError(describeError(e, 'la suppression de ce compte'));
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
   const roles: Array<['worker' | 'structure', string, FounderTestAccountSummary[] | undefined]> = [
     ['worker', '👷 Travailleurs de test', data?.workers],
     ['structure', '🏢 Structures de test', data?.structures],
   ];
+  const hasStructures = (data?.structures.length ?? 0) > 0;
 
   return (
     <div style={{ marginBottom: 18 }}>
@@ -206,51 +230,90 @@ function TestAccountsSwitcher() {
       <div className="rsp-cols-2-lg" style={{ display: 'grid', gap: 10, marginBottom: 8 }}>
         {roles.map(([role, label, accounts]) => {
           const createKey = `create-${role}`;
+          const canCreateWorker = role !== 'worker' || hasStructures;
           return (
             <div key={role} style={founderCard}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 8 }}>
                 <strong style={{ fontSize: 12 }}>{label}</strong>
                 <button
                   type="button"
-                  disabled={busyKey !== null}
+                  disabled={busyKey !== null || !canCreateWorker}
+                  title={canCreateWorker ? undefined : 'Crée d\'abord une structure de test'}
                   onClick={() => go(role, 'create', undefined, createKey)}
-                  style={{ ...founderButton, opacity: busyKey && busyKey !== createKey ? 0.5 : 1 }}
+                  style={{ ...founderButton, opacity: (busyKey && busyKey !== createKey) || !canCreateWorker ? 0.5 : 1, flexShrink: 0 }}
                 >
                   {busyKey === createKey ? '…' : '+ Nouveau'}
                 </button>
               </div>
+              {role === 'worker' && hasStructures && (
+                <select
+                  value={pairStructureId}
+                  onChange={(e) => setPairStructureId(e.target.value)}
+                  style={{ ...founderInput, padding: '6px 9px', fontSize: 10.5, marginBottom: 8 }}
+                >
+                  {(data?.structures ?? []).map((s) => (
+                    <option key={s.structure_id} value={s.structure_id}>
+                      Rattacher à : {s.structure_name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {role === 'worker' && !hasStructures && (
+                <div style={{ fontSize: 10.5, color: T.mu, marginBottom: 8 }}>Crée d'abord une structure de test.</div>
+              )}
               {accounts && accounts.length === 0 && (
                 <div style={{ fontSize: 11, color: T.mu }}>Aucun compte de test pour l'instant.</div>
               )}
-              {(accounts ?? []).map((acc) =>
-                editingId === acc.id ? (
-                  <div key={acc.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 0', borderTop: `1px solid ${T.cb}` }}>
-                    <input
-                      autoFocus
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') void saveEdit(role);
-                        if (e.key === 'Escape') cancelEdit();
-                      }}
-                      style={{ ...founderInput, padding: '6px 9px', fontSize: 11 }}
-                    />
-                    <button
-                      type="button"
-                      disabled={busyKey !== null || !editValue.trim()}
-                      onClick={() => void saveEdit(role)}
-                      style={{ ...founderButton, flexShrink: 0, opacity: !editValue.trim() ? 0.5 : 1 }}
-                    >
-                      {busyKey === `rename-${acc.id}` ? '…' : '✓'}
-                    </button>
-                    <button type="button" onClick={cancelEdit} style={{ ...founderButton, flexShrink: 0 }}>
-                      ✕
-                    </button>
-                  </div>
-                ) : (
+              {(accounts ?? []).map((acc) => {
+                if (editingId === acc.id) {
+                  return (
+                    <div key={acc.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 0', borderTop: `1px solid ${T.cb}` }}>
+                      <input
+                        autoFocus
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') void saveEdit(role);
+                          if (e.key === 'Escape') cancelEdit();
+                        }}
+                        style={{ ...founderInput, padding: '6px 9px', fontSize: 11 }}
+                      />
+                      <button
+                        type="button"
+                        disabled={busyKey !== null || !editValue.trim()}
+                        onClick={() => void saveEdit(role)}
+                        style={{ ...founderButton, flexShrink: 0, opacity: !editValue.trim() ? 0.5 : 1 }}
+                      >
+                        {busyKey === `rename-${acc.id}` ? '…' : '✓'}
+                      </button>
+                      <button type="button" onClick={cancelEdit} style={{ ...founderButton, flexShrink: 0 }}>
+                        ✕
+                      </button>
+                    </div>
+                  );
+                }
+                if (confirmDeleteId === acc.id) {
+                  return (
+                    <div key={acc.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 0', borderTop: `1px solid ${T.cb}` }}>
+                      <div style={{ flex: 1, fontSize: 10.5, color: T.red, fontWeight: 700 }}>Supprimer définitivement ?</div>
+                      <button
+                        type="button"
+                        disabled={busyKey !== null}
+                        onClick={() => void confirmDelete(role, acc.id)}
+                        style={{ ...founderButton, flexShrink: 0, background: T.redBg, color: T.red, borderColor: T.redBorder }}
+                      >
+                        {busyKey === `delete-${acc.id}` ? '…' : 'Confirmer'}
+                      </button>
+                      <button type="button" onClick={() => setConfirmDeleteId(null)} style={{ ...founderButton, flexShrink: 0 }}>
+                        ✕
+                      </button>
+                    </div>
+                  );
+                }
+                return (
                   <div
                     key={acc.id}
-                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '7px 0', borderTop: `1px solid ${T.cb}` }}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6, padding: '7px 0', borderTop: `1px solid ${T.cb}` }}
                   >
                     <button
                       type="button"
@@ -261,7 +324,10 @@ function TestAccountsSwitcher() {
                       <div style={{ fontSize: 11.5, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {acc.structure_name ?? acc.full_name} <span style={{ color: T.mu, fontWeight: 400 }}>✎</span>
                       </div>
-                      <div style={{ fontSize: 9, color: T.mu }}>{founderDate(acc.created_at)}</div>
+                      <div style={{ fontSize: 9, color: T.mu, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {founderDate(acc.created_at)}
+                        {role === 'worker' && acc.paired_structure_name ? ` · 🏢 ${acc.paired_structure_name}` : ''}
+                      </div>
                     </button>
                     <button
                       type="button"
@@ -271,23 +337,41 @@ function TestAccountsSwitcher() {
                     >
                       {busyKey === acc.id ? '…' : 'Tester'}
                     </button>
+                    <button
+                      type="button"
+                      disabled={busyKey !== null}
+                      onClick={() => {
+                        setDeleteError(null);
+                        setConfirmDeleteId(acc.id);
+                      }}
+                      title="Supprimer"
+                      style={{ ...founderButton, flexShrink: 0, padding: '8px 9px' }}
+                    >
+                      🗑
+                    </button>
                   </div>
-                ),
-              )}
+                );
+              })}
             </div>
           );
         })}
       </div>
       {switchError && (
-        <div style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, borderRadius: 12, padding: 12, marginBottom: renameError ? 8 : 0 }}>
+        <div style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, borderRadius: 12, padding: 12, marginBottom: renameError || deleteError ? 8 : 0 }}>
           <div style={{ color: T.red, fontSize: 12, fontWeight: 900, marginBottom: 3 }}>⚠ La bascule a échoué</div>
           <div style={{ color: T.sub, fontSize: 11, lineHeight: 1.5 }}>{switchError} Tu es toujours dans le Centre Fondateur — rien n'a changé.</div>
         </div>
       )}
       {renameError && (
-        <div style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, borderRadius: 12, padding: 12 }}>
+        <div style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, borderRadius: 12, padding: 12, marginBottom: deleteError ? 8 : 0 }}>
           <div style={{ color: T.red, fontSize: 12, fontWeight: 900, marginBottom: 3 }}>⚠ Le renommage a échoué</div>
           <div style={{ color: T.sub, fontSize: 11, lineHeight: 1.5 }}>{renameError}</div>
+        </div>
+      )}
+      {deleteError && (
+        <div style={{ background: T.redBg, border: `1px solid ${T.redBorder}`, borderRadius: 12, padding: 12 }}>
+          <div style={{ color: T.red, fontSize: 12, fontWeight: 900, marginBottom: 3 }}>⚠ La suppression a échoué</div>
+          <div style={{ color: T.sub, fontSize: 11, lineHeight: 1.5 }}>{deleteError}</div>
         </div>
       )}
     </div>
