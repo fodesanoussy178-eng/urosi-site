@@ -43,6 +43,20 @@ export async function listFounderTestAccounts(): Promise<FounderTestAccountsList
   return (data as unknown as FounderTestAccountsList) ?? { workers: [], structures: [] };
 }
 
+/**
+ * Renomme un compte de test existant. Pour un worker, modifie son
+ * full_name ; pour une structure, modifie le nom de la structure (l'identité
+ * réellement affichée/testée pour ce rôle).
+ */
+export async function renameFounderTestAccount(as: 'worker' | 'structure', accountId: string, name: string): Promise<void> {
+  const { error } = await supabase.rpc('founder_rename_test_account', {
+    p_account_id: accountId,
+    p_as: as,
+    p_name: name,
+  });
+  if (error) throw new Error(error.message);
+}
+
 export function hasStashedFounderSession(): boolean {
   try {
     return sessionStorage.getItem(STASH_KEY) !== null;
