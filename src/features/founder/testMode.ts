@@ -75,14 +75,27 @@ async function stashCurrentSession(): Promise<void> {
   sessionStorage.setItem(STASH_KEY, JSON.stringify(stash));
 }
 
+export interface FounderTestCreateOptions {
+  /** Requis pour créer un worker : la structure de test à laquelle ce worker est rattaché, seule dont il verra les missions. */
+  pairedStructureId?: string;
+  /** Uniquement pour créer une structure : type de la mission auto-créée (par défaut rémunérée). */
+  isSolidaire?: boolean;
+}
+
 async function invokeTestMode(
   as: 'worker' | 'structure',
   mode: FounderTestMode,
   accountId?: string,
-  pairedStructureId?: string,
+  options?: FounderTestCreateOptions,
 ): Promise<string> {
   const { data, error } = await supabase.functions.invoke<TestModeResponse>('founder-test-mode', {
-    body: { as, mode, account_id: accountId, paired_structure_id: pairedStructureId },
+    body: {
+      as,
+      mode,
+      account_id: accountId,
+      paired_structure_id: options?.pairedStructureId,
+      is_solidaire: options?.isSolidaire,
+    },
   });
   if (error) {
     let message = error.message;
@@ -105,19 +118,17 @@ async function invokeTestMode(
  * Passe la session active sur un compte de test worker/structure.
  * mode='create' en crée toujours un nouveau ; mode='switch' (défaut) bascule
  * vers un compte de test existant (accountId requis dans ce cas).
- * pairedStructureId : requis pour créer un worker (as='worker', mode='create')
- * — la structure de test à laquelle ce worker est rattaché, seule dont il
- * verra les missions.
+ * options : uniquement utilisées en mode='create' (voir FounderTestCreateOptions).
  */
 export async function enterFounderTestMode(
   as: 'worker' | 'structure',
   mode: FounderTestMode = 'switch',
   accountId?: string,
-  pairedStructureId?: string,
+  options?: FounderTestCreateOptions,
 ): Promise<void> {
   await stashCurrentSession();
   try {
-    const tokenHash = await invokeTestMode(as, mode, accountId, pairedStructureId);
+    const tokenHash = await invokeTestMode(as, mode, accountId, options);
     const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'magiclink' });
     if (error) throw error;
   } catch (e) {

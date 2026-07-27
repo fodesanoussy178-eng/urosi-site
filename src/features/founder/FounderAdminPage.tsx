@@ -143,6 +143,7 @@ function TestAccountsSwitcher() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [pairStructureId, setPairStructureId] = useState('');
+  const [missionType, setMissionType] = useState<'paid' | 'solidaire'>('paid');
 
   const load = useCallback(async () => {
     try {
@@ -166,7 +167,13 @@ function TestAccountsSwitcher() {
     setBusyKey(key);
     setSwitchError(null);
     try {
-      await enterFounderTestMode(as, mode, accountId, as === 'worker' && mode === 'create' ? pairStructureId : undefined);
+      const options =
+        mode === 'create'
+          ? as === 'worker'
+            ? { pairedStructureId: pairStructureId }
+            : { isSolidaire: missionType === 'solidaire' }
+          : undefined;
+      await enterFounderTestMode(as, mode, accountId, options);
       navigate('/app', { replace: true });
     } catch (e) {
       setSwitchError(describeError(e, 'la bascule vers ce mode de test'));
@@ -260,6 +267,18 @@ function TestAccountsSwitcher() {
               )}
               {role === 'worker' && !hasStructures && (
                 <div style={{ fontSize: 10.5, color: T.mu, marginBottom: 8 }}>Crée d'abord une structure de test.</div>
+              )}
+              {role === 'structure' && (
+                <div style={{ display: 'flex', gap: 10, marginBottom: 8, fontSize: 10.5, color: T.sub }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+                    <input type="radio" name="mission-type" checked={missionType === 'paid'} onChange={() => setMissionType('paid')} />
+                    Mission rémunérée
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+                    <input type="radio" name="mission-type" checked={missionType === 'solidaire'} onChange={() => setMissionType('solidaire')} />
+                    Mission solidaire
+                  </label>
+                </div>
               )}
               {accounts && accounts.length === 0 && (
                 <div style={{ fontSize: 11, color: T.mu }}>Aucun compte de test pour l'instant.</div>
