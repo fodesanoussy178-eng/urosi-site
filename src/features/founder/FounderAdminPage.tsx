@@ -65,7 +65,7 @@ export function FounderAdminPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: T.bg, color: T.text, fontFamily: FONT, padding: '20px 14px 40px' }}>
-      <main className="rsp-founder-main" style={{ maxWidth: 900, margin: '0 auto' }}>
+      <main style={{ maxWidth: 900, margin: '0 auto' }}>
         <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
           <div>
             <div style={{ color: T.cyan, fontSize: 10, fontWeight: 900, letterSpacing: 1.3 }}>UROSI · ADMINISTRATION</div>
