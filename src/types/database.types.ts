@@ -1297,6 +1297,34 @@ export interface Database {
           },
         ];
       };
+      mandat_acceptances: {
+        Row: {
+          id: string;
+          user_id: string;
+          role: ProfileRole;
+          version: string;
+          accepted_at: string;
+          revoked_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          role: ProfileRole;
+          version: string;
+          accepted_at?: string;
+          revoked_at?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['mandat_acceptances']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'mandat_acceptances_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
     };
     Views: {
       reliability_index: {
@@ -1579,6 +1607,26 @@ export interface Database {
       is_french_holiday: {
         Args: { p_date: string };
         Returns: boolean;
+      };
+      has_active_mandat: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
+      revoke_own_mandat: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
+      founder_mandat_acceptances: {
+        Args: { p_limit?: number };
+        Returns: Array<{
+          user_id: string;
+          full_name: string;
+          role: ProfileRole;
+          version: string;
+          accepted_at: string;
+          revoked_at: string | null;
+          is_test: boolean;
+        }>;
       };
     };
   };

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { fetchProfile, type Profile } from '@/features/profile/profileService';
+import { fetchHasActiveMandat } from '@/features/auth/mandatService';
 import { describeError } from '@/lib/errors';
 
 interface AuthContextValue {
@@ -15,7 +16,13 @@ interface AuthContextValue {
   // Message métier prêt à afficher si la dernière tentative de chargement du
   // profil a échoué (le détail technique part toujours en console).
   profileError: string | null;
+  // null tant que la verification n'a pas abouti (au chargement, ou apres une
+  // erreur reseau) : distinct de false, qui signifie explicitement « pas de
+  // mandat actif » et doit mener a l'ecran d'acceptation.
+  mandatAccepted: boolean | null;
+  mandatError: string | null;
   refreshProfile: () => Promise<void>;
+  refreshMandat: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -47,6 +54,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [profileMissing, setProfileMissing] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [mandatAccepted, setMandatAccepted] = useState<boolean | null>(null);
+  const [mandatError, setMandatError] = useState<string | null>(null);
+
+  async function loadMandat() {
+    setMandatError(null);
+    try {
+      const accepted = await withTimeout(fetchHasActiveMandat(), PROFILE_LOAD_TIMEOUT_MS);
+      setMandatAccepted(accepted);
+    } catch (e) {
+      setMandatAccepted(null);
+      setMandatError(describeError(e, 'la vérification du mandat'));
+    }
+  }
 
   async function loadProfile(userId: string) {
     setProfileMissing(false);
@@ -93,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: sessionData } = await supabase.auth.getSession();
     setSession(sessionData.session ?? null);
-    if (sessionData.session) await loadProfile(userId);
+    if (sessionData.session) await Promise.all([loadProfile(userId), loadMandat()]);
   }
 
   useEffect(() => {
@@ -110,12 +130,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // requete lancee ici se bloque (deadlock connu). setTimeout la fait
         // partir apres la liberation du verrou.
         setTimeout(() => {
-          if (active) loadProfile(nextSession.user.id);
+          if (!active) return;
+          loadProfile(nextSession.user.id);
+          loadMandat();
         }, 0);
       } else {
         setProfile(null);
         setProfileMissing(false);
         setProfileError(null);
+        setMandatAccepted(null);
+        setMandatError(null);
       }
     });
 
@@ -129,16 +153,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (session) await loadProfile(session.user.id);
   }
 
+  async function refreshMandat() {
+    if (session) await loadMandat();
+  }
+
   async function signOut() {
     await supabase.auth.signOut().catch((e) => console.error('AuthContext: échec de la déconnexion', e));
     setSession(null);
     setProfile(null);
     setProfileMissing(false);
     setProfileError(null);
+    setMandatAccepted(null);
+    setMandatError(null);
   }
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading, profileMissing, profileError, refreshProfile, signOut }}>
+    <AuthContext.Provider
+      value={{
+        session,
+        profile,
+        loading,
+        profileMissing,
+        profileError,
+        mandatAccepted,
+        mandatError,
+        refreshProfile,
+        refreshMandat,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

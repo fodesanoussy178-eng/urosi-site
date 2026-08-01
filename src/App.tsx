@@ -14,6 +14,7 @@ const EntryPage = lazy(() => import('@/app/EntryPage').then((m) => ({ default: m
 const DemoExperience = lazy(() => import('@/app/DemoExperience').then((m) => ({ default: m.DemoExperience })));
 const SignInPage = lazy(() => import('@/features/auth/SignInPage').then((m) => ({ default: m.SignInPage })));
 const WorkerSignupPage = lazy(() => import('@/features/auth/WorkerSignupPage').then((m) => ({ default: m.WorkerSignupPage })));
+const MandatAcceptancePage = lazy(() => import('@/features/auth/MandatAcceptancePage').then((m) => ({ default: m.MandatAcceptancePage })));
 const StructureSignupPage = lazy(() => import('@/features/auth/StructureSignupPage').then((m) => ({ default: m.StructureSignupPage })));
 const ResetPasswordPage = lazy(() => import('@/features/auth/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })));
 const WorkerApp = lazy(() => import('@/features/worker/WorkerApp').then((m) => ({ default: m.WorkerApp })));
@@ -96,7 +97,7 @@ function StaticHome() {
 }
 
 function AppShell() {
-  const { session, profile, loading, profileMissing, profileError, refreshProfile, signOut } = useAuth();
+  const { session, profile, loading, profileMissing, profileError, mandatAccepted, mandatError, refreshProfile, refreshMandat, signOut } = useAuth();
   const location = useLocation();
   const nav = useNavigate();
 
@@ -180,28 +181,59 @@ function AppShell() {
 
   const isFounderTest = Boolean(profile.is_founder_test_account);
 
+  // L'ecran d'acceptation du mandat s'intercale entre la verification email
+  // (session + profil charges) et l'acces aux espaces authentifies (/app,
+  // /fondateur). Aucun bypass fondateur : is_founder_test_account n'entre
+  // dans aucune condition ici, un compte de test suit exactement le meme
+  // chemin qu'un compte reel. Les routes utilitaires (pointage, scan,
+  // paiement, reinitialisation…) restent joignables sans mandat, elles ne
+  // donnent pas acces a un espace.
+  const isEspaceRoute = location.pathname === '/app' || location.pathname.startsWith('/fondateur');
+
+  let content: ReactNode;
+  if (isEspaceRoute && mandatError) {
+    content = (
+      <Centered text={mandatError}>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button style={actionButtonStyle(true)} onClick={() => void refreshMandat()}>
+            Réessayer
+          </button>
+          <button style={actionButtonStyle(false)} onClick={() => void signOut()}>
+            Se déconnecter
+          </button>
+        </div>
+      </Centered>
+    );
+  } else if (isEspaceRoute && mandatAccepted === null) {
+    content = <Centered text="Vérification du mandat…" />;
+  } else if (isEspaceRoute && mandatAccepted === false) {
+    content = <MandatAcceptancePage />;
+  } else {
+    content = (
+      <Routes>
+        <Route path="/" element={<StaticHome />} />
+        <Route path="/demo" element={<DemoExperience />} />
+        <Route path="/connexion" element={<SignInPage />} />
+        <Route path="/app" element={profile.role === 'structure_admin' ? <StructureApp /> : <WorkerApp />} />
+        <Route path="/fondateur" element={<FounderAdminPage />} />
+        <Route path="/fondateur/kyc" element={<Navigate to="/fondateur?section=kyc" replace />} />
+        <Route path="/reinitialisation" element={<ResetPasswordPage />} />
+        <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
+        <Route path="/scan/:token" element={<ScanPage />} />
+        <Route path="/paiement/succes" element={<PaymentResultPage outcome="success" />} />
+        <Route path="/paiement/annule" element={<PaymentResultPage outcome="cancel" />} />
+        <Route path="/valider" element={<WorkerAttendancePage />} />
+        <Route path="/valider/:qrCode" element={<WorkerAttendancePage />} />
+        <Route path="/validation" element={<ValidatorApp />} />
+        <Route path="*" element={<Navigate to="/app" replace />} />
+      </Routes>
+    );
+  }
+
   return (
     <>
       {isFounderTest && <FounderTestBanner />}
-      <div style={{ paddingTop: isFounderTest ? 'calc(30px + env(safe-area-inset-top))' : 0 }}>
-        <Routes>
-          <Route path="/" element={<StaticHome />} />
-          <Route path="/demo" element={<DemoExperience />} />
-          <Route path="/connexion" element={<SignInPage />} />
-          <Route path="/app" element={profile.role === 'structure_admin' ? <StructureApp /> : <WorkerApp />} />
-          <Route path="/fondateur" element={<FounderAdminPage />} />
-          <Route path="/fondateur/kyc" element={<Navigate to="/fondateur?section=kyc" replace />} />
-          <Route path="/reinitialisation" element={<ResetPasswordPage />} />
-          <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
-          <Route path="/scan/:token" element={<ScanPage />} />
-          <Route path="/paiement/succes" element={<PaymentResultPage outcome="success" />} />
-          <Route path="/paiement/annule" element={<PaymentResultPage outcome="cancel" />} />
-          <Route path="/valider" element={<WorkerAttendancePage />} />
-          <Route path="/valider/:qrCode" element={<WorkerAttendancePage />} />
-          <Route path="/validation" element={<ValidatorApp />} />
-          <Route path="*" element={<Navigate to="/app" replace />} />
-        </Routes>
-      </div>
+      <div style={{ paddingTop: isFounderTest ? 'calc(30px + env(safe-area-inset-top))' : 0 }}>{content}</div>
     </>
   );
 }
