@@ -1,0 +1,15 @@
+-- APPLIQUEE EN PRODUCTION le 2026-08-01. Staging n'en a pas besoin : ce
+-- projet accorde deja tous les privileges de table a `authenticated` par
+-- defaut, contrairement a prod.
+--
+-- Le create table de 20260801175646_mandat_acceptances.sql n'accordait les
+-- privileges qu'au proprietaire (postgres) : sans GRANT explicite a
+-- `authenticated`, PostgREST echoue avec "permission denied for table
+-- mandat_acceptances" avant meme d'evaluer les policies RLS — c'est ce qui
+-- bloquait l'ecran d'acceptation en prod. Meme convention que
+-- public.profiles (grant select, update ... to authenticated).
+--
+-- N'elargit rien par rapport a ce que mandat_insert_own / mandat_select_own
+-- autorisaient deja : la RLS reste la seule limite reelle sur les lignes
+-- visibles/inserables.
+grant select, insert on public.mandat_acceptances to authenticated;

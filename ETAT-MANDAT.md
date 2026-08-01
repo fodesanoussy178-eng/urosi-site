@@ -8,6 +8,7 @@ pour que le depot reflete l'etat reel, pas pour etre rejoues tels quels.
 | `20260801175646_mandat_acceptances.sql` | appliquee | deja presente |
 | `20260801182406_has_active_mandat.sql` | appliquee | appliquee |
 | `20260801190000_mandat_enforcement_policies.PENDING.sql` | **retiree** | appliquee |
+| `20260801194500_mandat_acceptances_authenticated_grant.sql` | appliquee | non necessaire |
 
 Renomme le troisieme fichier en retirant `.PENDING` le jour ou tu l'appliques
 en prod.
@@ -23,6 +24,16 @@ en prod.
    du gate, un compte de test suit exactement le meme chemin qu'un compte
    reel. La table est toujours vide en prod comme en staging tant que
    personne n'est passe par l'ecran.
+
+   En la testant, l'acceptation echouait en prod avec un message technique
+   generique : `20260801175646_mandat_acceptances.sql` cree la table sans
+   `grant ... to authenticated`, donc PostgREST refusait l'insert
+   (`permission denied for table`) avant meme d'evaluer la policy RLS —
+   la meme convention que `profiles` (qui a bien son grant explicite) avait
+   ete oubliee ici. Staging n'etait pas touche : ce projet accorde deja tous
+   les privileges de table a `authenticated` par defaut. Corrige par
+   `20260801194500_mandat_acceptances_authenticated_grant.sql`, appliquee en
+   prod uniquement.
 
 2. **Le role est `structure_admin`**, pas `structure`. La contrainte CHECK et
    la policy le verifient toutes les deux : un composant qui envoie
