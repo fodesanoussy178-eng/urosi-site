@@ -89,7 +89,16 @@
       .call { border: 1px solid var(--cb); border-radius: 8px; padding: 16px 18px; margin: 18px 0; }
       .call p { margin-bottom: 0; font-size: 15px; }
       .call.key { background: var(--cyan-soft); border-color: rgba(8,145,178,.28); }
+      .call.ok { background: var(--green-bg); border-color: rgba(95,146,113,.3); }
+      .call.warn { background: var(--amber-bg); border-color: rgba(185,131,24,.3); }
       .call.plain { background: rgba(255,255,255,.7); }
+
+      /* ── Tableaux ── */
+      .tbl { background: rgba(255,255,255,.7); border: 1px solid var(--cb); border-radius: 8px; overflow: hidden; margin: 18px 0; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { text-align: left; padding: 12px 16px; font-size: 14.5px; color: var(--text); vertical-align: top; }
+      th { background: var(--row); font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .07em; color: var(--sub); }
+      tbody tr { border-top: 1px solid var(--cb); }
 
       footer { border-top: 1px solid var(--cb); padding: 30px 0 44px; text-align: center; font-size: 12px; color: var(--mu); line-height: 1.9; }
       footer a { color: var(--sub); font-weight: 700; }
@@ -106,6 +115,7 @@
         .doc-lede { font-size: 16.5px; }
         .art h2 { font-size: 22px; }
         .art p, .art li { font-size: 15px; }
+        th, td { padding: 10px 11px; font-size: 13.5px; }
       }
     </style>
   </head>
@@ -125,8 +135,9 @@
     <section class="wrap doc-head">
       <div class="kicker">Document légal</div>
       <h1>Mentions légales</h1>
-      <p class="doc-lede">Identification de l'éditeur du site urosi.fr et de l'application UROSI, conformément à l'article 6 de la loi n° 2004-575 du 21 juin 2004 pour la confiance dans l'économie numérique.</p>
+      <p class="doc-lede">Identification de l'éditeur du site urosi.fr et de l'application UROSI, conformément aux articles 6-III et 19 de la loi n° 2004-575 du 21 juin 2004 pour la confiance dans l'économie numérique.</p>
       <div class="doc-meta">
+        <span class="chip">Version 1.1</span>
         <span class="chip">En vigueur au __/__/2026</span>
       </div>
     </section>
@@ -137,12 +148,13 @@
           <div class="art-n">1</div>
           <h2>Éditeur du site</h2>
         </div>
-        <div class="call key">
-          <p><strong>À compléter avant mise en production :</strong> les champs ci-dessous portent l'identité légale exacte d'UROSI (raison sociale, forme juridique, SIREN/SIRET, siège social, capital social le cas échéant) et ne doivent jamais être remplacés par des valeurs fictives.</p>
+        <div class="call warn">
+          <p><strong>À compléter avant mise en production :</strong> les champs ci-dessous portent l'identité légale exacte d'UROSI (raison sociale, forme juridique, SIREN/SIRET, siège social, capital social le cas échéant) et ne doivent jamais être remplacés par des valeurs fictives. Tant que la SASU n'est pas immatriculée au RCS, aucune mission rémunérée ne peut être publiée ni encaissée (voir <a href="/cgu#a7">CGU, art. 7.3</a>).</p>
         </div>
         <ul>
           <li>Raison sociale : __________</li>
           <li>Forme juridique : __________</li>
+          <li>Capital social : __________</li>
           <li>Siège social : __________</li>
           <li>SIREN / SIRET : __ __ __ __</li>
           <li>Numéro de TVA intracommunautaire : __________</li>
@@ -159,7 +171,7 @@
         <h3>Site et application</h3>
         <p>Le site urosi.fr et l'application UROSI sont hébergés par <strong>Vercel Inc.</strong>, 340 S Lemon Ave #4133, Walnut, CA 91789, États-Unis — <a href="https://vercel.com" target="_blank" rel="noreferrer noopener">vercel.com</a>.</p>
         <h3>Données</h3>
-        <p>Les données de la plateforme (comptes, missions, candidatures, CV vivant) sont hébergées par <strong>Supabase Inc.</strong> sur une infrastructure cloud sécurisée. Le détail des traitements et des durées de conservation figure dans notre <a href="/confidentialite">politique de confidentialité</a>.</p>
+        <p>Les données de la plateforme (comptes, missions, candidatures, CV vivant) sont hébergées par <strong>Supabase Inc.</strong>, sur une infrastructure cloud localisée dans l'Union européenne. Le détail des traitements, des durées de conservation et des éventuels transferts hors UE figure dans notre <a href="/confidentialite">politique de confidentialité</a>.</p>
       </div>
 
       <div class="art" id="paiement">
@@ -167,7 +179,7 @@
           <div class="art-n">3</div>
           <h2>Prestataire de paiement</h2>
         </div>
-        <p>Les paiements sont opérés par un prestataire de services de paiement agréé par l'ACPR ou par une autorité équivalente au sein de l'Union européenne. Son identité est communiquée à l'utilisateur lors de l'activation des paiements (voir <a href="/cgu#a6">CGU, article 6</a>).</p>
+        <p>Les paiements sont opérés par un prestataire de services de paiement agréé par l'ACPR ou par une autorité équivalente au sein de l'Union européenne. Son identité est communiquée à l'utilisateur lors de l'activation des paiements (voir <a href="/cgu#a7">CGU, article 7</a>). UROSI ne détient, ne manipule ni ne conserve aucun fonds : les paiements transitent exclusivement par des comptes cantonnés ouverts auprès de ce prestataire.</p>
       </div>
 
       <div class="art" id="propriete">
@@ -178,9 +190,28 @@
         <p>La structure, les textes, logos, éléments graphiques et l'ensemble des contenus du site urosi.fr et de l'application UROSI sont la propriété exclusive d'UROSI, sauf mention contraire, et sont protégés par le Code de la propriété intellectuelle. Toute reproduction non autorisée est susceptible de constituer une contrefaçon.</p>
       </div>
 
-      <div class="art" id="litiges">
+      <div class="art" id="mediation">
         <div class="art-head">
           <div class="art-n">5</div>
+          <h2>Médiation de la consommation</h2>
+        </div>
+        <p>Conformément aux articles L. 616-1 et R. 616-1 du Code de la consommation, tout utilisateur agissant en qualité de consommateur dispose du droit de recourir gratuitement à un médiateur de la consommation.</p>
+        <div class="call warn">
+          <p><strong>Médiateur à désigner formellement</strong> — nom, adresse et site du médiateur inscrit sur la liste de la Commission d'évaluation et de contrôle de la médiation de la consommation (CECMC) : __________. Cette désignation suppose l'adhésion effective à un service de médiation agréé ; la simple mention dans les CGU ne suffit pas. Elle doit être finalisée avant l'ouverture au paiement réel.</p>
+        </div>
+      </div>
+
+      <div class="art" id="signalement">
+        <div class="art-head">
+          <div class="art-n">6</div>
+          <h2>Signalement de contenu illicite</h2>
+        </div>
+        <p>Conformément à l'article 6-I-5 de la LCEN, tout contenu manifestement illicite présent sur le site ou l'application peut être signalé à <a href="mailto:contact@urosi.fr">contact@urosi.fr</a>. UROSI s'engage à traiter tout signalement dans les meilleurs délais.</p>
+      </div>
+
+      <div class="art" id="litiges">
+        <div class="art-head">
+          <div class="art-n">7</div>
           <h2>Droit applicable</h2>
         </div>
         <p>Les présentes mentions légales sont soumises au droit français. Pour toute question relative aux relations contractuelles entre UROSI, les travailleurs et les structures, se référer aux <a href="/cgu">Conditions Générales d'Utilisation</a>.</p>
