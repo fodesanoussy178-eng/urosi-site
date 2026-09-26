@@ -62,4 +62,34 @@ describe('WorkerSignupPage', () => {
       }),
     );
   });
+
+  it('transmet les centres d’intérêt facultatifs, sans aucun document demandé', async () => {
+    const user = userEvent.setup();
+    vi.mocked(authService.signUp).mockResolvedValue({ session: null } as never);
+    render(
+      <MemoryRouter>
+        <WorkerSignupPage />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByLabelText(/IBAN|pièce d'identité|SIRET/i)).toBeNull();
+    await user.type(screen.getByLabelText('Prénom'), 'Léa');
+    await user.type(screen.getByLabelText('Nom'), 'M');
+    await user.type(screen.getByLabelText('Email'), 'lea@exemple.fr');
+    await user.type(screen.getByLabelText('Mot de passe'), 'secret123');
+    await user.type(screen.getByLabelText('Confirmer le mot de passe'), 'secret123');
+    await user.click(screen.getByRole('button', { name: /Aide alimentaire/ }));
+    await user.click(screen.getByLabelText("J'accepte les conditions d'utilisation"));
+    await user.click(screen.getByRole('button', { name: 'Créer mon compte' }));
+
+    await waitFor(() =>
+      expect(authService.signUp).toHaveBeenCalledWith({
+        email: 'lea@exemple.fr',
+        password: 'secret123',
+        fullName: 'Léa M',
+        role: 'worker',
+        city: undefined,
+        interests: ['aide_alimentaire'],
+      }),
+    );
+  });
 });

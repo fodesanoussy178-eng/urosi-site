@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#f7f5ef" />
-    <meta name="description" content="UROSI — des missions courtes qui construisent ton CV vivant par l'expérience." />
-    <title>UROSI — Le CV par l'expérience</title>
+    <meta name="description" content="UROSI — des missions solidaires près de chez toi, dans la Métropole de Lille. Ton CV grandit avec l'expérience." />
+    <title>UROSI — Missions solidaires près de chez toi</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -16,7 +16,8 @@
       :root {
         --page: #1f2423; --bg: #f8f6ef; --card: #ffffff; --cb: #e2ded4; --row: #f0eee7;
         --text: #1d2a2e; --sub: #637277; --mu: #879397;
-        --cyan: #0891b2; --cyan-soft: #e0f7fb; --green: #5f9271; --green-bg: #e7f4eb;
+        --cyan: #0891b2; --cyan-soft: #e0f7fb; --green: #3f7d55; --green-bg: #e7f4eb;
+        --violet: #6d4fc2; --violet-bg: #efeafc;
         --amber: #b98318; --grad: linear-gradient(135deg, #1d4ed8, #0891b2);
         --luminosity: .45;
       }
@@ -38,15 +39,11 @@
         *, *::before, *::after { animation: none !important; transition: none !important; }
       }
       a { color: inherit; text-decoration: none; }
-      :where(a, button, input, summary):focus-visible {
-        outline: 3px solid rgba(8,145,178,.34); outline-offset: 3px;
-      }
+      :where(a, button, input, summary):focus-visible { outline: 3px solid rgba(8,145,178,.34); outline-offset: 3px; }
       .site-shell {
         position: relative; width: min(1560px, calc(100vw - 48px)); min-height: calc(100vh - 48px); margin: 24px auto;
         overflow: hidden; border: 1px solid rgba(255,255,255,.45); border-radius: 28px;
-        background:
-          linear-gradient(120deg, rgba(255,255,255,.92) 0%, rgba(249,248,243,.9) 45%, rgba(237,247,248,.92) 100%),
-          var(--bg);
+        background: linear-gradient(120deg, rgba(255,255,255,.92) 0%, rgba(249,248,243,.9) 45%, rgba(237,247,248,.92) 100%), var(--bg);
         box-shadow: 0 24px 90px rgba(0,0,0,.18);
       }
       .site-shell::before {
@@ -58,286 +55,122 @@
       .wrap { max-width: 1380px; margin: 0 auto; padding: 0 32px; }
 
       nav { position: sticky; top: 0; z-index: 50; background: rgba(248,246,239,.84); backdrop-filter: blur(18px); border-bottom: 1px solid rgba(226,222,212,.72); }
-      .nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 17px 32px; max-width: 1500px; margin: 0 auto; }
-      .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 13px; color: #a9b0b1; }
-      .brand-dot { width: 26px; height: 26px; border-radius: 8px; background: var(--grad); display: flex; align-items: center; justify-content: center; font-size: 13px; color: #fff; }
+      .nav-inner { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 15px 32px; max-width: 1500px; margin: 0 auto; }
+      .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 18px; color: var(--text); letter-spacing: .3px; }
+      .brand svg { width: 30px; height: 30px; }
+      .brand-phase { font-size: 13px; font-weight: 700; color: var(--sub); border-left: 1px solid var(--cb); padding-left: 10px; margin-left: 2px; }
+      .nav-links { display: flex; gap: 22px; font-size: 13.5px; font-weight: 700; color: var(--sub); }
+      .nav-links a:hover { color: var(--text); }
       .nav-actions { display: flex; align-items: center; gap: 10px; }
-      .btn { display: inline-flex; align-items: center; justify-content: center; border: none; cursor: pointer; font-family: inherit; border-radius: 18px; font-weight: 900; transition: transform .22s ease, box-shadow .22s ease, background .22s ease, border-color .22s ease; text-align: center; min-height: 44px; }
+      .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: none; cursor: pointer; font-family: inherit; border-radius: 14px; font-weight: 900; transition: transform .22s ease, box-shadow .22s ease; text-align: center; min-height: 46px; }
       .btn:hover, .btn:focus-visible { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(29,42,46,.16); }
-      .btn-grad, .btn-dark { background: var(--text); color: #fff; padding: 11px 24px; font-size: 15px; box-shadow: 0 12px 30px rgba(29,42,46,.12); }
-      .btn-white { background: #fff; color: var(--text); border: 1px solid var(--cb); padding: 11px 24px; font-size: 15px; }
-      .btn-ghost { background: rgba(255,255,255,.62); color: var(--text); border: 1px solid var(--cb); padding: 11px 24px; font-size: 15px; font-weight: 900; }
+      .btn-dark { background: var(--text); color: #fff; padding: 12px 24px; font-size: 15px; box-shadow: 0 12px 30px rgba(29,42,46,.12); }
+      .btn-white { background: #fff; color: var(--text); border: 1px solid var(--cb); padding: 12px 24px; font-size: 15px; }
+      .link-demo { color: var(--cyan); font-size: 14px; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; align-self: center; }
 
-      .hero-stage {
-        position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(350px, 440px);
-        gap: 60px; align-items: center; min-height: calc(100vh - 118px); padding-top: 42px; padding-bottom: 42px;
-      }
-      .hero { position: relative; text-align: left; padding: 0; }
-      .hero-blob { display: none; }
-      .hero-kicker { color: #9aa2a4; font-size: 13px; font-weight: 900; margin-bottom: 22px; }
-      .hero h1 { font-size: 82px; font-weight: 900; letter-spacing: 0; line-height: 1.02; margin-bottom: 28px; max-width: 760px; }
+      .hero-stage { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(330px, 420px); gap: 56px; align-items: center; min-height: calc(100vh - 120px); padding-top: 40px; padding-bottom: 48px; }
+      .hero-kicker { color: #8e999c; font-size: 12.5px; font-weight: 900; letter-spacing: .6px; margin-bottom: 20px; text-transform: uppercase; }
+      .hero h1 { font-size: 72px; font-weight: 900; line-height: 1.02; margin-bottom: 26px; max-width: 860px; letter-spacing: -1px; }
       .grad-text { color: var(--cyan); }
-      .hero p { font-size: 23px; color: var(--sub); max-width: 640px; margin: 0 0 32px; line-height: 1.7; }
-      .hero-ctas { display: flex; gap: 14px; justify-content: flex-start; flex-wrap: wrap; }
-      .cta-stack { display: inline-flex; flex-direction: column; align-items: stretch; gap: 6px; }
-      .cta-demo-link { color: var(--cyan); font-size: 11px; font-weight: 900; text-align: center; text-decoration: underline; text-underline-offset: 3px; }
-      .cta-demo-link:hover, .cta-demo-link:focus-visible { color: var(--text); }
-      .hero-note { color: #748084; font-size: 16px; font-weight: 600; margin-top: 32px; }
-      .float-card {
-        position: absolute; z-index: 4; min-width: 150px; border: 1px solid rgba(226,222,212,.78);
-        border-radius: 8px; background: rgba(255,255,255,.88); backdrop-filter: blur(12px);
-        padding: 14px 18px; box-shadow: 0 18px 50px rgba(29,42,46,.12);
-      }
-      .float-card small { display: block; color: var(--mu); font-size: 12px; font-weight: 700; }
-      .float-card strong { display: block; color: var(--text); font-size: 24px; line-height: 1.1; }
-      .float-earned { left: -92px; top: 105px; animation: earned-notification 3.1s .65s both; }
-      .float-profile { left: -92px; right: auto; bottom: 112px; animation: profile-proof .72s 2.15s both; }
-      @keyframes earned-notification {
-        0% { opacity: 0; transform: translateY(14px); }
-        18%, 76% { opacity: 1; transform: translateY(0); }
-        100% { opacity: 0; transform: translateY(-8px); }
-      }
-      @keyframes profile-proof {
-        0% { opacity: 0; transform: translateY(10px) scale(.97); }
-        65% { opacity: 1; transform: translateY(-2px) scale(1.015); }
-        100% { opacity: 1; transform: none; }
-      }
+      .hero p.lead { font-size: 22px; color: var(--sub); max-width: 600px; margin: 0 0 32px; line-height: 1.6; }
+      .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+      .benefits { display: flex; gap: 28px; flex-wrap: wrap; margin-top: 40px; }
+      .benefit { display: flex; align-items: center; gap: 11px; font-size: 14px; font-weight: 700; color: var(--sub); line-height: 1.3; max-width: 170px; }
+      .benefit svg { width: 34px; height: 34px; flex-shrink: 0; color: var(--cyan); }
 
-      /* ── Téléphone démo ── */
-      .phone-zone { position: relative; isolation: isolate; display: flex; flex-direction: column; align-items: center; justify-self: end; padding: 0; }
-      .phone-zone.tour-active { z-index: 2147482999; }
-      .phone-zone::before {
-        content: ''; position: absolute; z-index: -1; width: 125%; aspect-ratio: 1; top: 42%; left: 50%; transform: translate(-50%, -50%);
-        border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(8,145,178,.13), rgba(8,145,178,.045) 43%, transparent 70%);
-      }
-      .phone {
-        width: min(360px, calc(100vw - 72px)); aspect-ratio: 1 / 1.96; border-radius: 36px; position: relative;
-        background: #243236; border: 6px solid #243236;
-        box-shadow: 0 30px 76px rgba(29,42,46,.22), 0 0 0 1px rgba(255,255,255,.55);
-        overflow: hidden;
-      }
-      .phone.live-preview { background: #070814; }
-      .phone.live-preview .phone-notch,
-      .phone.live-preview .demo-badge,
-      .phone.live-preview .screen { display: none; }
-      .phone-live-frame { width: 100%; height: 100%; border: 0; display: block; background: #070814; opacity: 1; transform: translateY(0); transition: opacity .25s ease, transform .25s ease; }
-      .phone-live-frame.is-switching { opacity: 0; transform: translateY(7px); }
-      .phone-open-demo {
-        position: absolute; z-index: 12; top: 10px; right: 10px; width: 44px; height: 44px; border-radius: 50%;
-        display: grid; place-items: center; padding: 0; background: rgba(18,25,27,.78); color: #fff;
-        border: 1px solid rgba(255,255,255,.38); backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px);
-        box-shadow: 0 8px 24px rgba(0,0,0,.22); cursor: pointer; transition: transform .22s ease, background .22s ease;
-      }
-      .phone-open-demo:hover, .phone-open-demo:focus-visible { transform: translateY(-1px); background: rgba(18,25,27,.92); }
-      .phone-open-demo svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
-      .phone-open-demo .icon-reduce { display: none; }
-      .phone-open-demo.is-active .icon-expand { display: none; }
-      .phone-open-demo.is-active .icon-reduce { display: block; }
-      .phone-fullscreen-hint {
-        position: absolute; z-index: 11; top: 16px; right: 62px; padding: 7px 10px; border-radius: 999px;
-        color: #fff; background: rgba(18,25,27,.78); box-shadow: 0 7px 20px rgba(0,0,0,.16);
-        font-size: 10px; font-weight: 900; opacity: 0; transform: translateX(6px); pointer-events: none; transition: opacity .22s ease, transform .22s ease;
-      }
-      .phone-fullscreen-hint.show { opacity: 1; transform: none; }
-      .phone-zone:fullscreen,
-      .phone-zone.demo-fullscreen-fallback {
-        position: fixed; inset: 0; z-index: 2147483646; isolation: isolate;
-        width: 100%; max-width: none; height: 100vh; height: 100dvh;
-        padding: 10px;
-        padding-top: max(10px, env(safe-area-inset-top));
-        padding-right: max(10px, env(safe-area-inset-right));
-        padding-bottom: max(10px, env(safe-area-inset-bottom));
-        padding-left: max(10px, env(safe-area-inset-left));
-        box-sizing: border-box; background: #070814; justify-content: center;
-        overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
-        -webkit-overflow-scrolling: touch;
-      }
-      /* Le fallback est déplacé sous <body> pendant son ouverture. Il ne peut
-         donc plus être limité par overflow, transform, filter, opacity ou le
-         z-index d'un ancêtre de la landing. */
-      .phone-zone.demo-fullscreen-fallback { margin: 0; transform: none; filter: none; opacity: 1; }
-      html.demo-fullscreen-open { overflow: hidden; overscroll-behavior: none; }
-      body.demo-fullscreen-open {
-        position: fixed; top: var(--demo-fullscreen-scroll-top, 0px); left: 0; right: 0;
-        width: 100%; overflow: hidden; overscroll-behavior: none;
-      }
-      /* Aucun backdrop de la landing ne doit recouvrir la démo agrandie. */
-      body.demo-fullscreen-open .demo-overlay,
-      .phone-zone:fullscreen .demo-overlay,
-      .phone-zone.demo-fullscreen-fallback .demo-overlay { display: none !important; }
-      .phone-zone:fullscreen::before,
-      .phone-zone.demo-fullscreen-fallback::before,
-      .phone-zone:fullscreen .float-card,
-      .phone-zone.demo-fullscreen-fallback .float-card { display: none; }
-      .phone-zone:fullscreen .phone,
-      .phone-zone.demo-fullscreen-fallback .phone,
-      .phone-zone:fullscreen .preview-role-switch,
-      .phone-zone.demo-fullscreen-fallback .preview-role-switch { position: relative; z-index: 1; }
-      .phone-zone:fullscreen .phone,
-      .phone-zone.demo-fullscreen-fallback .phone {
-        width: min(430px, calc(100vw - 20px));
-        height: calc(100vh - 78px); height: calc(100dvh - 78px);
-        max-height: 100%; min-height: 0; aspect-ratio: auto;
-      }
-      .phone-zone:fullscreen .phone-open-demo,
-      .phone-zone.demo-fullscreen-fallback .phone-open-demo {
-        position: fixed; z-index: 100; top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right));
-      }
-      .phone-zone:fullscreen .phone-fullscreen-hint,
-      .phone-zone.demo-fullscreen-fallback .phone-fullscreen-hint { display: none; }
-      .phone-zone:fullscreen .preview-role-switch,
-      .phone-zone.demo-fullscreen-fallback .preview-role-switch { margin-top: 8px; }
-      .phone-zone:fullscreen .phone-hint,
-      .phone-zone.demo-fullscreen-fallback .phone-hint { display: none; }
-      @media (max-width: 520px) {
-        .phone-zone:fullscreen,
-        .phone-zone.demo-fullscreen-fallback {
-          justify-content: flex-start; padding: 0;
-          padding-top: env(safe-area-inset-top);
-          padding-right: env(safe-area-inset-right);
-          padding-bottom: env(safe-area-inset-bottom);
-          padding-left: env(safe-area-inset-left);
-        }
-        .phone-zone:fullscreen .phone,
-        .phone-zone.demo-fullscreen-fallback .phone {
-          flex: 1 1 auto; width: 100%; height: 100%; min-height: 0;
-          border: 0; border-radius: 0;
-        }
-        .phone-zone:fullscreen .preview-role-switch,
-        .phone-zone.demo-fullscreen-fallback .preview-role-switch { display: none; }
-      }
-      .preview-role-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: min(330px, calc(100vw - 56px)); margin-top: 14px; }
-      .preview-role {
-        border: 1px solid var(--cb); border-radius: 999px; padding: 9px 13px; background: rgba(255,255,255,.72);
-        color: var(--sub); font: inherit; font-size: 11px; font-weight: 900; cursor: pointer; transition: .2s ease;
-      }
-      .preview-role:hover, .preview-role:focus-visible { border-color: var(--cyan); color: var(--text); }
-      .preview-role.on { background: var(--text); border-color: var(--text); color: #fff; }
-      .phone-notch { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 96px; height: 23px; background: #12191b; border-radius: 14px; z-index: 5; border: 1px solid #2f3d42; }
-      .demo-badge { position: absolute; top: 15px; right: 15px; z-index: 6; font-size: 9px; font-weight: 900; color: var(--text); background: #f6dda1; border-radius: 10px; padding: 3px 9px; }
-      .screen { position: absolute; inset: 0; padding: 58px 18px 70px; overflow-y: auto; opacity: 0; transform: translateX(24px); transition: opacity .38s cubic-bezier(.2,.8,.2,1), transform .38s cubic-bezier(.2,.8,.2,1); pointer-events: none; background: #fbfaf5; color: var(--text); scrollbar-width: none; }
-      .screen::-webkit-scrollbar { display: none; }
-      .screen.on { opacity: 1; transform: none; pointer-events: auto; }
-      .s-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-      .s-title { font-size: 15px; font-weight: 900; }
-      .phone-page-title { font-size: 28px; font-weight: 900; line-height: 1; margin: 18px 0 7px; }
-      .phone-page-sub { color: var(--sub); font-size: 12px; font-weight: 700; margin-bottom: 16px; }
-      .s-back { background: var(--row); border: 1px solid var(--cb); color: var(--sub); border-radius: 8px; font-size: 10px; font-weight: 800; padding: 5px 10px; cursor: pointer; font-family: inherit; }
-      .role-grid { display: grid; gap: 10px; margin-top: 18px; }
-      .role-card { width: 100%; background: var(--card); border: 1px solid var(--cb); color: var(--text); border-radius: 8px; padding: 14px; text-align: left; cursor: pointer; font-family: inherit; transition: transform .2s ease, border-color .2s ease; }
-      .role-card.on { border-color: var(--cyan); box-shadow: 0 0 0 1px rgba(8,145,178,.12); }
-      .role-card:hover, .role-card:focus-visible, .mcard:hover, .p-btn:hover, .dot:hover, .demo-arrow:hover { border-color: var(--cyan); transform: translateY(-1px); }
-      .role-card strong { display: block; font-size: 14px; font-weight: 900; margin-bottom: 3px; }
-      .role-card span { display: block; font-size: 11px; color: var(--sub); }
-      .mcard { background: var(--card); border: 1px solid var(--cb); border-radius: 8px; padding: 15px; margin-bottom: 11px; cursor: pointer; transition: border-color .2s, transform .2s ease; }
-      .m-amount { font-size: 24px; font-weight: 900; letter-spacing: 0; }
-      .m-title { font-size: 13px; font-weight: 800; margin: 3px 0 2px; }
-      .m-org { font-size: 10.5px; font-weight: 700; color: var(--sub); }
-      .stars { color: var(--amber); font-size: 10px; letter-spacing: 0; }
+      .phone-zone { position: relative; justify-self: center; }
+      .phone-zone::before { content: ''; position: absolute; z-index: -1; width: 135%; aspect-ratio: 1; top: 45%; left: 50%; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(8,145,178,.14), rgba(8,145,178,.04) 45%, transparent 70%); }
+      .phone { width: min(340px, calc(100vw - 60px)); border-radius: 40px; background: #fbfaf5; border: 9px solid #1d2a2e; box-shadow: 0 30px 76px rgba(29,42,46,.24); overflow: hidden; position: relative; }
+      .phone-notch { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 92px; height: 22px; background: #1d2a2e; border-radius: 14px; z-index: 3; }
+      .screen { padding: 40px 14px 0; }
+      .s-hello { font-size: 13px; font-weight: 800; color: var(--sub); }
+      .s-title { font-size: 19px; font-weight: 900; line-height: 1.15; margin: 3px 0 10px; }
+      .s-search { display: flex; align-items: center; gap: 7px; background: #fff; border: 1px solid var(--cb); border-radius: 11px; padding: 8px 10px; font-size: 11px; color: var(--mu); }
+      .s-chips { display: flex; gap: 6px; margin: 10px 0; overflow: hidden; }
+      .s-chip { font-size: 10.5px; font-weight: 800; border: 1px solid var(--cb); border-radius: 999px; padding: 5px 10px; white-space: nowrap; color: var(--sub); background: #fff; }
+      .s-chip.on { background: var(--text); color: #fff; border-color: var(--text); }
+      .m-card { background: #fff; border: 1px solid var(--cb); border-radius: 14px; overflow: hidden; margin-bottom: 10px; }
+      .m-visual { position: relative; height: 96px; display: flex; align-items: center; justify-content: center; font-size: 38px; overflow: hidden; }
+      .m-visual::after { content: ''; position: absolute; width: 150px; height: 150px; border-radius: 50%; background: rgba(255,255,255,.14); top: -60px; right: -40px; }
+      .m-dist { position: absolute; left: 8px; bottom: 8px; background: rgba(15,23,42,.72); color: #fff; font-size: 9.5px; font-weight: 800; border-radius: 999px; padding: 3px 8px; }
+      .m-heart { position: absolute; right: 8px; top: 8px; width: 26px; height: 26px; border-radius: 50%; background: #fff; color: #e11d48; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+      .m-body { padding: 9px 11px 11px; }
+      .m-title { font-size: 12.5px; font-weight: 900; }
+      .m-org { font-size: 10.5px; color: var(--sub); font-weight: 700; margin-top: 2px; }
       .m-meta { font-size: 9.5px; color: var(--mu); margin-top: 3px; }
-      .p-btn { width: 100%; border: none; border-radius: 8px; padding: 11px 0; font-size: 12.5px; font-weight: 900; cursor: pointer; font-family: inherit; }
-      .p-white { background: var(--text); color: #fff; }
-      .p-green { background: #16a34a; color: #fff; }
-      .p-row { background: var(--row); border: 1px solid rgba(226,222,212,.65); border-radius: 8px; padding: 10px 12px; font-size: 11px; color: var(--sub); margin-bottom: 7px; }
-      .qr { width: 130px; height: 130px; margin: 12px auto; background:
-        repeating-linear-gradient(0deg, #000 0 6px, transparent 6px 12px),
-        repeating-linear-gradient(90deg, #000 0 6px, #fff 6px 12px);
-        border: 8px solid #fff; border-radius: 8px; }
-      .big-ok { width: 54px; height: 54px; border-radius: 50%; background: var(--green-bg); color: var(--green); display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 16px auto 8px; }
-      .w-balance { font-size: 32px; font-weight: 900; letter-spacing: 0; margin: 4px 0 12px; }
-      .tag { display: inline-block; font-size: 8.5px; font-weight: 800; border-radius: 8px; padding: 2px 7px; }
-      .tag-g { color: var(--green); background: var(--green-bg); }
-      .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin: 12px 0; }
-      .metric { background: var(--row); border: 1px solid var(--cb); border-radius: 8px; padding: 10px 6px; text-align: center; }
-      .metric b { display: block; font-size: 15px; line-height: 1; }
-      .metric span { display: block; color: var(--mu); font-size: 8.5px; margin-top: 4px; }
-      .publish-field { display: grid; gap: 5px; margin-bottom: 9px; }
-      .publish-field label { color: var(--mu); font-size: 8px; font-weight: 900; letter-spacing: 0; text-transform: uppercase; }
-      .publish-field input { width: 100%; background: #fff; border: 1px solid var(--cb); border-radius: 8px; color: var(--text); font: inherit; font-size: 12px; padding: 10px 11px; outline: none; }
-      .publish-field input:focus { border-color: var(--cyan); }
-      .kind-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 9px; }
-      .kind-btn { border: 1px solid var(--cb); border-radius: 8px; background: var(--row); color: var(--sub); font: inherit; font-size: 11px; font-weight: 900; padding: 10px 6px; cursor: pointer; }
-      .kind-btn.on { background: var(--text); color: #fff; border-color: var(--text); }
-      .kind-btn[data-kind="asso"].on { background: #16a34a; color: #fff; border-color: #16a34a; }
-      .chip-row { display: flex; flex-wrap: wrap; gap: 7px; margin: 8px 0 12px; }
-      .chip-btn { border: 1px solid var(--cb); border-radius: 999px; background: var(--row); color: var(--sub); font: inherit; font-size: 10.5px; font-weight: 900; padding: 7px 10px; cursor: pointer; }
-      .chip-btn.on { background: var(--text); color: #fff; border-color: var(--text); }
-      .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 10px; }
-      .step-card { background: var(--row); border: 1px solid var(--cb); border-radius: 8px; padding: 12px; }
-      .step-card small { display: block; color: var(--mu); font-size: 8px; font-weight: 900; letter-spacing: 0; text-transform: uppercase; margin-bottom: 8px; }
-      .step-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-      .round-btn { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--cb); background: #eaf2ff; color: #111827; font: inherit; font-size: 16px; font-weight: 900; cursor: pointer; }
-      .step-value { min-width: 42px; text-align: center; color: var(--text); font-size: 22px; font-weight: 900; letter-spacing: 0; }
-      .duration-row { display: flex; gap: 7px; margin: 8px 0 11px; }
-      .duration-btn { flex: 1; border: 1px solid var(--cb); border-radius: 999px; background: transparent; color: var(--sub); font: inherit; font-size: 11px; font-weight: 900; padding: 9px 0; cursor: pointer; }
-      .duration-btn.on { background: var(--text); color: #fff; border-color: var(--text); }
-      .solid-toggle { width: 100%; border: 1px solid var(--cb); border-radius: 8px; background: var(--row); color: var(--sub); font: inherit; font-size: 11px; font-weight: 900; padding: 12px; cursor: pointer; text-align: left; margin-bottom: 10px; }
-      .solid-toggle.on { color: var(--green); border-color: #b8dcc3; background: var(--green-bg); }
-      .summary-box { background: #f5f1e7; border: 1px solid var(--cb); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
-      .summary-row { display: flex; justify-content: space-between; gap: 10px; color: var(--sub); font-size: 11px; margin-bottom: 6px; }
-      .summary-row strong { color: var(--text); }
-      .summary-total { border-top: 1px solid rgba(29,42,46,.08); padding-top: 8px; margin-top: 8px; color: var(--text); font-size: 13px; font-weight: 900; }
-      .amount-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--row); border: 1px solid var(--cb); border-radius: 8px; padding: 11px 12px; margin-bottom: 10px; }
-      .amount-row b { font-size: 22px; letter-spacing: 0; }
-      .mini-note { font-size: 10.5px; color: var(--sub); line-height: 1.45; }
-      .candidate-card { background: var(--card); border: 1px solid var(--cb); border-radius: 8px; padding: 12px; margin-bottom: 9px; }
-      .candidate-card.accepted { border-color: #8cc29f; }
-      .candidate-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
-      .candidate-actions button { border-radius: 8px; padding: 9px 0; border: 1px solid var(--cb); font: inherit; font-size: 11px; font-weight: 900; cursor: pointer; }
-      .accept-btn { background: var(--green-bg); color: var(--green); border-color: #b8dcc3 !important; }
-      .reject-btn { background: #fff0f0; color: #c24141; border-color: #f1c4c4 !important; }
-      .demo-controls { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 16px; }
-      .demo-arrow { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--cb); background: var(--card); color: var(--text); cursor: pointer; font-size: 16px; line-height: 1; }
-      .dots { display: flex; gap: 6px; justify-content: center; }
-      .dot { width: 8px; height: 8px; border: 0; padding: 0; cursor: pointer; border-radius: 50%; background: var(--cb); transition: background .3s, transform .2s; }
-      .dot.on { background: var(--cyan); }
-      .phone-hint { font-size: 11px; color: var(--mu); margin-top: 12px; text-align: center; }
-      .phone-hint b { color: var(--sub); }
+      .m-tags { display: flex; gap: 5px; margin-top: 6px; }
+      .tag { font-size: 9px; font-weight: 800; border-radius: 999px; padding: 2px 7px; }
+      .tag-green { color: var(--green); background: var(--green-bg); }
+      .tag-cyan { color: var(--cyan); background: var(--cyan-soft); }
+      .tag-violet { color: var(--violet); background: var(--violet-bg); }
+      .s-nav { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--cb); padding: 8px 6px 12px; background: #fbfaf5; }
+      .s-nav span { text-align: center; font-size: 9.5px; font-weight: 800; color: var(--mu); }
+      .s-nav span.on { color: var(--cyan); }
+      .s-nav b { display: block; font-size: 14px; }
+      .float-card { position: absolute; z-index: 4; border: 1px solid rgba(226,222,212,.8); border-radius: 12px; background: rgba(255,255,255,.92); backdrop-filter: blur(12px); padding: 11px 15px; box-shadow: 0 18px 50px rgba(29,42,46,.12); }
+      .float-card small { display: block; color: var(--mu); font-size: 11.5px; font-weight: 700; }
+      .float-card strong { display: block; font-size: 16px; line-height: 1.2; }
+      .float-a { left: -150px; top: 120px; }
+      .float-b { left: -170px; bottom: 150px; }
+      .float-b strong { color: var(--cyan); }
 
-      section { padding: 54px 0; }
-      .sec-title { font-size: 34px; font-weight: 900; letter-spacing: 0; margin-bottom: 8px; text-align: center; }
+      .sec { padding: 70px 0 20px; }
+      .sec-kicker { font-size: 12px; font-weight: 900; color: var(--cyan); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 8px; }
+      .sec-title { font-size: 38px; font-weight: 900; line-height: 1.1; margin-bottom: 26px; max-width: 760px; }
+      .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+      .step { background: rgba(255,255,255,.75); border: 1px solid var(--cb); border-radius: 18px; padding: 20px; }
+      .step-n { width: 32px; height: 32px; border-radius: 50%; background: var(--grad); color: #fff; font-weight: 900; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+      .step h3 { font-size: 17px; font-weight: 900; margin-bottom: 6px; }
+      .step p { font-size: 13.5px; color: var(--sub); }
+      .split { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+      .panel { border-radius: 22px; padding: 30px; }
+      .panel-dark { background: linear-gradient(160deg, #13233a, #0b1424); color: #fff; }
+      .panel-dark p { color: #b7c3d3; }
+      .panel-light { background: rgba(255,255,255,.78); border: 1px solid var(--cb); }
+      .panel h3 { font-size: 24px; font-weight: 900; margin-bottom: 10px; line-height: 1.2; }
+      .panel p { font-size: 14.5px; line-height: 1.6; margin-bottom: 18px; color: var(--sub); }
+      .panel ul { list-style: none; margin-bottom: 20px; display: grid; gap: 8px; font-size: 14px; }
+      .panel li::before { content: '✓ '; color: #22d3ee; font-weight: 900; }
+      .panel-light li::before { color: var(--cyan); }
+      .btn-cyan { background: #22d3ee; color: #062a33; padding: 12px 22px; font-size: 14.5px; }
 
-      details { background: rgba(255,255,255,.7); border: 1px solid var(--cb); border-radius: 8px; margin-bottom: 9px; overflow: hidden; }
-      summary { cursor: pointer; padding: 15px 17px; font-size: 13.5px; font-weight: 800; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+      details { background: rgba(255,255,255,.7); border: 1px solid var(--cb); border-radius: 12px; margin-bottom: 9px; overflow: hidden; }
+      summary { cursor: pointer; padding: 15px 17px; font-size: 14px; font-weight: 800; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
       summary::-webkit-details-marker { display: none; }
-      summary::after { content: '+'; color: var(--cyan); font-size: 17px; font-weight: 900; transition: transform .2s; }
+      summary::after { content: '+'; color: var(--cyan); font-size: 18px; font-weight: 900; transition: transform .2s; }
       details[open] summary::after { transform: rotate(45deg); }
-      details p { padding: 0 17px 15px; font-size: 12.5px; color: var(--sub); }
-
+      details p { padding: 0 17px 15px; font-size: 13px; color: var(--sub); }
       .reveal { opacity: 0; transform: translateY(20px); transition: opacity .6s ease, transform .6s ease; }
       .reveal.in { opacity: 1; transform: none; }
-      footer { border-top: 1px solid var(--cb); padding: 26px 0 40px; text-align: center; font-size: 11px; color: var(--mu); line-height: 1.8; }
+      footer { border-top: 1px solid var(--cb); margin-top: 60px; padding: 26px 0 40px; text-align: center; font-size: 11.5px; color: var(--mu); line-height: 1.8; }
+      footer a { text-decoration: underline; }
 
-      @media (max-width: 1320px) {
-        .float-card { display: none; }
-      }
+      @media (max-width: 1320px) { .float-card { display: none; } }
       @media (max-width: 1120px) {
-        .hero-stage { grid-template-columns: 1fr; min-height: auto; gap: 34px; padding-top: 48px; }
+        .nav-links { display: none; }
+        .hero-stage { grid-template-columns: 1fr; min-height: auto; gap: 40px; padding-top: 44px; }
         .hero { text-align: center; }
-        .hero h1 { max-width: 820px; margin-left: auto; margin-right: auto; font-size: 70px; }
-        .hero p { margin-left: auto; margin-right: auto; }
-        .hero-ctas { justify-content: center; }
-        .hero-note { text-align: center; }
-        .phone-zone { justify-self: center; }
-        .float-earned { left: -160px; top: 98px; }
-        .float-profile { left: -160px; right: auto; bottom: 112px; }
+        .hero h1, .hero p.lead { margin-left: auto; margin-right: auto; }
+        .hero h1 { font-size: 64px; }
+        .hero-ctas, .benefits { justify-content: center; }
+        .steps { grid-template-columns: 1fr 1fr; }
       }
       @media (max-width: 720px) {
         .site-shell { width: 100%; min-height: 100vh; margin: 0; border-radius: 0; border: 0; }
-        .wrap { padding: 0 18px; }
-        .nav-inner { padding: 14px 18px; }
-        .nav-actions { gap: 7px; }
-        .btn { min-height: 40px; border-radius: 14px; }
-        .btn-white, .btn-ghost, .btn-grad, .btn-dark { padding: 9px 14px; font-size: 13px; }
-        .brand { font-size: 12px; }
-        .brand-dot { width: 24px; height: 24px; }
-        .hero-stage { padding-top: 34px; padding-bottom: 42px; }
-        .hero h1 { font-size: clamp(42px, 12vw, 52px); line-height: 1.03; }
-        .hero p { font-size: 17px; line-height: 1.55; }
-        .hero-note { font-size: 13px; }
-        .phone { width: min(342px, calc(100vw - 30px)); border-width: 5px; border-radius: 32px; }
-        .float-card { display: none; }
-        .sec-title { font-size: 27px; }
+        .wrap { padding: 0 16px; }
+        .nav-inner { padding: 12px 16px; }
+        .brand-phase { display: none; }
+        .btn { min-height: 42px; }
+        .btn-dark, .btn-white { padding: 10px 16px; font-size: 14px; }
+        .nav-actions .btn-white { display: none; }
+        .hero h1 { font-size: clamp(40px, 12vw, 52px); }
+        .hero p.lead { font-size: 17px; }
+        .benefits { gap: 16px; }
+        .benefit { font-size: 13px; }
+        .sec { padding-top: 50px; }
+        .sec-title { font-size: 28px; }
+        .steps, .split { grid-template-columns: 1fr; }
+        .panel { padding: 22px; }
       }
     </style>
   </head>
@@ -345,304 +178,165 @@
     <div class="site-shell">
       <nav>
         <div class="nav-inner">
-          <a class="brand" href="/"><span class="brand-dot" aria-hidden="true"></span>UROSI</a>
+          <a class="brand" href="/" aria-label="UROSI, accueil">
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              <defs><linearGradient id="lg" x1="20" y1="5" x2="80" y2="95" gradientUnits="userSpaceOnUse"><stop stop-color="#0891b2" /><stop offset="1" stop-color="#22d3ee" /></linearGradient></defs>
+              <path d="M47 95Q46 74 44 61Q42 49 50 44Q58 49 56 61Q54 74 53 95Z" fill="url(#lg)" />
+              <path d="M50 44Q34 37 20 27Q29 25 38 31Q44 36 50 40" fill="url(#lg)" opacity=".85" />
+              <path d="M50 44Q66 37 80 27Q71 25 62 31Q56 36 50 40" fill="url(#lg)" opacity=".85" />
+              <path d="M42 29Q37 16 39 7Q45 11 45 20Q45 26 44 31" fill="url(#lg)" opacity=".8" />
+              <path d="M58 29Q63 16 61 7Q55 11 55 20Q55 26 56 31" fill="url(#lg)" opacity=".8" />
+              <ellipse cx="19" cy="25" rx="7" ry="4.5" fill="#0891b2" transform="rotate(-20 19 25)" />
+              <ellipse cx="81" cy="25" rx="7" ry="4.5" fill="#0891b2" transform="rotate(20 81 25)" />
+              <ellipse cx="50" cy="7" rx="6.5" ry="4" fill="#0891b2" />
+            </svg>
+            UROSI <span class="brand-phase">Missions solidaires</span>
+          </a>
+          <div class="nav-links">
+            <a href="/missions">Missions solidaires</a>
+            <a href="#comment">Expérience</a>
+            <a href="#parcours">Parcours</a>
+          </div>
           <div class="nav-actions">
             <a class="btn btn-white" href="/connexion">Connexion</a>
-            <a class="btn btn-dark" href="/inscription/structure">Côté structure</a>
+            <a class="btn btn-dark" href="/acces">S'inscrire</a>
           </div>
         </div>
       </nav>
 
       <main class="hero-stage wrap">
         <header class="hero">
-          <div class="hero-blob"></div>
-          <div class="hero-kicker">MICRO-MISSIONS · MÉTROPOLE EUROPÉENNE DE LILLE</div>
+          <div class="hero-kicker">Micro-missions solidaires · Métropole Européenne de Lille</div>
           <h1>Ton CV grandit<br /><span class="grad-text">avec l'expérience.</span></h1>
-          <p>Chaque mission devient une preuve : présence validée, expérience visible, paiement clair.</p>
+          <p class="lead">Découvre des missions solidaires près de toi et construis ton parcours.</p>
           <div class="hero-ctas">
-            <a class="btn btn-dark" href="/connexion">Se connecter</a>
-            <div class="cta-stack">
-              <a class="btn btn-white" href="/acces">Créer un compte</a>
-              <a class="cta-demo-link" href="/demo?role=worker">Voir la démo</a>
+            <a class="btn btn-dark" href="/missions">Découvrir les missions →</a>
+            <a class="btn btn-white" href="/inscription/structure">Espace structure</a>
+            <a class="link-demo" href="/missions">Voir la démo</a>
+          </div>
+          <div class="benefits">
+            <div class="benefit">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11Z" /><circle cx="12" cy="10" r="2.6" /></svg>
+              Des missions près de chez toi
             </div>
-            <div class="cta-stack">
-              <a class="btn btn-ghost" href="/inscription/structure">Espace structure</a>
-              <a class="cta-demo-link" href="/demo?role=structure">Voir la démo structure</a>
+            <div class="benefit">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 20V13M10 20V9M16 20V5M22 20H2" /></svg>
+              Une expérience valorisée
+            </div>
+            <div class="benefit">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.2 7.5 9.5 4.3-1.3 7.5-4.9 7.5-9.5V6L12 3Z" /><path d="m8.8 12 2.2 2.2 4.3-4.4" /></svg>
+              Des structures vérifiées
             </div>
           </div>
-          <div class="hero-note">UROSI reste discret. L'expérience passe avant la marque.</div>
         </header>
 
-        <!-- ── Démo interactive ── -->
-        <div id="demo" class="phone-zone">
-          <div class="float-card float-earned"><small>Mission terminée</small><strong>+58 €</strong></div>
-          <div class="float-card float-profile"><small>CV enrichi</small><strong>13 preuves</strong></div>
-      <div class="phone live-preview" id="phone">
-        <div class="phone-notch"></div>
-        <div class="demo-badge">MODE DÉMO</div>
-        <iframe
-          id="phonePreview"
-          class="phone-live-frame"
-          src="/demo?role=worker&amp;embed=1"
-          title="Aperçu défilable de l’espace Travailleur UROSI"
-          loading="eager"
-        ></iframe>
-        <!-- Choix -->
-        <div class="screen on" data-s="choice">
-          <div class="s-head"><span class="s-title">UROSI</span><span class="stars" style="font-size:9px">MODE DÉMO · fictif</span></div>
-          <div style="font-size:22px;font-weight:900;letter-spacing:0;line-height:1.1;margin:22px 0 8px">Tu veux commencer comment ?</div>
-          <div style="font-size:12px;color:var(--sub)">Un accès pour trouver une mission. Un accès pour publier un besoin.</div>
-          <div class="role-grid">
-            <a class="role-card" href="/demo?role=worker" style="text-decoration:none"><strong>Travailleur</strong><span>Missions courtes, wallet, CV vivant.</span></a>
-            <a class="role-card" href="/demo?role=structure" style="text-decoration:none"><strong>Structure</strong><span>Créer une mission, voir les candidats, suivre le paiement.</span></a>
-          </div>
-        </div>
-
-        <!-- Flux -->
-        <div class="screen" data-s="flux">
-          <div class="s-head"><button class="s-back" data-go="choice">← Choix</button><span class="s-title">UROSI</span><span></span></div>
-          <div class="phone-page-title">Autour de toi</div>
-          <div class="phone-page-sub">Payé ou solidaire, dans le même flux.</div>
-          <div class="mcard" data-go="mission">
-            <div class="m-amount">72 €</div>
-            <div class="m-title">Service en salle</div>
-            <div class="m-org">Brasserie du Beffroi <span class="stars">★★★★★</span> <span style="color:var(--mu);font-size:9px">4,8</span></div>
-            <div class="m-meta">📍 Lille · sam. 12 · 11:00–15:00 et 18:00–22:00 · 8 h</div>
-          </div>
-          <div class="mcard" data-go="mission">
-            <div class="m-amount">120 €</div>
-            <div class="m-title">Inventaire (2 jours)</div>
-            <div class="m-org">Logistique Wazemmes <span class="stars">★★★★☆</span> <span style="color:var(--mu);font-size:9px">4,3</span></div>
-            <div class="m-meta">📍 Roubaix · lun. 14 – mar. 15 · 2 jours · 12 h</div>
-          </div>
-          <div class="mcard" data-go="cv">
-            <div class="m-amount" style="color:var(--green);font-size:18px">Solidaire <span class="tag tag-g">0 €</span></div>
-            <div class="m-title">Distribution alimentaire</div>
-            <div class="m-org">Les Restos du Nord <span class="stars">★★★★★</span> <span style="color:var(--mu);font-size:9px">4,9</span></div>
-            <div class="m-meta">📍 Roubaix · sam. 12 · enrichit le CV vivant après validation</div>
-          </div>
-        </div>
-
-        <!-- Mission -->
-        <div class="screen" data-s="mission">
-          <div class="s-head"><button class="s-back" data-go="flux">← Flux</button><span class="s-title">Mission</span><span></span></div>
-          <div class="m-amount">72 €</div>
-          <div class="m-title" style="font-size:15px">Service en salle</div>
-          <div class="m-org" style="margin-bottom:10px" data-go="worker-structure">Brasserie du Beffroi <span class="stars">★★★★★</span> <span style="color:var(--mu);font-size:9px">4,8 · 32 avis</span></div>
-          <div class="p-row">📍 12 rue de Béthune, Lille</div>
-          <div class="p-row">🗓 Samedi 12 · 11:00–15:00 puis 18:00–22:00 · 8 h au total</div>
-          <div class="p-row">Renfort service du midi et du soir. Tenue noire, bonne humeur exigée.</div>
-          <div class="p-row" style="color:var(--green);font-weight:800">Tu recevras : 72 €</div>
-          <button class="p-btn p-white" data-go="cv">Postuler</button>
-          <button class="p-btn" style="margin-top:8px;background:var(--row);color:var(--text);border:1px solid var(--cb)" data-go="worker-structure">Voir la structure</button>
-        </div>
-
-        <!-- Profil structure -->
-        <div class="screen" data-s="worker-structure">
-          <div class="s-head"><button class="s-back" data-go="mission">← Mission</button><span class="s-title">Structure</span><span></span></div>
-          <div style="display:flex;gap:10px;align-items:center;margin:12px 0">
-            <div style="width:44px;height:44px;border-radius:14px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff">BB</div>
-            <div><div style="font-size:15px;font-weight:900">Brasserie du Beffroi</div><div style="font-size:10.5px;color:var(--sub)">Structure vérifiée · Lille centre</div></div>
-          </div>
-          <div class="metric-grid">
-            <div class="metric"><b>4,8</b><span>avis</span></div>
-            <div class="metric"><b>32</b><span>missions</span></div>
-            <div class="metric"><b>8 min</b><span>réponse</span></div>
-          </div>
-          <div class="p-row">Profils vérifiés, horaires clairs, paiement provisionné avant mission.</div>
-          <button class="p-btn p-white" data-go="mission">Retour à la fiche mission</button>
-        </div>
-
-        <!-- CV vivant -->
-        <div class="screen" data-s="cv">
-          <div class="s-head"><button class="s-back" data-go="flux">← Flux</button><span class="s-title">CV vivant</span><span></span></div>
-          <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">
-            <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#f97316,#dc2626);display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff">A</div>
-            <div>
-              <div style="font-size:13px;font-weight:900">Alex M.</div>
-              <div class="stars" style="font-size:11px">★★★★★ <span style="color:var(--sub);font-weight:800">4,8</span> <span style="color:var(--mu);font-size:9px">· 23 preuves</span></div>
-            </div>
-          </div>
-          <div class="p-row" style="display:flex;justify-content:space-between"><span>Service en salle · Brasserie</span><span class="tag tag-g">validée</span></div>
-          <div class="p-row" style="display:flex;justify-content:space-between"><span>Inventaire · Logistique Waz.</span><span class="tag tag-g">validée</span></div>
-          <div class="p-row" style="display:flex;justify-content:space-between"><span>Distribution · Restos du Nord</span><span class="tag tag-g">solidaire</span></div>
-          <button class="p-btn p-white" data-go="wallet">Voir mon wallet →</button>
-        </div>
-
-        <!-- Wallet -->
-        <div class="screen" data-s="wallet">
-          <div class="s-head"><button class="s-back" data-go="flux">← Missions</button><span class="s-title">Wallet</span><span></span></div>
-          <div style="font-size:9px;font-weight:800;color:var(--mu);text-transform:uppercase">Disponible</div>
-          <div class="w-balance">238,00 €</div>
-          <div class="p-row" style="display:flex;justify-content:space-between"><span>Service en salle — Brasserie</span><span style="color:var(--green);font-weight:800">+72,00 €</span></div>
-          <div class="p-row" style="display:flex;justify-content:space-between"><span>Inventaire — Logistique Waz.</span><span style="color:var(--green);font-weight:800">+120,00 €</span></div>
-          <div class="p-row" style="display:flex;justify-content:space-between"><span>Retrait vers mon compte</span><span style="color:#f87171;font-weight:800">−50,00 €</span></div>
-          <button class="p-btn p-white" data-go="flux">Retour aux missions</button>
-        </div>
-
-        <!-- Structure : accueil -->
-        <div class="screen" data-s="struct-home">
-          <div class="s-head"><button class="s-back" data-go="choice">← Choix</button><span class="s-title">Structure</span><span class="tag tag-g">démo</span></div>
-          <div style="font-size:20px;font-weight:900;letter-spacing:0;line-height:1.1;margin-bottom:7px">Publier en moins de 3 minutes</div>
-          <div class="mini-note">Choisis une structure fictive, publie une mission, puis regarde les candidats arriver.</div>
-          <div class="metric-grid">
-            <div class="metric"><b>3</b><span>missions</span></div>
-            <div class="metric"><b>6</b><span>candidats</span></div>
-            <div class="metric"><b>0 €</b><span>ESS</span></div>
-          </div>
-          <div class="role-grid">
-            <button class="role-card" type="button" data-demo-kind="paid"><strong>Burger Nord</strong><span>PME · mission rémunérée</span></button>
-            <button class="role-card" type="button" data-demo-kind="asso"><strong>Banque Alimentaire</strong><span>Association ESS · mission à 0 €</span></button>
-          </div>
-          <button class="p-btn p-white" style="margin-top:10px" data-go="struct-publish">Créer une mission démo</button>
-          <button class="p-btn" style="margin-top:8px;background:var(--row);color:var(--text);border:1px solid var(--cb)" data-go="struct-candidates">Voir les candidats</button>
-        </div>
-
-        <!-- Structure : publication -->
-        <div class="screen" data-s="struct-publish">
-          <div class="s-head"><button class="s-back" data-go="struct-home">← Structure</button><span class="s-title">Nouvelle mission</span><span></span></div>
-          <div style="font-size:14px;font-weight:900;color:var(--sub);margin-bottom:4px">Quel renfort cherchez-vous ?</div>
-          <div class="chip-row">
-            <button class="chip-btn on" type="button" data-mission-type="Renfort service">Renfort service</button>
-            <button class="chip-btn" type="button" data-mission-type="Runner">Runner</button>
-            <button class="chip-btn" type="button" data-mission-type="Accueil">Accueil</button>
-            <button class="chip-btn" type="button" data-mission-type="Inventaire">Inventaire</button>
-            <button class="chip-btn" type="button" data-mission-type="Distribution">Distribution</button>
-          </div>
-          <div class="publish-field">
-            <label for="demoMissionTitle">Intitulé</label>
-            <input id="demoMissionTitle" value="Renfort service du midi" autocomplete="off" />
-          </div>
-          <div class="publish-field">
-            <label for="demoMissionPlace">Lieu</label>
-            <input id="demoMissionPlace" value="Lille centre" autocomplete="off" />
-          </div>
-          <div class="control-grid">
-            <div class="step-card">
-              <small>€ / personne</small>
-              <div class="step-line">
-                <button class="round-btn" type="button" data-price-step="-1">−</button>
-                <div class="step-value"><span id="demoPrice">15</span>€</div>
-                <button class="round-btn" type="button" data-price-step="1">+</button>
+        <!-- Aperçu statique de l'application (aucune donnée réelle). -->
+        <div class="phone-zone" aria-label="Aperçu de l'application UROSI">
+          <div class="float-card float-a"><small>Lille</small><strong>et alentours</strong></div>
+          <div class="float-card float-b"><small>Après la mission</small><strong>✓ Expérience vérifiée</strong></div>
+          <div class="phone" aria-hidden="true">
+            <div class="phone-notch"></div>
+            <div class="screen">
+              <div class="s-hello">Bonjour ! 👋</div>
+              <div class="s-title">Des missions solidaires près de chez toi</div>
+              <div class="s-search">⌕ Rechercher une mission…</div>
+              <div class="s-chips">
+                <span class="s-chip on">Tous</span><span class="s-chip">Aide alimentaire</span><span class="s-chip">Événementiel</span>
               </div>
-              <div style="font-size:9px;color:var(--mu);text-align:center;margin-top:5px">suggestion UROSI</div>
-            </div>
-            <div class="step-card">
-              <small>Places</small>
-              <div class="step-line">
-                <button class="round-btn" type="button" data-places-step="-1">−</button>
-                <div class="step-value" id="demoPlaces">2</div>
-                <button class="round-btn" type="button" data-places-step="1">+</button>
+              <div class="m-card">
+                <div class="m-visual" style="background: linear-gradient(135deg, #0e7490, #16a34a)">🥫<span class="m-dist">📍 2,1 km</span><span class="m-heart">♥</span></div>
+                <div class="m-body">
+                  <div class="m-title">Distribution de colis alimentaires</div>
+                  <div class="m-org">Association d'aide alimentaire</div>
+                  <div class="m-meta">📅 Samedi · 9h–12h · ⏱ 3 h</div>
+                  <div class="m-tags"><span class="tag tag-green">Solidaire</span><span class="tag tag-cyan">Mission courte</span></div>
+                </div>
+              </div>
+              <div class="m-card">
+                <div class="m-visual" style="background: linear-gradient(135deg, #7c3aed, #db2777)">🎪<span class="m-dist">📍 5,4 km</span><span class="m-heart">♡</span></div>
+                <div class="m-body">
+                  <div class="m-title">Aide à l'organisation d'un festival</div>
+                  <div class="m-org">Festival associatif</div>
+                  <div class="m-meta">📅 Dimanche · ⏱ 4 h</div>
+                  <div class="m-tags"><span class="tag tag-green">Solidaire</span><span class="tag tag-violet">Événementiel</span></div>
+                </div>
               </div>
             </div>
+            <div class="s-nav"><span class="on"><b>⌂</b>Accueil</span><span><b>◎</b>Missions</span><span><b>♡</b>Favoris</span><span><b>◯</b>Profil</span></div>
           </div>
-          <div style="font-size:9px;color:var(--mu);font-weight:900;text-transform:uppercase">Durée par jour · jusqu'à 3 jours consécutifs</div>
-          <div class="duration-row">
-            <button class="duration-btn" type="button" data-duration="2">2h</button>
-            <button class="duration-btn" type="button" data-duration="4">4h</button>
-            <button class="duration-btn on" type="button" data-duration="6">6h</button>
-            <button class="duration-btn" type="button" data-duration="8">8h</button>
-          </div>
-          <button class="solid-toggle" type="button" data-solid-toggle><span id="demoSolidCheck">○</span> Mission solidaire — 0 €, sans commission</button>
-          <div id="demoSolidNote" class="p-row" style="display:none;color:var(--green);background:var(--green-bg);border:1px solid #b8dcc3">Mission association : le montant passe à 0 €, mais elle compte dans le CV vivant.</div>
-          <div class="summary-box">
-            <div class="summary-row"><span>Rémunération × <span id="summaryPlaces">2</span></span><strong id="summaryPay">30,00 €</strong></div>
-            <div class="summary-row"><span>Commission structure 18 % HT</span><strong id="summaryFee">5,40 €</strong></div>
-            <div class="summary-row summary-total"><span>Total facturé à la structure</span><strong id="summaryTotal">35,40 €</strong></div>
-            <div id="summarySolde" style="color:var(--green);font-size:10.5px;font-weight:900;margin-top:7px">✓ Moyen de paiement enregistré — prélevé seulement à la validation de présence</div>
-          </div>
-          <button class="p-btn p-white" data-demo-publish>Publier la mission</button>
-        </div>
-
-        <!-- Structure : mission publiée -->
-        <div class="screen" data-s="struct-live">
-          <div class="s-head"><button class="s-back" data-go="struct-home">← Tableau</button><span class="s-title">Mission publiée</span><span class="tag tag-g">active</span></div>
-          <div class="mcard" data-go="struct-candidates">
-            <div id="publishedAmount" class="m-amount">72 €</div>
-            <div id="publishedTitle" class="m-title">Renfort service du midi</div>
-            <div id="publishedOrg" class="m-org">Burger Nord · PME vérifiée</div>
-            <div id="publishedMeta" class="m-meta">📍 Lille centre · aujourd'hui · 4 h</div>
-          </div>
-          <div class="p-row" style="display:flex;justify-content:space-between"><span>Candidatures rapides</span><strong style="color:var(--cyan)">3 reçues</strong></div>
-          <div class="p-row" style="display:flex;justify-content:space-between"><span>Paiement</span><strong id="publishedPayment" style="color:var(--green)">Provisionné</strong></div>
-          <button class="p-btn p-white" data-go="struct-candidates">Voir les candidats</button>
-          <button class="p-btn" style="margin-top:8px;background:var(--row);color:var(--text);border:1px solid var(--cb)" data-go="struct-publish">Créer une autre mission</button>
-        </div>
-
-        <!-- Structure : candidats -->
-        <div class="screen" data-s="struct-candidates">
-          <div class="s-head"><button class="s-back" data-go="struct-live">← Mission</button><span class="s-title">Candidats</span><span></span></div>
-          <div class="candidate-card">
-            <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
-              <div><div style="font-size:13px;font-weight:900">Aïssa D.</div><div class="m-meta">Lille · 18 missions · ★ 4,8</div></div>
-              <span class="tag tag-g">CV vivant</span>
-            </div>
-            <div class="p-row" style="margin-top:9px">Service, accueil public, 0 absence vérifiée.</div>
-            <div class="candidate-actions"><button class="accept-btn" data-candidate-action="accepted">Accepter</button><button class="reject-btn" data-candidate-action="rejected">Refuser</button></div>
-          </div>
-          <div class="candidate-card">
-            <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
-              <div><div style="font-size:13px;font-weight:900">Lina R.</div><div class="m-meta">Roubaix · 9 missions · ★ 4,7</div></div>
-              <span class="tag" style="color:var(--cyan);background:#22d3ee15">rapide</span>
-            </div>
-            <div class="p-row" style="margin-top:9px">Disponible aujourd'hui, déjà passée en restauration.</div>
-            <div class="candidate-actions"><button class="accept-btn" data-candidate-action="accepted">Accepter</button><button class="reject-btn" data-candidate-action="rejected">Refuser</button></div>
-          </div>
-          <button class="p-btn" style="background:var(--row);color:var(--text);border:1px solid var(--cb)" data-go="struct-home">Retour structure</button>
-        </div>
-      </div>
-
-      <button id="demoFullscreenButton" class="phone-open-demo" type="button" aria-label="Ouvrir la démo en plein écran" title="Plein écran" aria-pressed="false">
-        <svg class="icon-expand" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" /></svg>
-        <svg class="icon-reduce" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h5V3M21 8h-5V3M3 16h5v5M21 16h-5v5" /></svg>
-      </button>
-      <div id="demoFullscreenHint" class="phone-fullscreen-hint" role="status">Agrandir la démo</div>
-
-      <div class="preview-role-switch" aria-label="Choisir l’aperçu affiché dans le téléphone">
-        <button class="preview-role on" type="button" data-preview-role="worker" aria-pressed="true">Travailleur</button>
-        <button class="preview-role" type="button" data-preview-role="structure" aria-pressed="false">Structure</button>
-      </div>
-      <div class="phone-hint"><b>Fais défiler l’écran dans le téléphone</b></div>
         </div>
       </main>
 
-    <!-- ── FAQ ── -->
-    <section class="wrap reveal" style="max-width: 640px">
-      <div class="sec-title">Questions fréquentes</div>
-      <details>
-        <summary>Qui fixe le montant d'une mission ?</summary>
-        <p>La structure, librement. UROSI ne fixe aucun prix et le travailleur ne négocie pas : il voit le montant proposé et accepte, ou passe. Le détail (commission incluse) est visible en un clic sur chaque mission.</p>
-      </details>
-      <details>
-        <summary>Combien de temps dure une mission ?</summary>
-        <p>De quelques heures à 3 jours maximum, avec un planning détaillé par journée pour les missions de plusieurs jours.</p>
-      </details>
-      <details>
-        <summary>Comment suis-je payé·e ?</summary>
-        <p>Une première mission rémunérée nécessite d'activer ton compte de paiement (vérification d'identité, quelques minutes) : avant cette activation, aucun paiement n'est possible. Une fois activé, ton wallet UROSI est crédité automatiquement après validation de ta présence sur la mission. Tu demandes ensuite toi-même le virement vers ton compte bancaire, à ton rythme.</p>
-      </details>
-      <details>
-        <summary>C'est quoi, le CV vivant ?</summary>
-        <p>Ton historique de missions réellement effectuées : présence validée par QR, notes reçues (★), compétences. Il se construit tout seul.</p>
-      </details>
-      <details>
-        <summary>Une mauvaise note peut-elle me bloquer ?</summary>
-        <p>Non. Les étoiles sont informatives : elles n'entraînent aucun blocage automatique de ton accès aux missions.</p>
-      </details>
-      <details>
-        <summary>Et les missions solidaires ?</summary>
-        <p>Les associations publient des missions bénévoles à 0 € : elles comptent dans ton CV vivant comme preuve d'engagement.</p>
-      </details>
-    </section>
+      <section id="comment" class="sec wrap reveal">
+        <div class="sec-kicker">Comment ça marche</div>
+        <div class="sec-title">Il y a déjà des choses que tu peux faire autour de toi.</div>
+        <div class="steps">
+          <div class="step"><div class="step-n">1</div><h3>Je découvre</h3><p>Des missions solidaires courtes, près de chez toi, sur le moment qui te convient.</p></div>
+          <div class="step"><div class="step-n">2</div><h3>Je candidate</h3><p>En un geste. Pour une mission partenaire, tu termines ta candidature sur son site.</p></div>
+          <div class="step"><div class="step-n">3</div><h3>Je participe</h3><p>Tu suis ta candidature étape par étape, jusqu'au jour de la mission.</p></div>
+          <div class="step"><div class="step-n">4</div><h3>Mon parcours grandit</h3><p>Chaque expérience vérifiée enrichit ton parcours et ton CV UROSI.</p></div>
+        </div>
+      </section>
 
-    <div class="wrap reveal" style="text-align:center; padding: 20px 0 50px">
-      <a class="btn btn-dark" style="padding: 15px 32px; font-size: 15px" href="/app">Ouvrir mon espace →</a>
-    </div>
+      <section id="parcours" class="sec wrap reveal">
+        <div class="split">
+          <div class="panel panel-light">
+            <div class="sec-kicker">Pour toi</div>
+            <h3>Un parcours qui raconte ce que tu as vraiment fait.</h3>
+            <p>Missions réalisées, heures d'engagement, structures rencontrées, compétences mobilisées : ton profil parle par les faits. Et tu télécharges ton CV quand tu veux.</p>
+            <ul>
+              <li>Aucun document à fournir pour commencer</li>
+              <li>Ce que tu déclares et ce qui est vérifié restent clairement distincts</li>
+              <li>Des avis croisés après chaque mission sur UROSI</li>
+            </ul>
+            <a class="btn btn-dark" href="/acces">Créer mon compte</a>
+          </div>
+          <div class="panel panel-dark">
+            <div class="sec-kicker" style="color:#67e8f9">Pour les structures</div>
+            <h3>Avant de publier, on identifie ta structure.</h3>
+            <p>Les missions sont réservées aux structures vérifiées. Cette vérification permet aux participants de savoir pour qui ils s'engagent.</p>
+            <ul>
+              <li>Publier une mission solidaire en quelques minutes</li>
+              <li>Recevoir et gérer les candidatures</li>
+              <li>Laisser un avis après la mission</li>
+            </ul>
+            <a class="btn btn-cyan" href="/inscription/structure">Espace structure</a>
+          </div>
+        </div>
+      </section>
 
-    <footer>
-      UROSI · le CV par l'expérience · Métropole Européenne de Lille<br />
-      <a href="/mentions-legales">Mentions légales</a> · <a href="/cgu">CGU</a> · <a href="/confidentialite">Confidentialité</a>
-    </footer>
+      <section class="sec wrap reveal" style="max-width: 720px">
+        <div class="sec-title" style="font-size: 30px">Questions fréquentes</div>
+        <details>
+          <summary>Qui peut participer ?</summary>
+          <p>Toute personne qui a envie d'agir près de chez elle. Il suffit d'un prénom, d'un email, d'un mot de passe et de ta ville. La photo est recommandée, jamais obligatoire.</p>
+        </details>
+        <details>
+          <summary>Dois-je fournir des documents ?</summary>
+          <p>Non. Aucune pièce d'identité ni aucun justificatif n'est demandé pour découvrir des missions et candidater.</p>
+        </details>
+        <details>
+          <summary>D'où viennent les missions ?</summary>
+          <p>Des structures vérifiées qui publient directement sur UROSI, et de plateformes partenaires de l'engagement. Pour ces dernières, tu poursuis ta candidature sur leur site : UROSI garde une trace pour t'aider à la suivre.</p>
+        </details>
+        <details>
+          <summary>C'est quoi, mon parcours UROSI ?</summary>
+          <p>L'historique de tes missions réalisées, tes heures d'engagement, les structures rencontrées, les avis reçus et les compétences mobilisées. Tu peux le télécharger sous forme de CV.</p>
+        </details>
+        <details>
+          <summary>Quelle différence entre « déclarée » et « vérifiée » ?</summary>
+          <p>Une mission que tu indiques avoir réalisée reste « déclarée ». Elle devient « vérifiée » quand la structure le confirme sur UROSI, ou après vérification par l'équipe UROSI. Les deux ne sont jamais mélangés.</p>
+        </details>
+        <details>
+          <summary>Qui peut publier des missions ?</summary>
+          <p>Les structures identifiées et vérifiées via leur SIRET. Les missions solidaires sont publiées par les associations.</p>
+        </details>
+      </section>
+
+      <footer class="wrap">
+        UROSI · missions solidaires · Métropole Européenne de Lille<br />
+        <a href="/mentions-legales">Mentions légales</a> · <a href="/cgu">CGU</a> · <a href="/confidentialite">Confidentialité</a>
+      </footer>
     </div>
 
     <script>
@@ -654,20 +348,16 @@
         function updateLight() {
           var max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
           var progress = Math.min(1, Math.max(0, window.scrollY / max));
-          var light = 0.42 + progress * 0.34;
-          document.documentElement.style.setProperty('--luminosity', light.toFixed(2));
+          document.documentElement.style.setProperty('--luminosity', (0.42 + progress * 0.34).toFixed(2));
           ticking = false;
         }
         window.addEventListener('scroll', function () {
-          if (!ticking) {
-            window.requestAnimationFrame(updateLight);
-            ticking = true;
-          }
+          if (!ticking) { window.requestAnimationFrame(updateLight); ticking = true; }
         }, { passive: true });
         updateLight();
       })();
 
-      // Révélation au scroll
+      // Révélation au scroll.
       var els = document.querySelectorAll('.reveal');
       if ('IntersectionObserver' in window) {
         var io = new IntersectionObserver(function (entries) {
@@ -675,464 +365,6 @@
         }, { threshold: 0.12 });
         els.forEach(function (el) { io.observe(el); });
       } else { els.forEach(function (el) { el.classList.add('in'); }); }
-
-      // ── Démo interactive : lecture automatique + reprise en main libre.
-      (function () {
-        var phone = document.getElementById('phone');
-        if (!phone) return;
-        var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        var preview = document.getElementById('phonePreview');
-        var demoZone = document.getElementById('demo');
-        var fullscreenButton = document.getElementById('demoFullscreenButton');
-        var fullscreenHint = document.getElementById('demoFullscreenHint');
-        var fallbackFullscreen = false;
-        var fallbackHistoryEntry = false;
-        var fallbackPlaceholder = null;
-        var fullscreenScrollState = null;
-        var nativeFullscreenWasActive = false;
-
-        function nativeFullscreenActive() {
-          return document.fullscreenElement === demoZone;
-        }
-
-        function fullscreenActive() {
-          return nativeFullscreenActive() || fallbackFullscreen;
-        }
-
-        function useFallbackFullscreen() {
-          var coarsePointer = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
-          var compactViewport = window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
-          var ios = /iPad|iPhone|iPod/.test(navigator.userAgent)
-            || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-          return Boolean(ios || coarsePointer || compactViewport);
-        }
-
-        function lockFullscreenScroll() {
-          if (fullscreenScrollState) return;
-          fullscreenScrollState = {
-            y: window.scrollY,
-            scrollBehavior: document.documentElement.style.scrollBehavior
-          };
-          document.body.style.setProperty('--demo-fullscreen-scroll-top', (-fullscreenScrollState.y) + 'px');
-          document.documentElement.classList.add('demo-fullscreen-open');
-          document.body.classList.add('demo-fullscreen-open');
-        }
-
-        function unlockFullscreenScroll() {
-          var state = fullscreenScrollState;
-          document.documentElement.classList.remove('demo-fullscreen-open');
-          document.body.classList.remove('demo-fullscreen-open');
-          document.body.style.removeProperty('--demo-fullscreen-scroll-top');
-          if (!state) return;
-          fullscreenScrollState = null;
-          document.documentElement.style.scrollBehavior = 'auto';
-          window.scrollTo(0, state.y);
-          window.requestAnimationFrame(function () {
-            document.documentElement.style.scrollBehavior = state.scrollBehavior;
-          });
-        }
-
-        function moveFallbackToTopLayer() {
-          if (!demoZone || fallbackPlaceholder) return;
-          fallbackPlaceholder = document.createComment('demo-fullscreen-placeholder');
-          if (demoZone.parentNode) demoZone.parentNode.insertBefore(fallbackPlaceholder, demoZone);
-          document.body.appendChild(demoZone);
-        }
-
-        function restoreFallbackParent() {
-          if (!demoZone || !fallbackPlaceholder) return;
-          if (fallbackPlaceholder.parentNode) {
-            fallbackPlaceholder.parentNode.insertBefore(demoZone, fallbackPlaceholder);
-            fallbackPlaceholder.parentNode.removeChild(fallbackPlaceholder);
-          }
-          fallbackPlaceholder = null;
-        }
-
-        function syncFullscreenControl() {
-          if (!fullscreenButton) return;
-          var active = fullscreenActive();
-          fullscreenButton.classList.toggle('is-active', active);
-          fullscreenButton.setAttribute('aria-pressed', active ? 'true' : 'false');
-          fullscreenButton.setAttribute('aria-label', active ? 'Réduire la démo' : 'Ouvrir la démo en plein écran');
-          fullscreenButton.title = active ? 'Réduire' : 'Plein écran';
-        }
-
-        function hideFullscreenHint() {
-          if (fullscreenHint) fullscreenHint.classList.remove('show');
-          try { sessionStorage.setItem('urosi_demo_fullscreen_hint_seen_v1', '1'); } catch (error) { /* stockage indisponible */ }
-        }
-
-        function enterFallbackFullscreen() {
-          if (!demoZone || fallbackFullscreen) return;
-          moveFallbackToTopLayer();
-          fallbackFullscreen = true;
-          demoZone.classList.add('demo-fullscreen-fallback');
-          lockFullscreenScroll();
-          try {
-            history.pushState({ urosiDemoFullscreen: true }, '', window.location.href);
-            fallbackHistoryEntry = true;
-          } catch (error) {
-            fallbackHistoryEntry = false;
-          }
-          syncFullscreenControl();
-        }
-
-        function leaveFallbackFullscreen(fromBrowserBack) {
-          if (!demoZone || !fallbackFullscreen) return;
-          fallbackFullscreen = false;
-          demoZone.classList.remove('demo-fullscreen-fallback');
-          restoreFallbackParent();
-          unlockFullscreenScroll();
-          syncFullscreenControl();
-          if (!fromBrowserBack && fallbackHistoryEntry) history.back();
-          fallbackHistoryEntry = false;
-        }
-
-        function handleNativeFullscreenChange() {
-          var active = nativeFullscreenActive();
-          if (active && !nativeFullscreenWasActive) lockFullscreenScroll();
-          if (!active && nativeFullscreenWasActive && !fallbackFullscreen) unlockFullscreenScroll();
-          nativeFullscreenWasActive = active;
-          syncFullscreenControl();
-        }
-
-        if (fullscreenButton && demoZone) {
-          var hintAlreadySeen = false;
-          try { hintAlreadySeen = sessionStorage.getItem('urosi_demo_fullscreen_hint_seen_v1') === '1'; } catch (error) { /* stockage indisponible */ }
-          if (!hintAlreadySeen && fullscreenHint) {
-            window.setTimeout(function () { fullscreenHint.classList.add('show'); }, 550);
-            window.setTimeout(hideFullscreenHint, 3900);
-          }
-
-          fullscreenButton.addEventListener('click', function () {
-            hideFullscreenHint();
-            if (fallbackFullscreen) {
-              leaveFallbackFullscreen(false);
-              return;
-            }
-            if (nativeFullscreenActive()) {
-              document.exitFullscreen().catch(function () {});
-              return;
-            }
-            if (useFallbackFullscreen()) {
-              enterFallbackFullscreen();
-              return;
-            }
-            if (typeof demoZone.requestFullscreen === 'function') {
-              demoZone.requestFullscreen()
-                .then(handleNativeFullscreenChange)
-                .catch(function () {
-                  enterFallbackFullscreen();
-                });
-            } else {
-              enterFallbackFullscreen();
-            }
-          });
-
-          document.addEventListener('fullscreenchange', handleNativeFullscreenChange);
-          document.addEventListener('webkitfullscreenchange', handleNativeFullscreenChange);
-          document.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape' && fallbackFullscreen) leaveFallbackFullscreen(false);
-          });
-          window.addEventListener('popstate', function () {
-            if (fallbackFullscreen) leaveFallbackFullscreen(true);
-          });
-          window.addEventListener('pagehide', function () {
-            if (!fallbackFullscreen) return;
-            fallbackFullscreen = false;
-            demoZone.classList.remove('demo-fullscreen-fallback');
-            restoreFallbackParent();
-            unlockFullscreenScroll();
-          });
-          syncFullscreenControl();
-        }
-
-        // Le mini-tutoriel a été supprimé : la démo reste directement interactive.
-        if (preview) {
-          var switchTimer = null;
-          preview.addEventListener('load', function () {
-            window.requestAnimationFrame(function () { preview.classList.remove('is-switching'); });
-          });
-          document.querySelectorAll('[data-preview-role]').forEach(function (button) {
-            button.addEventListener('click', function () {
-              var role = button.dataset.previewRole === 'structure' ? 'structure' : 'worker';
-              var nextSrc = '/demo?role=' + role + '&embed=1';
-              if (preview.getAttribute('src') === nextSrc) return;
-              window.clearTimeout(switchTimer);
-              preview.classList.add('is-switching');
-              document.querySelectorAll('[data-preview-role]').forEach(function (item) {
-                var active = item === button;
-                item.classList.toggle('on', active);
-                item.setAttribute('aria-pressed', active ? 'true' : 'false');
-              });
-              switchTimer = window.setTimeout(function () {
-                preview.src = nextSrc;
-                preview.title = role === 'structure'
-                  ? 'Aperçu défilable de l’espace Structure UROSI'
-                  : 'Aperçu défilable de l’espace Travailleur UROSI';
-              }, reduceMotion ? 0 : 120);
-            });
-          });
-          return;
-        }
-        var screens = phone.querySelectorAll('.screen');
-        var order = ['flux', 'mission', 'worker-structure', 'cv', 'wallet', 'choice', 'struct-home', 'struct-publish', 'struct-live', 'struct-candidates'];
-        var dotsEl = document.getElementById('dots');
-        var statusEl = document.getElementById('demoStatus');
-        var labels = {
-          'choice': 'Choix travailleur / structure',
-          'flux': 'Flux des missions',
-          'mission': 'Fiche mission',
-          'worker-structure': 'Profil structure',
-          'cv': 'CV vivant',
-          'wallet': 'Wallet',
-          'struct-home': 'Démo structure',
-          'struct-publish': 'Création de mission',
-          'struct-live': 'Mission publiée',
-          'struct-candidates': 'Candidats structure'
-        };
-        order.forEach(function (name, index) {
-          var d = document.createElement('button');
-          d.type = 'button';
-          d.className = 'dot';
-          d.setAttribute('aria-label', labels[name]);
-          d.dataset.index = String(index);
-          dotsEl.appendChild(d);
-        });
-        var dots = dotsEl.children;
-        var timer = null;
-        var resumeTimer = null;
-        var active = 0;
-        var autoDelay = 4200;
-        var resumeDelay = 9000;
-        var demoKind = 'paid';
-        var demoMissionType = 'Renfort service';
-        var demoPrice = 15;
-        var demoPlaces = 2;
-        var demoDuration = 6;
-        var suggestedPrices = {
-          'Renfort service': 15,
-          'Runner': 13,
-          'Accueil': 14,
-          'Inventaire': 12,
-          'Distribution': 10
-        };
-
-        function setStatus(name, manual) {
-          if (statusEl) statusEl.textContent = manual ? labels[name] + ' · contrôle manuel' : labels[name] + ' · démo automatique';
-        }
-        function normalize(index) {
-          return (index + order.length) % order.length;
-        }
-        function show(index, manual) {
-          active = normalize(index);
-          var name = order[active];
-          screens.forEach(function (s) { s.classList.toggle('on', s.dataset.s === name); });
-          for (var i = 0; i < order.length; i++) {
-            dots[i].classList.toggle('on', i === active);
-            dots[i].setAttribute('aria-current', i === active ? 'true' : 'false');
-          }
-          setStatus(name, manual);
-        }
-        function stopAuto() {
-          if (timer) clearInterval(timer);
-          timer = null;
-        }
-        function startAuto() {
-          if (reduceMotion) return;
-          stopAuto();
-          setStatus(order[active], false);
-          timer = setInterval(function () { show(active + 1, false); }, autoDelay);
-        }
-        function manualShow(index) {
-          stopAuto();
-          clearTimeout(resumeTimer);
-          show(index, true);
-          resumeTimer = setTimeout(function () { startAuto(); }, resumeDelay);
-        }
-        function goToName(name) {
-          var index = order.indexOf(name);
-          if (index !== -1) manualShow(index);
-        }
-        function renderPublishControls() {
-          var isAsso = demoKind === 'asso';
-          document.querySelectorAll('[data-mission-type]').forEach(function (button) {
-            button.classList.toggle('on', button.dataset.missionType === demoMissionType);
-          });
-          document.querySelectorAll('[data-duration]').forEach(function (button) {
-            button.classList.toggle('on', Number(button.dataset.duration) === demoDuration);
-          });
-          var solidToggle = document.querySelector('[data-solid-toggle]');
-          if (solidToggle) solidToggle.classList.toggle('on', isAsso);
-          var solidCheck = document.getElementById('demoSolidCheck');
-          if (solidCheck) solidCheck.textContent = isAsso ? '●' : '○';
-          var note = document.getElementById('demoSolidNote');
-          if (note) note.style.display = isAsso ? 'block' : 'none';
-          var priceEl = document.getElementById('demoPrice');
-          if (priceEl) priceEl.textContent = isAsso ? '0' : String(demoPrice);
-          var placesEl = document.getElementById('demoPlaces');
-          if (placesEl) placesEl.textContent = String(demoPlaces);
-          var summaryPlaces = document.getElementById('summaryPlaces');
-          if (summaryPlaces) summaryPlaces.textContent = String(demoPlaces);
-          // Calcul en centimes (comme cote serveur) pour eviter tout ecart
-          // d'arrondi entre la demo et le vrai calcul de commission.
-          var payCents = isAsso ? 0 : demoPrice * demoPlaces * 100;
-          var feeCents = isAsso ? 0 : Math.round(payCents * 0.18);
-          var totalCents = payCents + feeCents;
-          var euros = function (cents) { return (cents / 100).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; };
-          var summaryPay = document.getElementById('summaryPay');
-          var summaryFee = document.getElementById('summaryFee');
-          var summaryTotal = document.getElementById('summaryTotal');
-          var summarySolde = document.getElementById('summarySolde');
-          if (summaryPay) summaryPay.textContent = euros(payCents);
-          if (summaryFee) summaryFee.textContent = euros(feeCents);
-          if (summaryTotal) summaryTotal.textContent = euros(totalCents);
-          if (summarySolde) summarySolde.textContent = isAsso ? '✓ Mission solidaire — aucun moyen de paiement demandé' : '✓ Moyen de paiement enregistré — prélevé seulement à la validation de présence';
-        }
-        function setDemoKind(kind) {
-          demoKind = kind === 'asso' ? 'asso' : 'paid';
-          document.querySelectorAll('[data-demo-kind]').forEach(function (button) {
-            button.classList.toggle('on', button.dataset.demoKind === demoKind);
-          });
-          var title = document.getElementById('demoMissionTitle');
-          var place = document.getElementById('demoMissionPlace');
-          if (demoKind === 'asso') {
-            demoMissionType = 'Distribution';
-            if (title) title.value = 'Distribution alimentaire';
-            if (place) place.value = 'Rue Nationale, Lille';
-          } else {
-            if (demoMissionType === 'Distribution') demoMissionType = 'Renfort service';
-            demoPrice = suggestedPrices[demoMissionType] || 15;
-            if (title) title.value = 'Renfort service du midi';
-            if (place) place.value = 'Lille centre';
-          }
-          renderPublishControls();
-        }
-        function publishDemoMission() {
-          var titleValue = (document.getElementById('demoMissionTitle') || {}).value || 'Nouvelle mission';
-          var placeValue = (document.getElementById('demoMissionPlace') || {}).value || 'Lille';
-          var isAsso = demoKind === 'asso';
-          var pay = isAsso ? 0 : demoPrice;
-          var publishedAmount = document.getElementById('publishedAmount');
-          var publishedTitle = document.getElementById('publishedTitle');
-          var publishedOrg = document.getElementById('publishedOrg');
-          var publishedMeta = document.getElementById('publishedMeta');
-          var publishedPayment = document.getElementById('publishedPayment');
-          if (publishedAmount) {
-            publishedAmount.textContent = isAsso ? 'Solidaire · 0 €' : pay + ' € / pers.';
-            publishedAmount.style.color = isAsso ? 'var(--green)' : '';
-            publishedAmount.style.fontSize = isAsso ? '19px' : '';
-          }
-          if (publishedTitle) publishedTitle.textContent = titleValue.trim() || 'Nouvelle mission';
-          if (publishedOrg) publishedOrg.textContent = isAsso ? 'Banque Alimentaire · Association ESS' : 'Burger Nord · PME vérifiée';
-          if (publishedMeta) publishedMeta.textContent = "📍 " + (placeValue.trim() || "Lille") + " · " + demoPlaces + " place" + (demoPlaces > 1 ? "s" : "") + " · " + demoDuration + " h";
-          if (publishedPayment) {
-            publishedPayment.textContent = isAsso ? '0 € · bénévole' : 'Total ' + (demoPrice * demoPlaces + Math.round(demoPrice * demoPlaces * 0.18)) + ' €';
-            publishedPayment.style.color = isAsso ? 'var(--green)' : 'var(--green)';
-          }
-          goToName('struct-live');
-        }
-        function updateCandidate(actionButton) {
-          var card = actionButton.closest('.candidate-card');
-          if (!card) return;
-          card.classList.toggle('accepted', actionButton.dataset.candidateAction === 'accepted');
-          var existing = card.querySelector('[data-candidate-status]');
-          if (!existing) {
-            existing = document.createElement('div');
-            existing.dataset.candidateStatus = 'true';
-            existing.className = 'p-row';
-            existing.style.marginTop = '9px';
-            card.appendChild(existing);
-          }
-          existing.textContent = actionButton.dataset.candidateAction === 'accepted' ? 'Candidat accepté pour la mission.' : 'Candidat refusé dans la démo.';
-          existing.style.color = actionButton.dataset.candidateAction === 'accepted' ? 'var(--green)' : '#f87171';
-          setStatus('struct-candidates', true);
-        }
-
-        dotsEl.addEventListener('click', function (e) {
-          var dot = e.target.closest('.dot');
-          if (dot) manualShow(Number(dot.dataset.index));
-        });
-        document.querySelector('[data-demo-prev]').addEventListener('click', function () { manualShow(active - 1); });
-        document.querySelector('[data-demo-next]').addEventListener('click', function () { manualShow(active + 1); });
-
-        var startPoint = null;
-        phone.addEventListener('pointerdown', function (e) {
-          if (e.target.closest('[data-go], .s-back, .p-btn, .role-card, .kind-btn, .chip-btn, .round-btn, .duration-btn, .solid-toggle, input, [data-demo-publish], [data-candidate-action]')) return;
-          startPoint = { x: e.clientX, y: e.clientY };
-        }, { passive: true });
-        phone.addEventListener('pointerup', function (e) {
-          if (!startPoint || e.target.closest('[data-go], .s-back, .p-btn, .role-card, .kind-btn, .chip-btn, .round-btn, .duration-btn, .solid-toggle, input, [data-demo-publish], [data-candidate-action]')) return;
-          var dx = e.clientX - startPoint.x;
-          var dy = e.clientY - startPoint.y;
-          startPoint = null;
-          if (Math.abs(dx) > 34 && Math.abs(dx) > Math.abs(dy)) {
-            manualShow(active + (dx < 0 ? 1 : -1));
-            return;
-          }
-          if (Math.abs(dx) < 8 && Math.abs(dy) < 8) manualShow(active + 1);
-        }, { passive: true });
-        phone.addEventListener('click', function (e) {
-          var missionType = e.target.closest('[data-mission-type]');
-          if (missionType) {
-            demoMissionType = missionType.dataset.missionType;
-            demoPrice = suggestedPrices[demoMissionType] || demoPrice;
-            var title = document.getElementById('demoMissionTitle');
-            if (title) title.value = demoMissionType === 'Distribution' ? 'Distribution alimentaire' : demoMissionType + ' du midi';
-            renderPublishControls();
-            return;
-          }
-          var priceStep = e.target.closest('[data-price-step]');
-          if (priceStep) {
-            if (demoKind !== 'asso') demoPrice = Math.max(10, Math.min(50, demoPrice + Number(priceStep.dataset.priceStep)));
-            renderPublishControls();
-            return;
-          }
-          var placesStep = e.target.closest('[data-places-step]');
-          if (placesStep) {
-            demoPlaces = Math.max(1, Math.min(12, demoPlaces + Number(placesStep.dataset.placesStep)));
-            renderPublishControls();
-            return;
-          }
-          var duration = e.target.closest('[data-duration]');
-          if (duration) {
-            demoDuration = Number(duration.dataset.duration);
-            renderPublishControls();
-            return;
-          }
-          var solidToggle = e.target.closest('[data-solid-toggle]');
-          if (solidToggle) {
-            setDemoKind(demoKind === 'asso' ? 'paid' : 'asso');
-            return;
-          }
-          var kind = e.target.closest('[data-demo-kind]');
-          if (kind) {
-            setDemoKind(kind.dataset.demoKind);
-            if (kind.closest('[data-s="struct-home"]')) goToName('struct-publish');
-            return;
-          }
-          var publish = e.target.closest('[data-demo-publish]');
-          if (publish) {
-            publishDemoMission();
-            return;
-          }
-          var candidateAction = e.target.closest('[data-candidate-action]');
-          if (candidateAction) {
-            updateCandidate(candidateAction);
-            return;
-          }
-          var go = e.target.closest('[data-go]');
-          if (go) goToName(go.dataset.go);
-        });
-        document.addEventListener('visibilitychange', function () {
-          if (document.hidden) stopAuto();
-          else startAuto();
-        });
-
-        show(0, false);
-        setDemoKind('paid');
-        startAuto();
-      })();
     </script>
   </body>
 </html>

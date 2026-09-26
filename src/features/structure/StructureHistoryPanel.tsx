@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Stars } from '@/components/ui/Stars';
 import { T } from '@/components/ui/theme';
 import { formatEuros } from '@/lib/format';
+import { features } from '@/lib/features';
 import {
   archiveMission,
   fetchStructureMissionHistory,
@@ -24,21 +25,29 @@ function csvCell(value: string | number): string {
 }
 
 function downloadHistory(rows: StructureMissionHistoryRow[]) {
-  const header = ['Date', 'Mission', 'Adresse', 'Travailleurs', 'Rémunérations (€)', 'Frais (€)', 'Dépense totale (€)'];
-  const lines = rows.map((row) => [
-    row.scheduled_date,
-    row.title,
-    row.address ?? '',
-    row.completed_workers,
-    (row.worker_paid_cents / 100).toFixed(2),
-    (row.commission_cents / 100).toFixed(2),
-    (row.total_expense_cents / 100).toFixed(2),
-  ]);
+  // Phase 0 : export des missions et de la participation, sans colonnes
+  // financières (couche rémunérée en sommeil).
+  const header = features.paidLayer
+    ? ['Date', 'Mission', 'Adresse', 'Travailleurs', 'Rémunérations (€)', 'Frais (€)', 'Dépense totale (€)']
+    : ['Date', 'Mission', 'Adresse', 'Bénévoles'];
+  const lines = rows.map((row) =>
+    features.paidLayer
+      ? [
+          row.scheduled_date,
+          row.title,
+          row.address ?? '',
+          row.completed_workers,
+          (row.worker_paid_cents / 100).toFixed(2),
+          (row.commission_cents / 100).toFixed(2),
+          (row.total_expense_cents / 100).toFixed(2),
+        ]
+      : [row.scheduled_date, row.title, row.address ?? '', row.completed_workers],
+  );
   const csv = `\uFEFF${[header, ...lines].map((line) => line.map(csvCell).join(';')).join('\n')}`;
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   const link = document.createElement('a');
   link.href = url;
-  link.download = `urosi-depenses-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = `urosi-${features.paidLayer ? 'depenses' : 'missions'}-${new Date().toISOString().slice(0, 10)}.csv`;
   link.hidden = true;
   document.body.appendChild(link);
   link.click();
@@ -126,11 +135,11 @@ export function StructureHistoryPanel({ structureId }: { structureId: string }) 
                   {row.title}{row.archived_at && <span style={{ color: T.mu, fontWeight: 700 }}> · archivée</span>}
                 </div>
                 <div style={{ color: T.mu, fontSize: 9.5, marginTop: 3 }}>
-                  {new Date(`${row.scheduled_date}T12:00:00`).toLocaleDateString('fr-FR')} · 📍 {row.address || 'Adresse non renseignée'} · {row.completed_workers} travailleur{row.completed_workers > 1 ? 's' : ''}
+                  {new Date(`${row.scheduled_date}T12:00:00`).toLocaleDateString('fr-FR')} · 📍 {row.address || 'Adresse non renseignée'} · {row.completed_workers} {features.paidLayer ? 'travailleur' : 'bénévole'}{row.completed_workers > 1 ? 's' : ''}
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5, flexShrink: 0 }}>
-                <div style={{ color: T.text, fontSize: 12, fontWeight: 900, whiteSpace: 'nowrap' }}>{euros(row.total_expense_cents)}</div>
+                {features.paidLayer && <div style={{ color: T.text, fontSize: 12, fontWeight: 900, whiteSpace: 'nowrap' }}>{euros(row.total_expense_cents)}</div>}
                 <button onClick={() => toggleArchive(row)} disabled={busyMission === row.mission_id} style={{ background: 'none', border: 0, color: T.mu, fontSize: 9, fontWeight: 800, cursor: 'pointer', padding: 0 }}>
                   {busyMission === row.mission_id ? '…' : row.archived_at ? 'Désarchiver' : 'Archiver'}
                 </button>

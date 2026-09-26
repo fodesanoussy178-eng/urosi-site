@@ -70,7 +70,7 @@ export function StructureSignupPage() {
             <>
           <div style={{ fontSize: 13, fontWeight: 800, color: T.text, marginBottom: 4 }}>Avant de publier, on identifie ta structure</div>
           <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.5, marginBottom: 16 }}>
-            Seules les structures identifiées (SIRET) peuvent publier des missions. Aucun lien de subordination n'est créé : UROSI est une plateforme de mise en relation (modèle mandataire).
+            Les missions sont réservées aux structures vérifiées. Cette vérification permet aux participants de savoir pour qui ils s'engagent.
           </div>
           <div style={{ fontSize: 10.5, color: T.mu, lineHeight: 1.5, marginBottom: 14 }}>
             En continuant, tu acceptes les <a href="/cgu" target="_blank" rel="noreferrer" style={{ color: T.cyan, fontWeight: 800 }}>CGU</a> et la <a href="/confidentialite" target="_blank" rel="noreferrer" style={{ color: T.cyan, fontWeight: 800 }}>politique de confidentialité</a>.
@@ -87,7 +87,7 @@ export function StructureSignupPage() {
             )}
           </Fld>
           <div style={{ fontSize: 9.5, color: T.mu, lineHeight: 1.5, marginBottom: 14 }}>
-            Le statut Association (missions solidaires) est détecté automatiquement à partir du registre officiel — ce n'est jamais un choix à faire ici.
+            Le statut Association est détecté automatiquement à partir du registre officiel (SIRET) — ce n'est jamais un choix à faire ici. Les missions solidaires sont publiées par les associations vérifiées.
           </div>
           <Fld label="Email">
             <input aria-label="Email" value={f.email} onChange={(e) => setF((x) => ({ ...x, email: e.target.value }))} placeholder="contact@structure.fr" style={inp} inputMode="email" type="email" />
@@ -108,9 +108,7 @@ export function StructureSignupPage() {
           )}
         </div>
         <div style={{ fontSize: 9, color: T.mu, textAlign: 'center', lineHeight: 1.5, marginTop: 14 }}>
-          UROSI est une plateforme de mise en relation (modèle mandataire).
-          <br />
-          Aucun lien de subordination n'est créé.
+          UROSI met en relation des structures vérifiées et des personnes qui veulent agir près de chez elles.
         </div>
       </div>
       </div>

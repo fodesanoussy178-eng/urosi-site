@@ -12,6 +12,8 @@ export interface SignUpInput {
   structureName?: string;
   siret?: string;
   isEss?: boolean;
+  // Phase 0 : centres d'intérêt facultatifs, reportés sur le profil au premier chargement.
+  interests?: string[];
 }
 
 export interface SignInInput {
@@ -34,7 +36,7 @@ function frenchAuthError(error: { message?: string; status?: number }): Error {
   return new Error(error.message || 'Une erreur est survenue. Réessaie.');
 }
 
-export async function signUp({ email, password, fullName, role, city, phone, structureName, siret, isEss }: SignUpInput) {
+export async function signUp({ email, password, fullName, role, city, phone, structureName, siret, isEss, interests }: SignUpInput) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -47,6 +49,7 @@ export async function signUp({ email, password, fullName, role, city, phone, str
         structure_name: structureName ?? null,
         siret: siret ?? null,
         is_ess: isEss ?? false,
+        ...(interests && interests.length > 0 ? { interests } : {}),
       },
     },
   });

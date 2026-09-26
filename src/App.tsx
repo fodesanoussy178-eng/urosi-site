@@ -6,6 +6,7 @@ import { isSupabaseConfigured } from '@/lib/supabase';
 import { T, FONT } from '@/components/ui/theme';
 import { exitFounderTestMode } from '@/features/founder/testMode';
 import { describeError } from '@/lib/errors';
+import { features } from '@/lib/features';
 
 // Chaque route est chargée à la demande : la démo de la landing ne télécharge
 // plus les espaces travailleur/structure/fondateur, et inversement. Aucun
@@ -18,6 +19,8 @@ const MandatAcceptancePage = lazy(() => import('@/features/auth/MandatAcceptance
 const StructureSignupPage = lazy(() => import('@/features/auth/StructureSignupPage').then((m) => ({ default: m.StructureSignupPage })));
 const ResetPasswordPage = lazy(() => import('@/features/auth/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })));
 const WorkerApp = lazy(() => import('@/features/worker/WorkerApp').then((m) => ({ default: m.WorkerApp })));
+const ParticipantApp = lazy(() => import('@/features/participant/ParticipantApp').then((m) => ({ default: m.ParticipantApp })));
+const PublicMissionsPage = lazy(() => import('@/features/participant/PublicMissionsPage').then((m) => ({ default: m.PublicMissionsPage })));
 const StructureApp = lazy(() => import('@/features/structure/StructureApp').then((m) => ({ default: m.StructureApp })));
 const CheckinPage = lazy(() => import('@/features/missions/CheckinPage').then((m) => ({ default: m.CheckinPage })));
 const ScanPage = lazy(() => import('@/features/missions/ScanPage').then((m) => ({ default: m.ScanPage })));
@@ -101,9 +104,10 @@ function AppShell() {
   const location = useLocation();
   const nav = useNavigate();
 
-  // La démo est volontairement autonome : elle doit rester consultable sans
-  // variables Supabase et ne déclenche aucune écriture dans les tables réelles.
-  if (location.pathname === '/demo') return <DemoExperience />;
+  // La démo historique (missions rémunérées, wallet) fait partie de la couche
+  // rémunérée : en phase 0, /demo ouvre le catalogue public des missions.
+  // Elle reste autonome : consultable sans variables Supabase, sans écriture.
+  if (location.pathname === '/demo' && features.paidLayer) return <DemoExperience />;
 
   if (!isSupabaseConfigured) {
     return <Centered text="Backend non configuré : vérifie VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY." />;
@@ -120,8 +124,10 @@ function AppShell() {
         {/* Non connecté : /app passe par la connexion, puis l'app s'ouvre. */}
         <Route path="/app" element={<Navigate to="/connexion" replace />} />
         <Route path="/acces" element={<EntryPage />} />
-        <Route path="/demo" element={<DemoExperience />} />
+        <Route path="/missions" element={<PublicMissionsPage />} />
+        <Route path="/demo" element={features.paidLayer ? <DemoExperience /> : <Navigate to="/missions" replace />} />
         <Route path="/connexion" element={<SignInPage />} />
+        <Route path="/inscription/participant" element={<WorkerSignupPage />} />
         <Route path="/inscription/travailleur" element={<WorkerSignupPage />} />
         <Route path="/inscription/structure" element={<StructureSignupPage />} />
         <Route path="/fondateur" element={<Navigate to="/connexion?next=/fondateur" replace />} />
@@ -129,8 +135,8 @@ function AppShell() {
         <Route path="/reinitialisation" element={<ResetPasswordPage />} />
         <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
         <Route path="/scan/:token" element={<ScanPage />} />
-        <Route path="/paiement/succes" element={<PaymentResultPage outcome="success" />} />
-        <Route path="/paiement/annule" element={<PaymentResultPage outcome="cancel" />} />
+        {features.paidLayer && <Route path="/paiement/succes" element={<PaymentResultPage outcome="success" />} />}
+        {features.paidLayer && <Route path="/paiement/annule" element={<PaymentResultPage outcome="cancel" />} />}
         <Route path="/valider" element={<WorkerAttendancePage />} />
         <Route path="/valider/:qrCode" element={<WorkerAttendancePage />} />
         <Route path="/validation" element={<Navigate to="/connexion?next=/validation" replace />} />
@@ -181,6 +187,10 @@ function AppShell() {
 
   const isFounderTest = Boolean(profile.is_founder_test_account);
 
+  // Phase 0 : le mandat (représentation et encaissement pour compte d'autrui)
+  // n'a de sens qu'avec la couche rémunérée ; l'écran est mis en sommeil
+  // avec elle. Réactivé tel quel par VITE_FEATURE_PAID_LAYER=true.
+  //
   // L'ecran d'acceptation du mandat s'intercale entre la verification email
   // (session + profil charges) et l'acces aux espaces authentifies (/app,
   // /fondateur). Aucun bypass fondateur : is_founder_test_account n'entre
@@ -188,7 +198,7 @@ function AppShell() {
   // chemin qu'un compte reel. Les routes utilitaires (pointage, scan,
   // paiement, reinitialisation…) restent joignables sans mandat, elles ne
   // donnent pas acces a un espace.
-  const isEspaceRoute = location.pathname === '/app' || location.pathname.startsWith('/fondateur');
+  const isEspaceRoute = features.paidLayer && (location.pathname === '/app' || location.pathname.startsWith('/fondateur'));
 
   let content: ReactNode;
   if (isEspaceRoute && mandatError) {
@@ -212,16 +222,20 @@ function AppShell() {
     content = (
       <Routes>
         <Route path="/" element={<StaticHome />} />
-        <Route path="/demo" element={<DemoExperience />} />
+        <Route path="/demo" element={features.paidLayer ? <DemoExperience /> : <Navigate to="/app" replace />} />
+        <Route path="/missions" element={<Navigate to="/app" replace />} />
         <Route path="/connexion" element={<SignInPage />} />
-        <Route path="/app" element={profile.role === 'structure_admin' ? <StructureApp /> : <WorkerApp />} />
+        <Route
+          path="/app"
+          element={profile.role === 'structure_admin' ? <StructureApp /> : features.paidLayer ? <WorkerApp /> : <ParticipantApp />}
+        />
         <Route path="/fondateur" element={<FounderAdminPage />} />
         <Route path="/fondateur/kyc" element={<Navigate to="/fondateur?section=kyc" replace />} />
         <Route path="/reinitialisation" element={<ResetPasswordPage />} />
         <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
         <Route path="/scan/:token" element={<ScanPage />} />
-        <Route path="/paiement/succes" element={<PaymentResultPage outcome="success" />} />
-        <Route path="/paiement/annule" element={<PaymentResultPage outcome="cancel" />} />
+        {features.paidLayer && <Route path="/paiement/succes" element={<PaymentResultPage outcome="success" />} />}
+        {features.paidLayer && <Route path="/paiement/annule" element={<PaymentResultPage outcome="cancel" />} />}
         <Route path="/valider" element={<WorkerAttendancePage />} />
         <Route path="/valider/:qrCode" element={<WorkerAttendancePage />} />
         <Route path="/validation" element={<ValidatorApp />} />

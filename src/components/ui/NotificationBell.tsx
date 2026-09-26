@@ -11,6 +11,7 @@ import {
   restoreNotification,
   deleteAllNotifications,
   isProtectedNotification,
+  isVisibleInCurrentPhase,
   subscribeToNotifications,
   unsubscribeNotifications,
   type Notification,
@@ -231,18 +232,20 @@ export function NotificationBell({ profileId, onDataChanged }: { profileId: stri
   useEffect(() => {
     let active = true;
     fetchNotifications(profileId)
-      .then((list) => active && setItems(list))
+      .then((list) => active && setItems(list.filter(isVisibleInCurrentPhase)))
       .catch(() => undefined);
     fetchImportantNotifications(profileId)
-      .then((list) => active && setImportant(list))
+      .then((list) => active && setImportant(list.filter(isVisibleInCurrentPhase)))
       .catch(() => undefined);
     const channel = subscribeToNotifications(profileId, {
       onInsert: (n) => {
+        if (!isVisibleInCurrentPhase(n)) return;
         setItems((prev) => [n, ...prev]);
         if (n.is_critical) setImportant((prev) => [n, ...prev]);
         changed.current?.();
       },
       onUpdate: (n) => {
+        if (!isVisibleInCurrentPhase(n)) return;
         setItems((prev) => (n.deleted_at || n.archived_at ? prev.filter((x) => x.id !== n.id) : prev.map((x) => (x.id === n.id ? n : x))));
         setImportant((prev) => {
           if (n.deleted_at) return prev.filter((x) => x.id !== n.id);

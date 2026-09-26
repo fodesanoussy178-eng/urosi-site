@@ -143,7 +143,7 @@ function StructurePresentationCard({ structure, notif, onSaved }: { structure: S
   return (
     <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 15 }}>
       <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Nom commercial / enseigne</div>
-      <input aria-label="Nom commercial" value={tradeName} onChange={(e) => setTradeName(e.target.value)} placeholder={structure?.name ?? 'Nom affiché aux travailleurs'} style={{ ...inp, marginBottom: 12 }} />
+      <input aria-label="Nom commercial" value={tradeName} onChange={(e) => setTradeName(e.target.value)} placeholder={structure?.name ?? 'Nom affiché aux participants'} style={{ ...inp, marginBottom: 12 }} />
       <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Logo (URL)</div>
       <input aria-label="URL du logo" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://…" style={{ ...inp, marginBottom: 12 }} />
       <button onClick={save} disabled={busy} style={{ width: '100%', background: busy ? T.row : '#fff', color: busy ? T.mu : '#000', border: 'none', borderRadius: 10, padding: '12px 0', fontSize: 13, fontWeight: 900, cursor: 'pointer' }}>

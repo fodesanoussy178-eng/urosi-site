@@ -1,6 +1,7 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/types/database.types';
+import { features } from '@/lib/features';
 
 export type Notification = Database['public']['Tables']['notifications']['Row'];
 
@@ -114,4 +115,15 @@ export function subscribeToNotifications(
 
 export function unsubscribeNotifications(channel: RealtimeChannel): void {
   supabase.removeChannel(channel);
+}
+
+// Phase 0 : aucune trace de la couche rémunérée ne doit apparaître dans la
+// cloche (paiement, wallet, KYC financier…). Les notifications restent en
+// base, elles sont seulement masquées à l'affichage tant que la couche est
+// en sommeil.
+const PAID_LAYER_PATTERN = /payment|paiement|wallet|payout|refund|rembours|stripe|kyc|iban|unlock|debloc|commission|€/i;
+
+export function isVisibleInCurrentPhase(n: { kind: string; title?: string | null; body?: string | null }): boolean {
+  if (features.paidLayer) return true;
+  return !PAID_LAYER_PATTERN.test(`${n.kind} ${n.title ?? ''} ${n.body ?? ''}`);
 }

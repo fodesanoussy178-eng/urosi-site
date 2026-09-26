@@ -70,6 +70,14 @@ export type ReliabilityEventType =
 export type ReliabilityEventStatus = 'pending' | 'confirmed' | 'disputed' | 'dismissed';
 export type QRTokenType = 'start' | 'end';
 export type ConversationStatus = 'open' | 'closed';
+// Phase 0 : cycle d'une candidature sur une plateforme partenaire. Tout ce
+// qui précède 'verified' est déclaratif (clic, puis déclarations).
+export type ExternalApplicationStatus =
+  | 'external_application_started'
+  | 'accepted_declared'
+  | 'completed_declared'
+  | 'verified'
+  | 'withdrawn';
 export type CvStatus = 'pending_verification' | 'verified' | 'disputed' | 'rejected';
 export type RatingRequestStatus = 'pending' | 'completed' | 'dismissed';
 export type RatingVisibilityStatus = 'pending' | 'published';
@@ -168,6 +176,8 @@ export interface Database {
           conversion_started_at: string | null;
           unlocked_at: string | null;
           unlock_notified_at: string | null;
+          avatar_url: string | null;
+          interests: string[];
         };
         Insert: {
           id: string;
@@ -205,6 +215,8 @@ export interface Database {
           conversion_started_at?: string | null;
           unlocked_at?: string | null;
           unlock_notified_at?: string | null;
+          avatar_url?: string | null;
+          interests?: string[];
         };
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>;
         Relationships: [];
@@ -372,6 +384,105 @@ export interface Database {
             columns: ['profile_id'];
             isOneToOne: false;
             referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      external_missions: {
+        Row: {
+          id: string;
+          source: string;
+          external_id: string;
+          title: string;
+          description: string | null;
+          organization_name: string | null;
+          organization_logo_url: string | null;
+          image_url: string | null;
+          source_illustration_url: string | null;
+          category: string;
+          city: string | null;
+          postal_code: string | null;
+          address: string | null;
+          lat: number | null;
+          lng: number | null;
+          starts_at: string | null;
+          ends_at: string | null;
+          schedule_text: string | null;
+          duration_minutes: number | null;
+          places: number | null;
+          application_url: string;
+          source_url: string | null;
+          is_active: boolean;
+          raw: Json | null;
+          imported_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          source: string;
+          external_id: string;
+          title: string;
+          description?: string | null;
+          organization_name?: string | null;
+          organization_logo_url?: string | null;
+          image_url?: string | null;
+          source_illustration_url?: string | null;
+          category?: string;
+          city?: string | null;
+          postal_code?: string | null;
+          address?: string | null;
+          lat?: number | null;
+          lng?: number | null;
+          starts_at?: string | null;
+          ends_at?: string | null;
+          schedule_text?: string | null;
+          duration_minutes?: number | null;
+          places?: number | null;
+          application_url: string;
+          source_url?: string | null;
+          is_active?: boolean;
+          raw?: Json | null;
+          imported_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['external_missions']['Insert']>;
+        Relationships: [];
+      };
+      external_applications: {
+        Row: {
+          id: string;
+          user_id: string;
+          external_mission_id: string;
+          source: string;
+          clicked_at: string;
+          status: ExternalApplicationStatus;
+          status_updated_at: string;
+          accepted_declared_at: string | null;
+          completed_declared_at: string | null;
+          declared_minutes: number | null;
+          verified_at: string | null;
+          verified_by: string | null;
+          verification_note: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          external_mission_id: string;
+          source: string;
+          clicked_at?: string;
+          status?: ExternalApplicationStatus;
+          status_updated_at?: string;
+          accepted_declared_at?: string | null;
+          completed_declared_at?: string | null;
+          declared_minutes?: number | null;
+        };
+        Update: Partial<Database['public']['Tables']['external_applications']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'external_applications_external_mission_id_fkey';
+            columns: ['external_mission_id'];
+            isOneToOne: false;
+            referencedRelation: 'external_missions';
             referencedColumns: ['id'];
           },
         ];
@@ -1607,6 +1718,10 @@ export interface Database {
       is_french_holiday: {
         Args: { p_date: string };
         Returns: boolean;
+      };
+      founder_verify_external_application: {
+        Args: { p_application_id: string; p_note?: string | null };
+        Returns: undefined;
       };
       has_active_mandat: {
         Args: Record<string, never>;

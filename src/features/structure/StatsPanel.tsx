@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { features } from '@/lib/features';
 import { T } from '@/components/ui/theme';
 import { formatEuros } from '@/lib/format';
 import { fetchStructureStats, type StructureStats } from '@/features/stats/statsService';
@@ -86,12 +87,18 @@ export function StructurePerformances({
 
   const hasReviews = stats.ratings_count > 0;
   const note = stats.avg_rating == null ? '—' : stats.avg_rating.toFixed(1).replace('.', ',');
-  const tiles: [string, string][] = [
-    ['Missions réalisées', String(stats.missions_completed)],
-    ['Dépenses', euros(stats.total_paid_cents)],
-    ['Travailleurs favoris', String(favoris)],
-    ['Avis à donner', String(avisADonner)],
-  ];
+  const tiles: [string, string][] = features.paidLayer
+    ? [
+        ['Missions réalisées', String(stats.missions_completed)],
+        ['Dépenses', euros(stats.total_paid_cents)],
+        ['Travailleurs favoris', String(favoris)],
+        ['Avis à donner', String(avisADonner)],
+      ]
+    : [
+        ['Missions réalisées', String(stats.missions_completed)],
+        ['Bénévoles fidèles', String(favoris)],
+        ['Avis à donner', String(avisADonner)],
+      ];
 
   function openReviews() {
     setShowReviews(true);
@@ -124,7 +131,7 @@ export function StructurePerformances({
           <div style={{ fontSize: 12, fontWeight: 700, color: T.mu }}>Pas encore évaluée – 0 avis</div>
         )}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${tiles.length === 3 ? 3 : 2}, 1fr)`, gap: 7 }}>
         {tiles.map(([l, v]) => (
           <div key={l} style={{ background: T.row, borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
             <div style={{ fontSize: 16, fontWeight: 900, color: T.text }}>{v}</div>
@@ -198,7 +205,7 @@ export function StatsPanel({ structureId }: { structureId: string }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${tiles.length === 3 ? 3 : 2}, 1fr)`, gap: 7 }}>
         {tiles.map(([l, v]) => (
           <div key={l} style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 11, padding: '13px 10px', textAlign: 'center' }}>
             <div style={{ fontSize: 20, fontWeight: 900, color: T.text }}>{v}</div>

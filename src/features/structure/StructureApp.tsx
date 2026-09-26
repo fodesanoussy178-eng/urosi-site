@@ -47,6 +47,8 @@ import type { Mission, Structure } from '@/features/missions/types';
 import type { MissionDayOfWeek, MissionSlot, MissionTimeSlot } from '@/types/database.types';
 import { formatEuros, formatHours } from '@/lib/format';
 import { describeError } from '@/lib/errors';
+import { features } from '@/lib/features';
+import { CATEGORIES } from '@/features/missions/categories';
 
 type Tab = 'missions' | 'candidats' | 'habitues' | 'historique';
 const DEFAULT_HOURLY_EUR = 14;
@@ -63,14 +65,24 @@ const SLOT_SHORTCUTS: Array<{ label: string; start: string; end: string }> = [
   { label: 'Nuit', start: '22:00', end: '03:00' },
 ];
 
-const MISSION_CATEGORIES = [
+const PAID_MISSION_CATEGORIES: ReadonlyArray<readonly [string, string]> = [
   ['renfort_service', 'Renfort service'],
   ['runner', 'Runner'],
   ['accueil', 'Accueil'],
   ['inventaire', 'Inventaire'],
   ['distribution', 'Distribution'],
   ['autre', 'Autre'],
-] as const;
+];
+
+// Phase 0 : catégories des missions solidaires (partagées avec le flux
+// participant et l'import des missions externes).
+const MISSION_CATEGORIES: ReadonlyArray<readonly [string, string]> = features.paidLayer
+  ? PAID_MISSION_CATEGORIES
+  : CATEGORIES.map((c) => [c.key, c.label] as const);
+
+// Vocabulaire côté structure : « bénévole » en phase 0.
+const PERSON = features.paidLayer ? 'travailleur' : 'bénévole';
+const PERSON_CAP = features.paidLayer ? 'Travailleur' : 'Bénévole';
 
 function euros(cents: number): string {
   return formatEuros(cents).replace(' EUR', ' €');
@@ -201,7 +213,7 @@ function MissionCard({
   const slots = mission.slots ?? [];
   const first = firstSlot(slots);
   const last = lastSlot(slots);
-  const canScan = bucket === 'accepted' || bucket === 'in_progress';
+  const canScan = features.qrAttendance && (bucket === 'accepted' || bucket === 'in_progress');
   return (
     <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '11px 12px', display: 'flex', flexDirection: 'column', gap: 7 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
@@ -233,7 +245,11 @@ function MissionCard({
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 9.5, fontWeight: 700, color: pill.color, background: pill.bg, borderRadius: 8, padding: '2px 7px' }}>{pill.label}</span>
-        <span style={{ fontSize: 12, fontWeight: 900, color: T.text }}>{mission.is_solidaire ? 'Solidaire' : euros(mission.worker_rate_cents)}</span>
+        {features.paidLayer ? (
+          <span style={{ fontSize: 12, fontWeight: 900, color: T.text }}>{mission.is_solidaire ? 'Solidaire' : euros(mission.worker_rate_cents)}</span>
+        ) : (
+          mission.is_solidaire && <span style={{ fontSize: 9.5, fontWeight: 800, color: T.green, background: T.greenBg, borderRadius: 8, padding: '2px 7px' }}>Solidaire</span>
+        )}
       </div>
       {bucket === 'open' && candidateCount > 0 && (
         <button onClick={onOpenCandidates} style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', fontSize: 10.5, fontWeight: 800, color: T.amber }}>
@@ -443,7 +459,7 @@ export function StructureApp() {
   }
 
   function isPaidMission(mission: Mission | undefined): boolean {
-    return Boolean(mission && !mission.is_solidaire && mission.worker_rate_cents > 0);
+    return features.paidLayer && Boolean(mission && !mission.is_solidaire && mission.worker_rate_cents > 0);
   }
 
   async function payAndConfirm(candidate: CandWithMission) {
@@ -497,14 +513,14 @@ export function StructureApp() {
     try {
       await verifyMissionCvEntry(c.id);
       await loadMissionData(mis);
-      notif('Mission validée — elle passe en vert dans le CV du travailleur.');
+      notif(features.paidLayer ? 'Mission validée — elle passe en vert dans le CV du travailleur.' : 'Expérience validée — elle rejoint le parcours vérifié du bénévole.');
     } catch (e) {
       notif(describeError(e, 'la validation'));
     }
   }
 
   async function contesterMissionCv(c: CandWithMission) {
-    const reason = window.prompt('Motif de la contestation (visible par le travailleur) :');
+    const reason = window.prompt(`Motif de la contestation (visible par le ${PERSON}) :`);
     if (!reason || !reason.trim()) return;
     try {
       await disputeMissionCvEntry(c.id, reason.trim());
@@ -519,17 +535,34 @@ export function StructureApp() {
     try {
       await confirmRemoteAttendance(c.id, type);
       await loadMissionData(mis);
-      notif(type === 'start' ? 'Début validé à distance.' : 'Fin validée à distance — paiement préparé pour J+3.');
+      notif(type === 'start' ? 'Début validé à distance.' : features.paidLayer ? 'Fin validée à distance — paiement préparé pour J+3.' : 'Participation confirmée — l’expérience rejoint le parcours du bénévole.');
     } catch (e) {
       notif(describeError(e, 'la validation à distance'));
     }
   }
 
+  // Phase 0 (sans pointage QR) : la structure confirme en un geste que la
+  // personne a participé. Réutilise la validation à distance existante
+  // (début puis fin) : la fin déclenche l'entrée au parcours, la demande
+  // d'avis croisée et la vérification (structure ou automatique à 48 h).
+  async function confirmParticipation(c: CandWithMission) {
+    if (!window.confirm(`Confirmer que ${c.profile?.display_name || 'cette personne'} a bien participé à « ${c.missionTitle} » ?`)) return;
+    try {
+      if (!c.actual_start_at) await confirmRemoteAttendance(c.id, 'start');
+      await confirmRemoteAttendance(c.id, 'end');
+      await loadMissionData(mis);
+      notif('Participation confirmée — l’expérience rejoint le parcours du bénévole.');
+    } catch (e) {
+      await loadMissionData(mis).catch(() => undefined);
+      notif(describeError(e, 'la confirmation de participation'));
+    }
+  }
+
   async function signalerAbsence(c: CandWithMission) {
     try {
-      await reportWorkerAbsence(c.id, 'travailleur absent / impossible à joindre');
+      await reportWorkerAbsence(c.id, `${PERSON} absent / impossible à joindre`);
       await loadMissionData(mis);
-      notif('Absence signalée — le travailleur peut répondre, aucune sanction automatique.');
+      notif(`Absence signalée — le ${PERSON} peut répondre, aucune sanction automatique.`);
     } catch (e) {
       notif(describeError(e, "le signalement de l'absence"));
     }
@@ -564,7 +597,7 @@ export function StructureApp() {
         paid.length > 0
           ? 'Mission annulée — remboursement Stripe lancé, le travailleur est prévenu.'
           : active.length > 0
-            ? 'Mission annulée — le(s) travailleur(s) concerné(s) est/sont prévenu(s).'
+            ? `Mission annulée — les ${PERSON}s concernés sont prévenus.`
             : 'Mission annulée.',
       );
     } catch (e) {
@@ -643,7 +676,7 @@ export function StructureApp() {
     completedByWorker.set(c.worker_id, [...(completedByWorker.get(c.worker_id) ?? []), c]);
   }
   const habitues = [...completedByWorker.entries()]
-    .map(([workerId, list]) => ({ workerId, nom: list[0]?.profile?.display_name || 'Travailleur', fois: list.length }))
+    .map(([workerId, list]) => ({ workerId, nom: list[0]?.profile?.display_name || PERSON_CAP, fois: list.length }))
     .sort((a, b) => b.fois - a.fois);
   // Missions réellement réalisées (pointage de fin confirmé), qu'elles soient
   // encore en attente de paiement ou déjà payées — jamais gaté par le seul
@@ -713,7 +746,10 @@ export function StructureApp() {
   const structureVerified = isVerifiedStructure(structure);
   // Aucun abonnement structure : la seule condition pour publier est la
   // vérification de la structure (SIRET, ou accès fondateur en test).
-  const canPublishMission = structureVerified;
+  // Phase 0 : seules des missions solidaires se publient, et la base les
+  // réserve aux associations (trigger enforce_solidaire_association_only).
+  const solidarityOnlyBlocked = !features.paidLayer && structureVerified && !structure?.is_association;
+  const canPublishMission = structureVerified && !solidarityOnlyBlocked;
 
   if (loading) {
     return <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, color: T.mu, fontSize: 12 }}>Chargement…</div>;
@@ -740,14 +776,16 @@ export function StructureApp() {
         {!structure ? (
           <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 17 }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: T.text, marginBottom: 4 }}>Avant de publier, on identifie ta structure</div>
-            <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.5, marginBottom: 16 }}>Seules les structures identifiées (SIRET) peuvent publier des missions.</div>
+            <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.5, marginBottom: 16 }}>
+              Les missions sont réservées aux structures vérifiées. Cette vérification permet aux participants de savoir pour qui ils s'engagent.
+            </div>
             {formFounder && (
               <div style={{ fontSize: 10.5, color: T.green, background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 9, padding: '8px 10px', marginBottom: 12 }}>
                 Accès fondateur détecté sur ce compte.
               </div>
             )}
             <Fld label="Nom de la structure">
-              <input aria-label="Nom de la structure" value={vf.nom} onChange={(e) => setVf((x) => ({ ...x, nom: e.target.value }))} placeholder="Burger Nord" style={inp} />
+              <input aria-label="Nom de la structure" value={vf.nom} onChange={(e) => setVf((x) => ({ ...x, nom: e.target.value }))} placeholder="Nom de la structure" style={inp} />
             </Fld>
             <Fld label="SIRET">
               <input aria-label="SIRET" value={vf.siret} onChange={(e) => setVf((x) => ({ ...x, siret: formatSiret(e.target.value) }))} placeholder="123 456 789 00012" style={inp} />
@@ -811,9 +849,9 @@ export function StructureApp() {
                 >
                   {(
                     [
-                      ['missions', 'Missions', activeMissionsCount],
-                      ['candidats', 'Candidats', pending.length + unreadTotal],
-                      ['habitues', 'Habitués', habitues.length],
+                      ['missions', features.paidLayer ? 'Missions' : 'Mes missions', activeMissionsCount],
+                      ['candidats', features.paidLayer ? 'Candidats' : 'Candidatures', pending.length + unreadTotal],
+                      ['habitues', features.paidLayer ? 'Habitués' : 'Bénévoles', habitues.length],
                       ['historique', 'Historique', 0],
                     ] as [Tab, string, number][]
                   ).map(([k, l, n]) => (
@@ -841,11 +879,16 @@ export function StructureApp() {
                     <div className="structure-missions-main" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {!structureVerified && (
                         <div style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 10, padding: '10px 12px', fontSize: 10.5, color: T.amber, lineHeight: 1.45 }}>
-                          Vérification SIRET requise avant publication.
+                          Vérification SIRET requise avant publication. Elle permet aux participants de savoir pour qui ils s'engagent.
+                        </div>
+                      )}
+                      {solidarityOnlyBlocked && (
+                        <div style={{ background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 10, padding: '10px 12px', fontSize: 10.5, color: T.amber, lineHeight: 1.45 }}>
+                          Les missions solidaires sont réservées aux associations. Le registre officiel ne classe pas encore ta structure comme association : vérifie ton SIRET dans les réglages ⚙, ou contacte-nous.
                         </div>
                       )}
                       <button onClick={() => { setDuplicateSeed(null); if (canPublishMission) setShowPub(true); }} disabled={!canPublishMission} style={{ width: '100%', background: canPublishMission ? '#fff' : T.row, color: canPublishMission ? '#000' : T.mu, border: 'none', borderRadius: 11, padding: '13px 0', fontSize: 13, fontWeight: 900, cursor: canPublishMission ? 'pointer' : 'not-allowed', marginBottom: 2 }}>
-                        {!structureVerified ? 'Structure à vérifier' : '＋ Publier une mission'}
+                        {!structureVerified ? 'Structure à vérifier' : solidarityOnlyBlocked ? 'Réservé aux associations' : features.paidLayer ? '＋ Publier une mission' : '＋ Publier une mission solidaire'}
                       </button>
                       {accueilEmpty && (
                         <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 20, textAlign: 'center', fontSize: 11, color: T.mu, lineHeight: 1.5 }}>
@@ -880,6 +923,7 @@ export function StructureApp() {
                       {/* Performances (compactes) + code de secours discret. */}
                       <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <StructurePerformances structureId={structure.id} favoris={habitues.length} avisADonner={ratingRequests.length} />
+                        {features.qrAttendance && (
                         <button
                           type="button"
                           onClick={() => {
@@ -894,6 +938,7 @@ export function StructureApp() {
                           </span>
                           <span style={{ fontSize: 10, fontWeight: 800, color: T.cyan, flexShrink: 0 }}>Code →</span>
                         </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -911,7 +956,9 @@ export function StructureApp() {
                       </div>
                     ) : (
                       <div style={{ fontSize: 10, color: T.sub, lineHeight: 1.5, marginBottom: 2 }}>
-                        Tape un candidat pour voir son CV vivant, puis confirme ou refuse. Une fois accepté, échange avec lui par message.
+                        {features.paidLayer
+                          ? 'Tape un candidat pour voir son CV vivant, puis confirme ou refuse. Une fois accepté, échange avec lui par message.'
+                          : 'Tape une candidature pour voir le parcours de la personne, puis accepte ou refuse. Une fois acceptée, échangez par message.'}
                       </div>
                     )}
                     {shownCands.map((c) => {
@@ -934,7 +981,7 @@ export function StructureApp() {
                           <div style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{c.profile?.display_name || 'Candidat'}</div>
                           <div style={{ fontSize: 10, color: T.mu, marginTop: 2 }}>{realized} mission{realized > 1 ? 's' : ''} réalisée{realized > 1 ? 's' : ''} avec vous</div>
                         </div>
-                        <span style={{ fontSize: 9.5, fontWeight: 800, color: T.cyan, flexShrink: 0 }}>paiement J+3</span>
+                        <span style={{ fontSize: 9.5, fontWeight: 800, color: T.cyan, flexShrink: 0 }}>{features.paidLayer ? 'paiement J+3' : c.cv_status === 'verified' ? 'expérience vérifiée' : 'participation confirmée'}</span>
                       </div>
                     );
                   }
@@ -962,7 +1009,7 @@ export function StructureApp() {
                               : c.status === 'in_progress'
                                 ? 'en cours'
                                 : c.status === 'payment_pending'
-                                  ? 'paiement J+3'
+                                  ? features.paidLayer ? 'paiement J+3' : 'réalisée'
                                   : c.status === 'completed'
                                     ? 'terminée'
                                     : c.status === 'rejected'
@@ -1006,8 +1053,8 @@ export function StructureApp() {
                           )}
                           {c.status === 'accepted' && (
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                              <button onClick={() => validationDistance(c, 'start')} style={{ background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
-                                Début à distance
+                              <button onClick={() => (features.qrAttendance ? validationDistance(c, 'start') : confirmParticipation(c))} style={{ background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+                                {features.qrAttendance ? 'Début à distance' : '✓ Confirmer la participation'}
                               </button>
                               <button onClick={() => signalerAbsence(c)} style={{ background: T.redBg, color: T.red, border: `1px solid ${T.redBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
                                 Signaler absence
@@ -1016,13 +1063,13 @@ export function StructureApp() {
                           )}
                           {c.status === 'in_progress' && (
                             <button onClick={() => validationDistance(c, 'end')} style={{ background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
-                              Fin à distance
+                              {features.qrAttendance ? 'Fin à distance' : '✓ Confirmer la fin de mission'}
                             </button>
                           )}
                           {c.cv_status === 'pending_verification' && (
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                               <button onClick={() => validerMissionCv(c)} style={{ background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
-                                ✓ Valider la mission
+                                {features.paidLayer ? '✓ Valider la mission' : '✓ Valider l’expérience'}
                               </button>
                               <button onClick={() => contesterMissionCv(c)} style={{ background: T.amberBg, color: T.amber, border: `1px solid ${T.amberBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
                                 Contester
@@ -1046,11 +1093,11 @@ export function StructureApp() {
                 {tab === 'habitues' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div style={{ fontSize: 10, color: T.sub, lineHeight: 1.5, marginBottom: 2 }}>
-                      Les travailleurs qui ont déjà terminé au moins une mission chez toi.
+                      {`Les ${PERSON}s qui ont déjà terminé au moins une mission chez toi.`}
                     </div>
                     {habitues.length === 0 && (
                       <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: 20, textAlign: 'center', fontSize: 11, color: T.mu }}>
-                        Les travailleurs qui terminent des missions chez toi apparaîtront ici.
+                        {`Les ${PERSON}s qui terminent des missions chez toi apparaîtront ici.`}
                       </div>
                     )}
                     {habitues.map((h) => (
@@ -1073,6 +1120,7 @@ export function StructureApp() {
                       <StructureStatsSummary structureId={structure.id} acceptedCount={acceptedDecisionCount} decidedCount={decidedCount} />
                     </section>
                     <StructureHistoryPanel structureId={structure.id} />
+                    {features.paidLayer && (
                     <button
                       type="button"
                       onClick={() => setShowDetailedStats((v) => !v)}
@@ -1081,13 +1129,14 @@ export function StructureApp() {
                       <span>Statistiques détaillées &amp; portefeuille</span>
                       <span style={{ color: T.mu }}>{showDetailedStats ? '▲' : '▼'}</span>
                     </button>
-                    {showDetailedStats && (
+                    )}
+                    {features.paidLayer && showDetailedStats && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         <StatsPanel structureId={structure.id} />
                         {session && <WalletCard profileId={session.user.id} mode="structure" />}
                       </div>
                     )}
-                    <AideRegles onOpen={setDocKey} />
+                    {features.paidLayer && <AideRegles onOpen={setDocKey} />}
                   </div>
                 )}
               </main>
@@ -1181,7 +1230,7 @@ export function StructureApp() {
                 <div className="rsp-sheet-body urosi-bottom-sheet" style={{ width: '100%', maxWidth: 420, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 26px', fontFamily: FONT }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ fontSize: 14, fontWeight: 900, color: T.text, marginBottom: 3 }}>Mission terminée</div>
                   <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.5, marginBottom: 12 }}>
-                    Comment s'est passée votre expérience avec {ratingCand.profile?.display_name || 'ce travailleur'} ? Ta note apparaîtra dans son CV vivant une fois publiée (informative, jamais bloquante).
+                    Comment s'est passée votre expérience avec {ratingCand.profile?.display_name || `ce ${PERSON}`} ? Ta note apparaîtra dans son {features.paidLayer ? 'CV vivant' : 'parcours'} une fois publiée (informative, jamais bloquante).
                   </div>
                   <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
                     {[1, 2, 3, 4, 5].map((n) => (
@@ -1322,7 +1371,7 @@ function AboutEditor({ structure, onSaved, notif }: { structure: Structure; onSa
       <div style={{ marginTop: 8 }}>
         {structure.about ? <div style={{ fontSize: 10.5, color: T.sub, lineHeight: 1.5 }}>{structure.about}</div> : null}
         <button onClick={() => setEditing(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: T.cyan, fontWeight: 700, padding: '4px 0 0' }}>
-          {structure.about ? 'Modifier le "À propos"' : '＋ Ajouter un "À propos" (visible par les travailleurs)'}
+          {structure.about ? 'Modifier le "À propos"' : `＋ Ajouter un "À propos" (visible par les ${features.paidLayer ? 'travailleurs' : 'participants'})`}
         </button>
       </div>
     );
@@ -1432,9 +1481,9 @@ function MissionManageSheet({
             )}
             {bucket === 'accepted' && (
               <>
-                <SheetAction label="Voir le travailleur" onClick={onOpenCandidate} />
+                <SheetAction label={`Voir le ${PERSON}`} onClick={onOpenCandidate} />
                 {candidate?.conversation_status === 'open' && <SheetAction label="Messagerie" onClick={onMessage} />}
-                {candidate?.stripe_payment_status === 'paid' && <SheetAction label="Remplacer le travailleur" onClick={() => onModeChange('replace')} />}
+                {features.paidLayer && candidate?.stripe_payment_status === 'paid' && <SheetAction label="Remplacer le travailleur" onClick={() => onModeChange('replace')} />}
                 <SheetAction label="Modifier les informations non sensibles" onClick={() => onModeChange('edit')} />
                 <SheetAction label="Dupliquer la mission" onClick={onDuplicate} />
                 <SheetAction label="Annuler selon les règles" danger onClick={() => onModeChange('cancel')} />
@@ -1450,7 +1499,7 @@ function MissionManageSheet({
             {bucket === 'completed' && (
               <>
                 <SheetAction label="Voir le résumé" onClick={() => onModeChange('summary')} />
-                <SheetAction label="Voir le paiement" onClick={() => onModeChange('summary')} />
+                {features.paidLayer && <SheetAction label="Voir le paiement" onClick={() => onModeChange('summary')} />}
                 <SheetAction label={givenScore ? `Avis donné : ${'★'.repeat(givenScore)}` : 'Voir les avis'} onClick={() => onModeChange('summary')} />
               </>
             )}
@@ -1475,7 +1524,7 @@ function MissionManageSheet({
             <Fld label="Consignes">
               <textarea aria-label="Consignes" value={edit.instructions} onChange={(e) => setEdit((x) => ({ ...x, instructions: e.target.value }))} rows={3} style={{ ...inp, resize: 'none', lineHeight: 1.5 }} />
             </Fld>
-            <div style={{ fontSize: 9.5, color: T.mu, lineHeight: 1.5 }}>Le prix, les horaires et le nombre de places restent fixés une fois la mission publiée.</div>
+            <div style={{ fontSize: 9.5, color: T.mu, lineHeight: 1.5 }}>{features.paidLayer ? 'Le prix, les horaires' : 'Les horaires'} et le nombre de places restent fixés une fois la mission publiée.</div>
             <button
               onClick={() =>
                 onSaveEdit({
@@ -1496,7 +1545,7 @@ function MissionManageSheet({
         {mode === 'cancel' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ fontSize: 11.5, color: T.sub, lineHeight: 1.5 }}>
-              Annuler cette mission {candidate ? 'préviendra le travailleur concerné et libérera sa candidature' : "n'a pas de candidat engagé pour l'instant"}. Cette action est définitive.
+              Annuler cette mission {candidate ? `préviendra le ${PERSON} concerné et libérera sa candidature` : "n'a pas de candidat engagé pour l'instant"}. Cette action est définitive.
             </div>
             {candidate?.stripe_payment_status === 'paid' && (
               <div style={{ fontSize: 10.5, color: T.amber, background: T.amberBg, border: `1px solid ${T.amberBorder}`, borderRadius: 10, padding: '9px 11px', lineHeight: 1.45 }}>
@@ -1545,8 +1594,8 @@ function MissionManageSheet({
             <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.5 }}>{mission.detail || 'Aucun descriptif.'}</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <div style={{ background: T.row, borderRadius: 8, padding: '9px 10px' }}>
-                <div style={{ fontSize: 8.5, color: T.mu }}>Rémunération</div>
-                <div style={{ fontSize: 13, fontWeight: 900, color: T.text }}>{mission.is_solidaire ? 'Solidaire' : euros(mission.worker_rate_cents)}</div>
+                <div style={{ fontSize: 8.5, color: T.mu }}>{features.paidLayer ? 'Rémunération' : 'Type'}</div>
+                <div style={{ fontSize: 13, fontWeight: 900, color: T.text }}>{mission.is_solidaire ? 'Solidaire' : features.paidLayer ? euros(mission.worker_rate_cents) : 'Mission'}</div>
               </div>
               <div style={{ background: T.row, borderRadius: 8, padding: '9px 10px' }}>
                 <div style={{ fontSize: 8.5, color: T.mu }}>Places</div>
@@ -1590,7 +1639,7 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
     t: initial ? `${initial.title} (copie)` : '',
     city: initial?.city ?? '',
     address: initial?.address ?? '',
-    category: initial?.mission_category ?? 'renfort_service',
+    category: initial?.mission_category ?? (features.paidLayer ? 'renfort_service' : 'aide_alimentaire'),
     rateMode: (initial && !initial.hourly_rate ? 'fixed' : 'hourly') as RateMode,
     hourly: initial?.hourly_rate ? String(initial.hourly_rate) : String(DEFAULT_HOURLY_EUR),
     fixed: initial && !initial.hourly_rate ? String((initial.worker_rate_cents ?? 6000) / 100) : '60',
@@ -1599,7 +1648,8 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
     equipment: initial?.equipment ?? '',
     instructions: initial?.instructions ?? '',
     positions: initial?.positions ?? 1,
-    solid: initial?.is_solidaire ?? false,
+    // Phase 0 : toute mission publiée est solidaire.
+    solid: features.paidLayer ? (initial?.is_solidaire ?? false) : true,
     noSalariedSubstitution: initial?.no_salaried_substitution ?? false,
   }));
   // Duplique la structure des creneaux (nombre de jours, heures) mais jamais
@@ -1757,12 +1807,12 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
     <div className="rsp-sheet urosi-modal-layer urosi-bottom-sheet-layer" role="dialog" aria-modal="true" aria-label="Publier une mission" style={{ background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
       <div className="rsp-sheet-body urosi-bottom-sheet" style={{ width: '100%', maxWidth: 420, background: T.card, borderRadius: '20px 20px 0 0', padding: '18px 16px 26px', fontFamily: FONT }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <span style={{ fontSize: 15, fontWeight: 900, color: T.text }}>Nouvelle mission</span>
+          <span style={{ fontSize: 15, fontWeight: 900, color: T.text }}>{features.paidLayer ? 'Nouvelle mission' : 'Publier une mission solidaire'}</span>
           <button onClick={onClose} style={{ background: T.row, border: 'none', borderRadius: 6, width: 26, height: 26, cursor: 'pointer', color: T.sub, fontSize: 14 }}>×</button>
         </div>
 
         <Fld label="Intitulé de la mission">
-          <input aria-label="Intitulé" value={f.t} onChange={(e) => setF((x) => ({ ...x, t: e.target.value }))} placeholder="Renfort service, accueil, inventaire…" style={inp} autoFocus />
+          <input aria-label="Intitulé" value={f.t} onChange={(e) => setF((x) => ({ ...x, t: e.target.value }))} placeholder={features.paidLayer ? 'Renfort service, accueil, inventaire…' : 'Ex. Distribution de colis alimentaires'} style={inp} autoFocus />
         </Fld>
         <Fld label="Catégorie">
           <select aria-label="Catégorie" value={f.category} onChange={(e) => setF((x) => ({ ...x, category: e.target.value }))} style={inp}>
@@ -1819,7 +1869,7 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
           {maxDaysReached && <div style={{ color: T.amber, fontSize: 10.5, marginTop: 7 }}>Une mission dure 3 jours maximum.</div>}
         </Fld>
 
-        <Fld label="Nombre de personnes">
+        <Fld label={features.paidLayer ? 'Nombre de personnes' : 'Nombre de bénévoles'}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button onClick={() => setF((x) => ({ ...x, positions: Math.max(1, x.positions - 1) }))} style={{ width: 30, height: 30, borderRadius: '50%', background: T.row, border: `1px solid ${T.cb}`, color: T.text, fontSize: 15, cursor: 'pointer' }}>−</button>
             <span style={{ fontSize: 15, fontWeight: 900, color: T.text, minWidth: 95, textAlign: 'center' }}>{positions} personne{positions > 1 ? 's' : ''}</span>
@@ -1827,7 +1877,19 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
           </div>
         </Fld>
 
-        {structure.is_association && (
+        {!features.paidLayer && (
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 12, fontSize: 10.5, color: T.sub, lineHeight: 1.5, cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={f.noSalariedSubstitution}
+              onChange={(e) => setF((x) => ({ ...x, noSalariedSubstitution: e.target.checked }))}
+              style={{ marginTop: 2 }}
+            />
+            J'atteste que cette mission solidaire ne remplace pas un poste salarié.
+          </label>
+        )}
+
+        {features.paidLayer && structure.is_association && (
           <Fld label="Type de mission">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
               <button onClick={() => setF((x) => ({ ...x, solid: false }))} style={{ background: !f.solid ? '#fff' : T.row, color: !f.solid ? '#000' : T.sub, border: `1px solid ${!f.solid ? '#fff' : T.cb}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
@@ -1882,8 +1944,8 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
           <div style={{ color: T.text, fontSize: 12.5, fontWeight: 900, marginBottom: 5 }}>
             {positions} personne{positions > 1 ? 's' : ''} · {missionDays || 1} jour{(missionDays || 1) > 1 ? 's' : ''} · {formatHours(minutes)} par personne
           </div>
-          <div style={{ color: T.sub, fontSize: 11, marginBottom: 10 }}>{formatHoursCompact(totalWorkerHours)} de travail au total</div>
-          <div style={{ color: T.text, fontSize: 16, fontWeight: 900 }}>Coût total estimé : {formatMoney(structureTotalCents)}</div>
+          <div style={{ color: T.sub, fontSize: 11, marginBottom: features.paidLayer ? 10 : 0 }}>{formatHoursCompact(totalWorkerHours)} {features.paidLayer ? 'de travail' : "d'engagement"} au total</div>
+          {features.paidLayer && <div style={{ color: T.text, fontSize: 16, fontWeight: 900 }}>Coût total estimé : {formatMoney(structureTotalCents)}</div>}
           {!f.solid && (
             <button onClick={() => setShowDetail((v) => !v)} style={{ marginTop: 9, background: 'none', border: 'none', cursor: 'pointer', fontSize: 10.5, color: T.mu, textDecoration: 'underline', fontWeight: 600, padding: 0 }}>
               {showDetail ? 'Masquer le détail' : 'Voir le détail'}
@@ -1896,11 +1958,15 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
               <div style={{ display: 'flex', justifyContent: 'space-between', color: T.text, fontSize: 12, fontWeight: 900 }}><span>Total à payer</span><span>{formatMoney(structureTotalCents)}</span></div>
             </div>
           )}
-          {f.solid && <div style={{ color: T.green, fontSize: 11, fontWeight: 800, marginTop: 8 }}>Mission solidaire : aucun coût, comptabilisée dans le CV vivant.</div>}
+          {f.solid && (
+            <div style={{ color: T.green, fontSize: 11, fontWeight: 800, marginTop: 8 }}>
+              {features.paidLayer ? 'Mission solidaire : aucun coût, comptabilisée dans le CV vivant.' : 'Mission solidaire : elle rejoindra le parcours des bénévoles qui y participent.'}
+            </div>
+          )}
         </div>
 
         <Fld label="Descriptif">
-          <textarea aria-label="Descriptif" value={f.desc} onChange={(e) => setF((x) => ({ ...x, desc: e.target.value }))} rows={3} placeholder="Ce que le travailleur fera concrètement…" style={{ ...inp, resize: 'none', lineHeight: 1.5 }} />
+          <textarea aria-label="Descriptif" value={f.desc} onChange={(e) => setF((x) => ({ ...x, desc: e.target.value }))} rows={3} placeholder={`Ce que le ${PERSON} fera concrètement…`} style={{ ...inp, resize: 'none', lineHeight: 1.5 }} />
         </Fld>
         <Fld label="Tenue demandée">
           <input aria-label="Tenue demandée" value={f.dressCode} onChange={(e) => setF((x) => ({ ...x, dressCode: e.target.value }))} placeholder="Ex. pantalon noir et chaussures fermées" style={inp} />
@@ -1915,7 +1981,7 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
         {(error || validationMessage) && <div style={{ fontSize: 11, color: T.red, marginBottom: 10 }}>{error || validationMessage}</div>}
         <div className="urosi-modal-actions">
           <button onClick={publish} disabled={!ok || busy} style={{ width: '100%', background: ok && !busy ? '#fff' : T.row, color: ok && !busy ? '#000' : T.mu, border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: ok && !busy ? 'pointer' : 'not-allowed' }}>
-            {busy ? 'Publication…' : f.solid ? 'Publier · Solidaire (0 €)' : `Publier · ${formatMoney(structureTotalCents)} au total`}
+            {busy ? 'Publication…' : !features.paidLayer ? 'Publier la mission' : f.solid ? 'Publier · Solidaire (0 €)' : `Publier · ${formatMoney(structureTotalCents)} au total`}
           </button>
         </div>
       </div>

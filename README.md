@@ -1,5 +1,10 @@
 # UROSI
 
+> **Phase 0 — missions solidaires.** La couche rémunérée (wallet, Stripe,
+> mandat, missions rémunérées) et le pointage QR sont en sommeil derrière
+> `VITE_FEATURE_PAID_LAYER` / `VITE_FEATURE_QR_ATTENDANCE` (défaut `false`).
+> Audit et points à trancher : [`docs/phase0-audit.md`](./docs/phase0-audit.md).
+
 Plateforme de micro-missions de la MEL (modele mandataire). Application
 React + TypeScript branchee sur une vraie base Supabase (Postgres + Auth +
 Row Level Security) — plus un prototype a donnees fictives.

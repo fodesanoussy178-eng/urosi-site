@@ -6,14 +6,17 @@ import { T, FONT, inp } from '@/components/ui/theme';
 import { signUp } from './authService';
 import { describeError } from '@/lib/errors';
 import { AuthTabs, type AuthMode } from './AuthTabs';
+import { INTEREST_OPTIONS } from '@/features/missions/categories';
 import { SignInForm } from './SignInForm';
 
-// Inscription travailleur : uniquement l'essentiel, champs vides,
-// placeholders neutres (jamais de données personnelles en exemple).
+// Inscription participant (phase 0) : uniquement l'essentiel, champs vides,
+// placeholders neutres (jamais de données personnelles en exemple). Aucun
+// document, IBAN, Stripe ni SIRET : la photo s'ajoute plus tard, facultative.
 export function WorkerSignupPage() {
   const nav = useNavigate();
   const [mode, setMode] = useState<AuthMode>('signup');
   const [f, setF] = useState({ prenom: '', nom: '', email: '', ville: '', password: '', confirm: '', cgu: false });
+  const [interests, setInterests] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -42,6 +45,7 @@ export function WorkerSignupPage() {
         fullName: `${f.prenom.trim()} ${f.nom.trim()}`.trim(),
         role: 'worker',
         city: f.ville.trim() || undefined,
+        ...(interests.length > 0 ? { interests } : {}),
       });
       if (!data.session) {
         setInfo('Compte créé ! Vérifie ta boîte mail pour confirmer ton adresse, puis connecte-toi.');
@@ -58,7 +62,7 @@ export function WorkerSignupPage() {
       <div className="auth-demo-layout">
         <div className="auth-form-column">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <span style={{ fontWeight: 900, fontSize: 15, color: T.text }}>{mode === 'signin' ? 'Connexion' : 'Créer mon compte'}</span>
+          <span style={{ fontWeight: 900, fontSize: 15, color: T.text }}>{mode === 'signin' ? 'Connexion' : 'Rejoindre les missions solidaires'}</span>
           <div style={{ display: 'flex', gap: 6 }}>
             <button onClick={() => nav('/')} style={{ fontSize: 10, color: T.mu, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>
               ← Accueil
@@ -80,8 +84,8 @@ export function WorkerSignupPage() {
                   </Fld>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <Fld label="Nom">
-                    <input aria-label="Nom" value={f.nom} onChange={(e) => setF((x) => ({ ...x, nom: e.target.value }))} placeholder="Nom" style={inp} />
+                  <Fld label="Nom ou initiale">
+                    <input aria-label="Nom" value={f.nom} onChange={(e) => setF((x) => ({ ...x, nom: e.target.value }))} placeholder="Nom ou initiale" style={inp} />
                   </Fld>
                 </div>
               </div>
@@ -96,6 +100,24 @@ export function WorkerSignupPage() {
               </Fld>
               <Fld label="Ville">
                 <input aria-label="Ville" value={f.ville} onChange={(e) => setF((x) => ({ ...x, ville: e.target.value }))} placeholder="Ville" style={inp} />
+              </Fld>
+              <Fld label="Ce qui te donne envie d'agir (facultatif)">
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {INTEREST_OPTIONS.map((c) => {
+                    const on = interests.includes(c.key);
+                    return (
+                      <button
+                        key={c.key}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => setInterests((prev) => (on ? prev.filter((k) => k !== c.key) : [...prev, c.key]))}
+                        style={{ border: `1px solid ${on ? T.cyan : T.cb}`, background: on ? 'rgba(34,211,238,.12)' : T.row, color: on ? T.cyan : T.sub, borderRadius: 999, padding: '6px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
+                      >
+                        {c.glyph} {c.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </Fld>
               <label style={{ display: 'flex', gap: 9, alignItems: 'flex-start', cursor: 'pointer', marginBottom: 12 }}>
                 <input
@@ -119,7 +141,7 @@ export function WorkerSignupPage() {
                 {busy ? '…' : ok ? 'Créer mon compte' : 'Remplis tes infos'}
               </button>
               <div style={{ fontSize: 9, color: T.mu, textAlign: 'center', lineHeight: 1.5, marginTop: 10 }}>
-                Pas de pièce d'identité ni d'IBAN maintenant — on te les demandera seulement quand ce sera nécessaire.
+                Aucun justificatif à fournir. Tu pourras ajouter une photo depuis ton profil, si tu le souhaites.
               </div>
             </>
           )}
