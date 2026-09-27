@@ -123,7 +123,7 @@ export function SignInForm() {
       <button
         onClick={submit}
         disabled={busy}
-        style={{ width: '100%', background: busy ? T.row : '#fff', color: busy ? T.mu : '#000', border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: busy ? 'not-allowed' : 'pointer', marginTop: 4 }}
+        style={{ width: '100%', background: busy ? T.row : T.grad, color: busy ? T.mu : '#fff', border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: busy ? 'not-allowed' : 'pointer', marginTop: 4 }}
       >
         {busy ? '…' : internalCode.trim() || founderDestination ? 'Accéder à l’espace fondateur' : 'Se connecter'}
       </button>

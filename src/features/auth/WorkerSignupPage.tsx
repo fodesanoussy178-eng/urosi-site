@@ -1,42 +1,34 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Logo } from '@/components/ui/Logo';
-import { Fld } from '@/components/ui/Fld';
-import { T, FONT, inp } from '@/components/ui/theme';
-import { signUp } from './authService';
-import { describeError } from '@/lib/errors';
-import { AuthTabs, type AuthMode } from './AuthTabs';
+import { Link } from 'react-router-dom';
+import { PublicShell } from '@/components/public/PublicShell';
+import { Icon } from '@/components/public/icons';
 import { INTEREST_OPTIONS } from '@/features/missions/categories';
-import { SignInForm } from './SignInForm';
+import { MEL_CITIES } from '@/features/participant/publicCatalog';
+import { describeError } from '@/lib/errors';
+import { signUp } from './authService';
+import { PasswordField } from './PasswordField';
 
-// Inscription participant (phase 0) : uniquement l'essentiel, champs vides,
-// placeholders neutres (jamais de données personnelles en exemple). Aucun
-// document, IBAN, Stripe ni SIRET : la photo s'ajoute plus tard, facultative.
+// Inscription participant (phase 0) : rapide, humaine, sans friction.
+// Uniquement l'essentiel, champs vides, placeholders neutres. Aucun
+// document, IBAN, Stripe ni SIRET ; la photo s'ajoute plus tard, facultative.
 export function WorkerSignupPage() {
-  const nav = useNavigate();
-  const [mode, setMode] = useState<AuthMode>('signup');
-  const [f, setF] = useState({ prenom: '', nom: '', email: '', ville: '', password: '', confirm: '', cgu: false });
+  const [f, setF] = useState({ prenom: '', nom: '', email: '', ville: '', password: '' });
   const [interests, setInterests] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const ok =
-    f.prenom.trim().length >= 2 &&
-    f.nom.trim().length >= 1 &&
-    /\S+@\S+\.\S+/.test(f.email) &&
-    f.password.length >= 6 &&
-    f.password === f.confirm &&
-    f.cgu;
+  const emailOk = /\S+@\S+\.\S+/.test(f.email);
+  const ok = f.prenom.trim().length >= 2 && f.nom.trim().length >= 1 && emailOk && f.password.length >= 6 && f.ville.trim().length >= 2;
 
-  async function submit() {
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
     if (busy) return;
     setError(null);
-    if (f.password.length >= 6 && f.confirm && f.password !== f.confirm) {
-      setError('Les deux mots de passe ne correspondent pas.');
+    if (!ok) {
+      setError(f.password && f.password.length < 6 ? 'Le mot de passe doit contenir au moins 6 caractères.' : 'Renseigne ton prénom, ton nom (ou son initiale), ton email, ta ville et un mot de passe.');
       return;
     }
-    if (!ok) return;
     setBusy(true);
     try {
       const data = await signUp({
@@ -44,12 +36,10 @@ export function WorkerSignupPage() {
         password: f.password,
         fullName: `${f.prenom.trim()} ${f.nom.trim()}`.trim(),
         role: 'worker',
-        city: f.ville.trim() || undefined,
+        city: f.ville.trim(),
         ...(interests.length > 0 ? { interests } : {}),
       });
-      if (!data.session) {
-        setInfo('Compte créé ! Vérifie ta boîte mail pour confirmer ton adresse, puis connecte-toi.');
-      }
+      if (!data.session) setDone(true);
     } catch (e) {
       setError(describeError(e, 'la création du compte'));
     } finally {
@@ -57,97 +47,99 @@ export function WorkerSignupPage() {
     }
   }
 
+  const set = (key: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF((x) => ({ ...x, [key]: e.target.value }));
+
   return (
-    <div className="auth-demo-shell" style={{ fontFamily: FONT }}>
-      <div className="auth-demo-layout">
-        <div className="auth-form-column">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <span style={{ fontWeight: 900, fontSize: 15, color: T.text }}>{mode === 'signin' ? 'Connexion' : 'Rejoindre les missions solidaires'}</span>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={() => nav('/')} style={{ fontSize: 10, color: T.mu, background: 'none', border: `1px solid ${T.cb}`, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' }}>
-              ← Accueil
-            </button>
-          </div>
-        </div>
-        <div style={{ textAlign: 'center', marginBottom: 20 }}>
-          <Logo sz={54} />
-        </div>
-        <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 17 }}>
-          <AuthTabs mode={mode} onChange={setMode} />
-          {mode === 'signin' && <SignInForm />}
-          {mode === 'signup' && (
-            <>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <div style={{ flex: 1 }}>
-                  <Fld label="Prénom">
-                    <input aria-label="Prénom" value={f.prenom} onChange={(e) => setF((x) => ({ ...x, prenom: e.target.value }))} placeholder="Prénom" style={inp} autoFocus />
-                  </Fld>
+    <PublicShell minimal>
+      <div className="pub-wrap pub-auth" style={{ maxWidth: 1040 }}>
+        <section className="pub-card pub-auth-card" aria-labelledby="signup-title">
+          <Link to="/acces" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13.5, fontWeight: 700, color: '#4a5a72', textDecoration: 'none', marginBottom: 12 }}>
+            <Icon name="arrowLeft" size={15} /> Retour
+          </Link>
+          {done ? (
+            <div role="status" style={{ textAlign: 'center', padding: '20px 4px' }}>
+              <div style={{ display: 'inline-flex', width: 60, height: 60, borderRadius: 20, background: '#e5f6ec', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name="check" size={30} color="#13824a" />
+              </div>
+              <h1 className="pub-h1" style={{ fontSize: 26 }}>Compte créé !</h1>
+              <p className="pub-lede" style={{ fontSize: 15 }}>
+                Vérifie ta boîte mail pour confirmer ton adresse, puis connecte-toi. Tes premières missions t’attendent.
+              </p>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 18, flexWrap: 'wrap' }}>
+                <Link className="pub-btn pub-btn-primary" to="/connexion">Se connecter</Link>
+                <Link className="pub-btn pub-btn-ghost" to="/missions">Voir les missions</Link>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={submit} noValidate>
+              <h1 id="signup-title" className="pub-h1" style={{ fontSize: 28, marginTop: 0 }}>Crée ton compte</h1>
+              <p className="pub-lede" style={{ fontSize: 15, marginBottom: 20 }}>Rejoins une communauté de personnes qui s’engagent près de chez elles. C’est gratuit.</p>
+              <div className="pub-form-grid">
+                <div className="pub-field">
+                  <label htmlFor="su-prenom">Prénom</label>
+                  <input id="su-prenom" className="pub-input" aria-label="Prénom" value={f.prenom} onChange={set('prenom')} placeholder="Prénom" autoComplete="given-name" autoFocus />
                 </div>
-                <div style={{ flex: 1 }}>
-                  <Fld label="Nom ou initiale">
-                    <input aria-label="Nom" value={f.nom} onChange={(e) => setF((x) => ({ ...x, nom: e.target.value }))} placeholder="Nom ou initiale" style={inp} />
-                  </Fld>
+                <div className="pub-field">
+                  <label htmlFor="su-nom">Nom <span className="pub-hint">(ou initiale)</span></label>
+                  <input id="su-nom" className="pub-input" aria-label="Nom" value={f.nom} onChange={set('nom')} placeholder="Nom ou initiale" autoComplete="family-name" />
+                </div>
+                <div className="pub-field">
+                  <label htmlFor="su-email">Email</label>
+                  <input id="su-email" className="pub-input" aria-label="Email" value={f.email} onChange={set('email')} placeholder="ton@email.fr" type="email" inputMode="email" autoComplete="email" />
+                </div>
+                <div className="pub-field">
+                  <span className="pub-label">Mot de passe</span>
+                  <PasswordField value={f.password} onChange={(v) => setF((x) => ({ ...x, password: v }))} />
+                </div>
+                <div className="pub-field" style={{ gridColumn: '1 / -1' }}>
+                  <label htmlFor="su-ville">Ville</label>
+                  <input id="su-ville" className="pub-input" aria-label="Ville" value={f.ville} onChange={set('ville')} placeholder="Ville" list="su-villes" autoComplete="address-level2" />
+                  <datalist id="su-villes">{MEL_CITIES.map((c) => <option key={c} value={c} />)}</datalist>
                 </div>
               </div>
-              <Fld label="Adresse e-mail">
-                <input aria-label="Email" value={f.email} onChange={(e) => setF((x) => ({ ...x, email: e.target.value }))} placeholder="Adresse e-mail" style={inp} inputMode="email" type="email" />
-              </Fld>
-              <Fld label="Mot de passe">
-                <input aria-label="Mot de passe" value={f.password} onChange={(e) => setF((x) => ({ ...x, password: e.target.value }))} placeholder="Mot de passe (6 caractères min.)" style={inp} type="password" />
-              </Fld>
-              <Fld label="Confirmer le mot de passe">
-                <input aria-label="Confirmer le mot de passe" value={f.confirm} onChange={(e) => setF((x) => ({ ...x, confirm: e.target.value }))} placeholder="Confirmer le mot de passe" style={inp} type="password" />
-              </Fld>
-              <Fld label="Ville">
-                <input aria-label="Ville" value={f.ville} onChange={(e) => setF((x) => ({ ...x, ville: e.target.value }))} placeholder="Ville" style={inp} />
-              </Fld>
-              <Fld label="Ce qui te donne envie d'agir (facultatif)">
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+
+              <div className="pub-field" style={{ marginTop: 16 }}>
+                <span className="pub-label">Tes centres d’intérêt <span className="pub-hint">(facultatif)</span></span>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {INTEREST_OPTIONS.map((c) => {
                     const on = interests.includes(c.key);
                     return (
-                      <button
-                        key={c.key}
-                        type="button"
-                        aria-pressed={on}
-                        onClick={() => setInterests((prev) => (on ? prev.filter((k) => k !== c.key) : [...prev, c.key]))}
-                        style={{ border: `1px solid ${on ? T.cyan : T.cb}`, background: on ? 'rgba(34,211,238,.12)' : T.row, color: on ? T.cyan : T.sub, borderRadius: 999, padding: '6px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
-                      >
-                        {c.glyph} {c.label}
+                      <button key={c.key} type="button" aria-pressed={on} className="pub-chip" aria-selected={on} onClick={() => setInterests((prev) => (on ? prev.filter((k) => k !== c.key) : [...prev, c.key]))}>
+                        {c.label}
                       </button>
                     );
                   })}
                 </div>
-              </Fld>
-              <label style={{ display: 'flex', gap: 9, alignItems: 'flex-start', cursor: 'pointer', marginBottom: 12 }}>
-                <input
-                  type="checkbox"
-                  aria-label="J'accepte les conditions d'utilisation"
-                  checked={f.cgu}
-                  onChange={(e) => setF((x) => ({ ...x, cgu: e.target.checked }))}
-                  style={{ marginTop: 2, accentColor: '#0891b2' }}
-                />
-                <span style={{ fontSize: 11, color: T.sub, lineHeight: 1.5 }}>
-                  J'accepte les <a href="/cgu" target="_blank" rel="noreferrer" style={{ color: T.cyan, fontWeight: 800 }}>conditions d'utilisation</a> et la <a href="/confidentialite" target="_blank" rel="noreferrer" style={{ color: T.cyan, fontWeight: 800 }}>politique de confidentialité</a> d'UROSI.
-                </span>
-              </label>
-              {error && <div style={{ fontSize: 12, color: T.red, marginBottom: 10 }}>{error}</div>}
-              {info && <div style={{ fontSize: 12, color: T.green, marginBottom: 10 }}>{info}</div>}
-              <button
-                onClick={submit}
-                disabled={!ok || busy}
-                style={{ width: '100%', background: ok && !busy ? '#fff' : T.row, color: ok && !busy ? '#000' : T.mu, border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: ok && !busy ? 'pointer' : 'not-allowed', marginTop: 4 }}
-              >
-                {busy ? '…' : ok ? 'Créer mon compte' : 'Remplis tes infos'}
-              </button>
-              <div style={{ fontSize: 9, color: T.mu, textAlign: 'center', lineHeight: 1.5, marginTop: 10 }}>
-                Aucun justificatif à fournir. Tu pourras ajouter une photo depuis ton profil, si tu le souhaites.
               </div>
-            </>
+
+              {error && <div role="alert" style={{ marginTop: 14, fontSize: 13.5, color: '#d33a3f' }}>{error}</div>}
+              <button type="submit" className="pub-btn pub-btn-primary pub-btn-block" disabled={busy} style={{ marginTop: 20, minHeight: 50 }}>
+                {busy ? 'Création…' : 'Créer mon compte'}
+              </button>
+              <p style={{ fontSize: 12.5, color: '#7b8aa1', textAlign: 'center', marginTop: 12, lineHeight: 1.55 }}>
+                En créant ton compte, tu acceptes les <a href="/cgu" target="_blank" rel="noreferrer" style={{ color: '#1d5fe6', fontWeight: 700 }}>conditions d’utilisation</a> et la{' '}
+                <a href="/confidentialite" target="_blank" rel="noreferrer" style={{ color: '#1d5fe6', fontWeight: 700 }}>politique de confidentialité</a>. Aucun justificatif n’est demandé.
+              </p>
+              <p style={{ fontSize: 14, textAlign: 'center', marginTop: 8 }}>
+                Déjà un compte ? <Link to="/connexion" style={{ color: '#1d5fe6', fontWeight: 800 }}>Se connecter</Link>
+              </p>
+            </form>
           )}
-        </div>
+        </section>
+
+        <aside className="pub-side" aria-label="Ce qui t’attend">
+          {[
+            { icon: 'pin' as const, title: 'Des missions près de chez toi', text: 'Quelques heures, dans ton quartier, quand tu es disponible.' },
+            { icon: 'route' as const, title: 'Un parcours qui grandit', text: 'Chaque mission réalisée rejoint ton parcours et ton CV UROSI.' },
+            { icon: 'shield' as const, title: 'Des structures vérifiées', text: 'Tu sais toujours pour qui tu t’engages.' },
+          ].map((item) => (
+            <div key={item.title} className="pub-side-item">
+              <span className="pub-side-icon"><Icon name={item.icon} size={20} color="#1d5fe6" /></span>
+              <div><strong>{item.title}</strong><span>{item.text}</span></div>
+            </div>
+          ))}
+        </aside>
       </div>
-      </div>
-    </div>
+    </PublicShell>
   );
 }

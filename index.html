@@ -3,368 +3,351 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#f7f5ef" />
+    <meta name="theme-color" content="#f4f7fc" />
     <meta name="description" content="UROSI — des missions solidaires près de chez toi, dans la Métropole de Lille. Ton CV grandit avec l'expérience." />
     <title>UROSI — Missions solidaires près de chez toi</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800;9..40,900&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800;9..40,900&display=swap" rel="stylesheet" />
     <style>
       :root {
-        --page: #1f2423; --bg: #f8f6ef; --card: #ffffff; --cb: #e2ded4; --row: #f0eee7;
-        --text: #1d2a2e; --sub: #637277; --mu: #879397;
-        --cyan: #0891b2; --cyan-soft: #e0f7fb; --green: #3f7d55; --green-bg: #e7f4eb;
-        --violet: #6d4fc2; --violet-bg: #efeafc;
-        --amber: #b98318; --grad: linear-gradient(135deg, #1d4ed8, #0891b2);
-        --luminosity: .45;
+        --bg: #f4f7fc; --card: #fff; --line: #e1e8f2; --text: #0f1f3a; --sub: #4a5a72; --mu: #7b8aa1;
+        --blue: #1d5fe6; --blue-dark: #1449b8; --blue-soft: #e8f0ff; --cyan: #0a8bd6;
+        --shadow: 0 10px 30px rgba(15, 31, 58, .08);
       }
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html { scroll-behavior: smooth; }
-      html, body { min-height: 100%; }
-      body {
-        position: relative; background: var(--page); color: var(--text);
-        font-family: 'DM Sans', system-ui, sans-serif; line-height: 1.5; overflow-x: hidden;
-        -webkit-font-smoothing: antialiased;
-      }
-      body::before {
-        content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-        background: linear-gradient(120deg, #f9f8f2 0%, #edf7f8 50%, #f4f0e8 100%);
-        opacity: var(--luminosity);
-      }
-      @media (prefers-reduced-motion: reduce) {
-        html { scroll-behavior: auto; }
-        *, *::before, *::after { animation: none !important; transition: none !important; }
-      }
+      body { background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, -apple-system, sans-serif; line-height: 1.5; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
       a { color: inherit; text-decoration: none; }
-      :where(a, button, input, summary):focus-visible { outline: 3px solid rgba(8,145,178,.34); outline-offset: 3px; }
-      .site-shell {
-        position: relative; width: min(1560px, calc(100vw - 48px)); min-height: calc(100vh - 48px); margin: 24px auto;
-        overflow: hidden; border: 1px solid rgba(255,255,255,.45); border-radius: 28px;
-        background: linear-gradient(120deg, rgba(255,255,255,.92) 0%, rgba(249,248,243,.9) 45%, rgba(237,247,248,.92) 100%), var(--bg);
-        box-shadow: 0 24px 90px rgba(0,0,0,.18);
-      }
-      .site-shell::before {
-        content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-        background: linear-gradient(145deg, rgba(255,255,255,.42), rgba(8,145,178,.12) 55%, rgba(255,255,255,.2));
-        opacity: var(--luminosity);
-      }
-      .site-shell > * { position: relative; z-index: 1; }
-      .wrap { max-width: 1380px; margin: 0 auto; padding: 0 32px; }
+      :where(a, button, summary):focus-visible { outline: 3px solid rgba(29, 95, 230, .3); outline-offset: 3px; }
+      @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation: none !important; transition: none !important; } }
+      .wrap { width: min(1180px, 100%); margin: 0 auto; padding: 0 24px; }
 
-      nav { position: sticky; top: 0; z-index: 50; background: rgba(248,246,239,.84); backdrop-filter: blur(18px); border-bottom: 1px solid rgba(226,222,212,.72); }
-      .nav-inner { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 15px 32px; max-width: 1500px; margin: 0 auto; }
-      .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 18px; color: var(--text); letter-spacing: .3px; }
-      .brand svg { width: 30px; height: 30px; }
-      .brand-phase { font-size: 13px; font-weight: 700; color: var(--sub); border-left: 1px solid var(--cb); padding-left: 10px; margin-left: 2px; }
-      .nav-links { display: flex; gap: 22px; font-size: 13.5px; font-weight: 700; color: var(--sub); }
-      .nav-links a:hover { color: var(--text); }
-      .nav-actions { display: flex; align-items: center; gap: 10px; }
-      .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: none; cursor: pointer; font-family: inherit; border-radius: 14px; font-weight: 900; transition: transform .22s ease, box-shadow .22s ease; text-align: center; min-height: 46px; }
-      .btn:hover, .btn:focus-visible { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(29,42,46,.16); }
-      .btn-dark { background: var(--text); color: #fff; padding: 12px 24px; font-size: 15px; box-shadow: 0 12px 30px rgba(29,42,46,.12); }
-      .btn-white { background: #fff; color: var(--text); border: 1px solid var(--cb); padding: 12px 24px; font-size: 15px; }
-      .link-demo { color: var(--cyan); font-size: 14px; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; align-self: center; }
+      /* Navigation */
+      nav { position: sticky; top: 0; z-index: 50; background: rgba(255, 255, 255, .9); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+      .nav-inner { display: flex; align-items: center; justify-content: space-between; gap: 18px; height: 68px; }
+      .brand { display: flex; align-items: center; gap: 9px; font-weight: 900; font-size: 21px; color: var(--blue); letter-spacing: .2px; }
+      .brand svg { width: 32px; height: 32px; }
+      .links { display: flex; gap: 28px; font-size: 14.5px; font-weight: 700; color: var(--sub); }
+      .links a:hover { color: var(--text); }
+      .actions { display: flex; gap: 8px; }
+      .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 22px; border-radius: 13px; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; border: 1px solid transparent; transition: transform .15s ease, background .15s ease, box-shadow .15s ease; white-space: nowrap; }
+      .btn:hover { transform: translateY(-2px); }
+      .btn-primary { background: var(--blue); color: #fff; box-shadow: 0 10px 22px rgba(29, 95, 230, .28); }
+      .btn-primary:hover { background: var(--blue-dark); }
+      .btn-ghost { background: #fff; color: var(--blue); border-color: #cddcf7; }
+      .btn-sm { min-height: 40px; padding: 0 16px; font-size: 14px; }
+      .btn svg { width: 18px; height: 18px; }
 
-      .hero-stage { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(330px, 420px); gap: 56px; align-items: center; min-height: calc(100vh - 120px); padding-top: 40px; padding-bottom: 48px; }
-      .hero-kicker { color: #8e999c; font-size: 12.5px; font-weight: 900; letter-spacing: .6px; margin-bottom: 20px; text-transform: uppercase; }
-      .hero h1 { font-size: 72px; font-weight: 900; line-height: 1.02; margin-bottom: 26px; max-width: 860px; letter-spacing: -1px; }
-      .grad-text { color: var(--cyan); }
-      .hero p.lead { font-size: 22px; color: var(--sub); max-width: 600px; margin: 0 0 32px; line-height: 1.6; }
-      .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
-      .benefits { display: flex; gap: 28px; flex-wrap: wrap; margin-top: 40px; }
-      .benefit { display: flex; align-items: center; gap: 11px; font-size: 14px; font-weight: 700; color: var(--sub); line-height: 1.3; max-width: 170px; }
-      .benefit svg { width: 34px; height: 34px; flex-shrink: 0; color: var(--cyan); }
+      /* Hero */
+      .hero { position: relative; overflow: hidden; }
+      .hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(900px 480px at 85% 30%, #dbe8ff 0%, rgba(219, 232, 255, 0) 70%), radial-gradient(600px 400px at 0% 100%, #e6f6ff 0%, rgba(230, 246, 255, 0) 70%); pointer-events: none; }
+      .hero-grid { position: relative; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 40px; align-items: center; padding: 64px 0 56px; }
+      .pill { display: inline-block; font-size: 12.5px; font-weight: 900; letter-spacing: .6px; text-transform: uppercase; color: var(--blue); background: var(--blue-soft); border-radius: 999px; padding: 7px 14px; }
+      h1 { font-size: clamp(42px, 6vw, 72px); line-height: 1.02; font-weight: 900; letter-spacing: -1.5px; margin: 20px 0 22px; }
+      h1 .accent { color: var(--blue); }
+      .lead { font-size: 20px; color: var(--sub); max-width: 520px; line-height: 1.55; }
+      .ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 30px; }
+      .reassure { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 22px; font-size: 14px; font-weight: 700; color: var(--sub); }
+      .reassure span { display: inline-flex; align-items: center; gap: 7px; }
+      .reassure svg { width: 17px; height: 17px; color: #13824a; }
 
-      .phone-zone { position: relative; justify-self: center; }
-      .phone-zone::before { content: ''; position: absolute; z-index: -1; width: 135%; aspect-ratio: 1; top: 45%; left: 50%; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(8,145,178,.14), rgba(8,145,178,.04) 45%, transparent 70%); }
-      .phone { width: min(340px, calc(100vw - 60px)); border-radius: 40px; background: #fbfaf5; border: 9px solid #1d2a2e; box-shadow: 0 30px 76px rgba(29,42,46,.24); overflow: hidden; position: relative; }
-      .phone-notch { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 92px; height: 22px; background: #1d2a2e; border-radius: 14px; z-index: 3; }
-      .screen { padding: 40px 14px 0; }
-      .s-hello { font-size: 13px; font-weight: 800; color: var(--sub); }
-      .s-title { font-size: 19px; font-weight: 900; line-height: 1.15; margin: 3px 0 10px; }
-      .s-search { display: flex; align-items: center; gap: 7px; background: #fff; border: 1px solid var(--cb); border-radius: 11px; padding: 8px 10px; font-size: 11px; color: var(--mu); }
-      .s-chips { display: flex; gap: 6px; margin: 10px 0; overflow: hidden; }
-      .s-chip { font-size: 10.5px; font-weight: 800; border: 1px solid var(--cb); border-radius: 999px; padding: 5px 10px; white-space: nowrap; color: var(--sub); background: #fff; }
-      .s-chip.on { background: var(--text); color: #fff; border-color: var(--text); }
-      .m-card { background: #fff; border: 1px solid var(--cb); border-radius: 14px; overflow: hidden; margin-bottom: 10px; }
-      .m-visual { position: relative; height: 96px; display: flex; align-items: center; justify-content: center; font-size: 38px; overflow: hidden; }
-      .m-visual::after { content: ''; position: absolute; width: 150px; height: 150px; border-radius: 50%; background: rgba(255,255,255,.14); top: -60px; right: -40px; }
-      .m-dist { position: absolute; left: 8px; bottom: 8px; background: rgba(15,23,42,.72); color: #fff; font-size: 9.5px; font-weight: 800; border-radius: 999px; padding: 3px 8px; }
-      .m-heart { position: absolute; right: 8px; top: 8px; width: 26px; height: 26px; border-radius: 50%; background: #fff; color: #e11d48; font-size: 13px; display: flex; align-items: center; justify-content: center; }
-      .m-body { padding: 9px 11px 11px; }
-      .m-title { font-size: 12.5px; font-weight: 900; }
-      .m-org { font-size: 10.5px; color: var(--sub); font-weight: 700; margin-top: 2px; }
-      .m-meta { font-size: 9.5px; color: var(--mu); margin-top: 3px; }
-      .m-tags { display: flex; gap: 5px; margin-top: 6px; }
-      .tag { font-size: 9px; font-weight: 800; border-radius: 999px; padding: 2px 7px; }
-      .tag-green { color: var(--green); background: var(--green-bg); }
-      .tag-cyan { color: var(--cyan); background: var(--cyan-soft); }
-      .tag-violet { color: var(--violet); background: var(--violet-bg); }
-      .s-nav { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--cb); padding: 8px 6px 12px; background: #fbfaf5; }
-      .s-nav span { text-align: center; font-size: 9.5px; font-weight: 800; color: var(--mu); }
-      .s-nav span.on { color: var(--cyan); }
-      .s-nav b { display: block; font-size: 14px; }
-      .float-card { position: absolute; z-index: 4; border: 1px solid rgba(226,222,212,.8); border-radius: 12px; background: rgba(255,255,255,.92); backdrop-filter: blur(12px); padding: 11px 15px; box-shadow: 0 18px 50px rgba(29,42,46,.12); }
-      .float-card small { display: block; color: var(--mu); font-size: 11.5px; font-weight: 700; }
-      .float-card strong { display: block; font-size: 16px; line-height: 1.2; }
-      .float-a { left: -150px; top: 120px; }
-      .float-b { left: -170px; bottom: 150px; }
-      .float-b strong { color: var(--cyan); }
+      .stage { position: relative; height: 600px; display: flex; justify-content: center; align-items: center; }
+      .stage-bg { position: absolute; width: 520px; height: 520px; border-radius: 50%; background: linear-gradient(160deg, #e2edff, #cfe1ff); overflow: hidden; }
+      .stage-bg > div { position: absolute; left: 0; right: 0; bottom: 0; height: 58%; opacity: .9; }
+      .phone { position: relative; z-index: 2; width: 300px; height: 590px; border-radius: 44px; background: #fff; border: 10px solid #0f1f3a; box-shadow: 0 40px 80px rgba(15, 31, 58, .28); overflow: hidden; }
+      .phone-notch { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 90px; height: 22px; border-radius: 14px; background: #0f1f3a; z-index: 4; }
+      .ph-head { position: relative; z-index: 3; padding: 38px 16px 10px; background: #fff; }
+      .ph-top { display: flex; justify-content: space-between; align-items: center; font-weight: 900; color: var(--blue); font-size: 15px; }
+      .ph-top small { color: var(--sub); font-weight: 700; font-size: 11px; }
+      .ph-hello { margin-top: 10px; font-size: 16px; font-weight: 900; line-height: 1.2; }
+      .ph-chips { display: flex; gap: 6px; margin-top: 10px; }
+      .ph-chip { font-size: 10px; font-weight: 800; border: 1px solid var(--line); border-radius: 999px; padding: 4px 9px; color: var(--sub); white-space: nowrap; }
+      .ph-chip.on { background: var(--blue); color: #fff; border-color: var(--blue); }
+      .ph-feed { position: absolute; top: 132px; left: 0; right: 0; bottom: 58px; overflow: hidden; padding: 0 14px; }
+      .ph-track { animation: feed 26s linear infinite; }
+      @keyframes feed { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+      .ph-card { border: 1px solid var(--line); border-radius: 16px; overflow: hidden; margin-bottom: 12px; background: #fff; box-shadow: 0 4px 14px rgba(15, 31, 58, .06); }
+      .ph-visual { position: relative; height: 104px; }
+      .ph-visual svg { display: block; width: 100%; height: 100%; }
+      .ph-heart { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 50%; background: #fff; color: #e5484d; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+      .ph-dist { position: absolute; left: 8px; bottom: 8px; background: rgba(15, 31, 58, .72); color: #fff; font-size: 9.5px; font-weight: 800; border-radius: 999px; padding: 2px 8px; }
+      .ph-body { padding: 9px 11px 11px; }
+      .ph-title { font-size: 12.5px; font-weight: 900; line-height: 1.25; }
+      .ph-org { font-size: 10.5px; color: var(--sub); font-weight: 600; margin-top: 2px; }
+      .ph-meta { font-size: 10px; color: var(--mu); margin-top: 3px; text-transform: capitalize; }
+      .ph-tags { display: flex; gap: 5px; margin-top: 6px; }
+      .tag { font-size: 9px; font-weight: 800; border-radius: 999px; padding: 2px 8px; }
+      .tag-green { background: #e5f6ec; color: #13824a; } .tag-blue { background: #e7f0ff; color: var(--blue); } .tag-violet { background: #f0eaff; color: #6b43d8; }
+      .ph-nav { position: absolute; left: 0; right: 0; bottom: 0; height: 58px; background: #fff; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(4, 1fr); align-items: center; z-index: 3; }
+      .ph-nav span { text-align: center; font-size: 9.5px; font-weight: 800; color: var(--mu); }
+      .ph-nav span.on { color: var(--blue); }
+      .ph-nav b { display: block; font-size: 14px; }
+      .float { position: absolute; z-index: 3; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 12px 15px; box-shadow: var(--shadow); display: flex; gap: 10px; align-items: center; }
+      .float small { display: block; font-size: 11.5px; color: var(--mu); font-weight: 700; }
+      .float strong { display: block; font-size: 14.5px; }
+      .float .ic { width: 36px; height: 36px; border-radius: 11px; display: flex; align-items: center; justify-content: center; }
+      .float-a { left: -34px; top: 250px; } .float-b { left: -10px; bottom: 70px; } .float-c { left: -24px; top: 70px; }
+      .stage .phone { margin-left: 150px; }
+      .stage-bg { margin-left: 100px; }
 
-      .sec { padding: 70px 0 20px; }
-      .sec-kicker { font-size: 12px; font-weight: 900; color: var(--cyan); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 8px; }
-      .sec-title { font-size: 38px; font-weight: 900; line-height: 1.1; margin-bottom: 26px; max-width: 760px; }
-      .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-      .step { background: rgba(255,255,255,.75); border: 1px solid var(--cb); border-radius: 18px; padding: 20px; }
-      .step-n { width: 32px; height: 32px; border-radius: 50%; background: var(--grad); color: #fff; font-weight: 900; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
-      .step h3 { font-size: 17px; font-weight: 900; margin-bottom: 6px; }
-      .step p { font-size: 13.5px; color: var(--sub); }
-      .split { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-      .panel { border-radius: 22px; padding: 30px; }
-      .panel-dark { background: linear-gradient(160deg, #13233a, #0b1424); color: #fff; }
-      .panel-dark p { color: #b7c3d3; }
-      .panel-light { background: rgba(255,255,255,.78); border: 1px solid var(--cb); }
-      .panel h3 { font-size: 24px; font-weight: 900; margin-bottom: 10px; line-height: 1.2; }
-      .panel p { font-size: 14.5px; line-height: 1.6; margin-bottom: 18px; color: var(--sub); }
-      .panel ul { list-style: none; margin-bottom: 20px; display: grid; gap: 8px; font-size: 14px; }
-      .panel li::before { content: '✓ '; color: #22d3ee; font-weight: 900; }
-      .panel-light li::before { color: var(--cyan); }
-      .btn-cyan { background: #22d3ee; color: #062a33; padding: 12px 22px; font-size: 14.5px; }
+      /* Sections */
+      section { padding: 72px 0; }
+      .kicker { font-size: 12.5px; font-weight: 900; letter-spacing: .6px; text-transform: uppercase; color: var(--blue); }
+      h2 { font-size: clamp(28px, 3.6vw, 40px); line-height: 1.12; font-weight: 900; letter-spacing: -.6px; margin: 8px 0 12px; }
+      .sec-lead { font-size: 17px; color: var(--sub); max-width: 620px; }
+      .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+      .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+      .card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 24px; box-shadow: var(--shadow); }
+      .card h3 { font-size: 18px; font-weight: 900; margin: 14px 0 6px; line-height: 1.25; }
+      .card p { font-size: 14.5px; color: var(--sub); }
+      .icon-tile { width: 48px; height: 48px; border-radius: 14px; background: var(--blue-soft); color: var(--blue); display: flex; align-items: center; justify-content: center; }
+      .icon-tile svg { width: 24px; height: 24px; }
+      .benefits { margin-top: -18px; position: relative; z-index: 2; padding-top: 0; }
 
-      details { background: rgba(255,255,255,.7); border: 1px solid var(--cb); border-radius: 12px; margin-bottom: 9px; overflow: hidden; }
-      summary { cursor: pointer; padding: 15px 17px; font-size: 14px; font-weight: 800; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+      .steps { counter-reset: step; }
+      .step { position: relative; }
+      .step-n { width: 40px; height: 40px; border-radius: 50%; background: var(--blue); color: #fff; font-weight: 900; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 18px rgba(29, 95, 230, .3); }
+      .step .art { height: 120px; border-radius: 14px; overflow: hidden; margin: 16px 0 0; }
+      .step .art svg { display: block; width: 100%; height: 100%; }
+
+      .why { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 40px; align-items: center; }
+      .why-list { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 26px; }
+      .why-item { display: flex; gap: 12px; }
+      .why-item strong { display: block; font-size: 16px; margin-bottom: 3px; }
+      .why-item span { font-size: 14px; color: var(--sub); }
+      .cv { background: #fff; border: 1px solid var(--line); border-radius: 24px; padding: 22px; box-shadow: 0 24px 50px rgba(15, 31, 58, .12); }
+      .cv-head { display: flex; gap: 12px; align-items: center; }
+      .cv-avatar { width: 54px; height: 54px; border-radius: 50%; background: linear-gradient(135deg, #1d5fe6, #0a8bd6); color: #fff; font-weight: 900; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+      .cv-stats { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 16px 0; padding: 12px 0; }
+      .cv-stats b { display: block; font-size: 20px; }
+      .cv-stats span { font-size: 11.5px; color: var(--mu); }
+      .cv-exp { display: flex; gap: 10px; align-items: center; padding: 8px 0; }
+      .cv-exp .thumb { width: 44px; height: 44px; border-radius: 11px; overflow: hidden; flex-shrink: 0; }
+      .cv-exp .thumb svg { width: 100%; height: 100%; display: block; }
+      .cv-exp strong { display: block; font-size: 13.5px; }
+      .cv-exp span { font-size: 12px; color: var(--mu); }
+      .cv-exp .ok { margin-left: auto; width: 22px; height: 22px; border-radius: 50%; background: var(--blue); color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+      .cv-note { font-size: 11px; color: var(--mu); text-align: center; margin-top: 8px; }
+
+      .asso { position: relative; overflow: hidden; border-radius: 28px; background: linear-gradient(135deg, #1449b8 0%, #1d5fe6 55%, #0a8bd6 100%); color: #fff; padding: 48px; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 30px; align-items: center; }
+      .asso h2 { color: #fff; }
+      .asso p { color: #dbe8ff; font-size: 17px; max-width: 520px; }
+      .asso .btn { background: #fff; color: var(--blue); margin-top: 24px; }
+      .asso-art { height: 220px; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 40px rgba(0, 0, 0, .2); }
+      .asso-art svg { width: 100%; height: 100%; display: block; }
+
+      details { background: #fff; border: 1px solid var(--line); border-radius: 14px; margin-bottom: 10px; overflow: hidden; }
+      summary { cursor: pointer; padding: 17px 20px; font-size: 15.5px; font-weight: 800; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
       summary::-webkit-details-marker { display: none; }
-      summary::after { content: '+'; color: var(--cyan); font-size: 18px; font-weight: 900; transition: transform .2s; }
+      summary::after { content: '+'; color: var(--blue); font-size: 20px; font-weight: 900; transition: transform .2s; }
       details[open] summary::after { transform: rotate(45deg); }
-      details p { padding: 0 17px 15px; font-size: 13px; color: var(--sub); }
-      .reveal { opacity: 0; transform: translateY(20px); transition: opacity .6s ease, transform .6s ease; }
-      .reveal.in { opacity: 1; transform: none; }
-      footer { border-top: 1px solid var(--cb); margin-top: 60px; padding: 26px 0 40px; text-align: center; font-size: 11.5px; color: var(--mu); line-height: 1.8; }
-      footer a { text-decoration: underline; }
+      details p { padding: 0 20px 18px; font-size: 14.5px; color: var(--sub); }
 
-      @media (max-width: 1320px) { .float-card { display: none; } }
-      @media (max-width: 1120px) {
-        .nav-links { display: none; }
-        .hero-stage { grid-template-columns: 1fr; min-height: auto; gap: 40px; padding-top: 44px; }
-        .hero { text-align: center; }
-        .hero h1, .hero p.lead { margin-left: auto; margin-right: auto; }
-        .hero h1 { font-size: 64px; }
-        .hero-ctas, .benefits { justify-content: center; }
-        .steps { grid-template-columns: 1fr 1fr; }
+      footer { border-top: 1px solid var(--line); padding: 30px 0 40px; font-size: 13px; color: var(--mu); }
+      .foot { display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; align-items: center; }
+      .foot a:hover { color: var(--text); }
+      .foot-links { display: flex; gap: 18px; flex-wrap: wrap; }
+
+      .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
+      .reveal.in { opacity: 1; transform: none; }
+
+      @media (max-width: 1080px) {
+        .links { display: none; }
+        .hero-grid { grid-template-columns: 1fr; text-align: center; padding-top: 44px; }
+        .lead { margin: 0 auto; }
+        .ctas, .reassure { justify-content: center; }
+        .grid-4 { grid-template-columns: 1fr 1fr; }
+        .why, .asso { grid-template-columns: 1fr; }
+        .float-a { left: 4%; } .float-b { left: auto; right: 4%; } .float-c { left: 4%; }
+        .stage .phone, .stage-bg { margin-left: 0; }
       }
       @media (max-width: 720px) {
-        .site-shell { width: 100%; min-height: 100vh; margin: 0; border-radius: 0; border: 0; }
         .wrap { padding: 0 16px; }
-        .nav-inner { padding: 12px 16px; }
-        .brand-phase { display: none; }
-        .btn { min-height: 42px; }
-        .btn-dark, .btn-white { padding: 10px 16px; font-size: 14px; }
-        .nav-actions .btn-white { display: none; }
-        .hero h1 { font-size: clamp(40px, 12vw, 52px); }
-        .hero p.lead { font-size: 17px; }
-        .benefits { gap: 16px; }
-        .benefit { font-size: 13px; }
-        .sec { padding-top: 50px; }
-        .sec-title { font-size: 28px; }
-        .steps, .split { grid-template-columns: 1fr; }
-        .panel { padding: 22px; }
+        .nav-inner { height: 60px; }
+        .actions .btn-ghost { display: none; }
+        .hero-grid { padding: 30px 0 30px; gap: 28px; }
+        h1 { letter-spacing: -1px; }
+        .lead { font-size: 17px; }
+        .ctas .btn { flex: 1 1 100%; }
+        .stage { height: 520px; }
+        .stage-bg { width: 380px; height: 380px; }
+        .phone { width: 262px; height: 510px; }
+        .float { display: none; }
+        section { padding: 52px 0; }
+        .benefits { margin-top: 0; }
+        .grid-3, .grid-4, .why-list { grid-template-columns: 1fr; }
+        .asso { padding: 30px 22px; border-radius: 22px; }
       }
     </style>
+    <script type="module" src="/src/landing/main.ts"></script>
+    <noscript><style>.reveal { opacity: 1; transform: none; }</style></noscript>
   </head>
   <body>
-    <div class="site-shell">
-      <nav>
-        <div class="nav-inner">
-          <a class="brand" href="/" aria-label="UROSI, accueil">
-            <svg viewBox="0 0 100 100" aria-hidden="true">
-              <defs><linearGradient id="lg" x1="20" y1="5" x2="80" y2="95" gradientUnits="userSpaceOnUse"><stop stop-color="#0891b2" /><stop offset="1" stop-color="#22d3ee" /></linearGradient></defs>
-              <path d="M47 95Q46 74 44 61Q42 49 50 44Q58 49 56 61Q54 74 53 95Z" fill="url(#lg)" />
-              <path d="M50 44Q34 37 20 27Q29 25 38 31Q44 36 50 40" fill="url(#lg)" opacity=".85" />
-              <path d="M50 44Q66 37 80 27Q71 25 62 31Q56 36 50 40" fill="url(#lg)" opacity=".85" />
-              <path d="M42 29Q37 16 39 7Q45 11 45 20Q45 26 44 31" fill="url(#lg)" opacity=".8" />
-              <path d="M58 29Q63 16 61 7Q55 11 55 20Q55 26 56 31" fill="url(#lg)" opacity=".8" />
-              <ellipse cx="19" cy="25" rx="7" ry="4.5" fill="#0891b2" transform="rotate(-20 19 25)" />
-              <ellipse cx="81" cy="25" rx="7" ry="4.5" fill="#0891b2" transform="rotate(20 81 25)" />
-              <ellipse cx="50" cy="7" rx="6.5" ry="4" fill="#0891b2" />
-            </svg>
-            UROSI <span class="brand-phase">Missions solidaires</span>
-          </a>
-          <div class="nav-links">
-            <a href="/missions">Missions solidaires</a>
-            <a href="#comment">Expérience</a>
-            <a href="#parcours">Parcours</a>
+    <nav>
+      <div class="wrap nav-inner">
+        <a class="brand" href="/" aria-label="UROSI, accueil">
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <defs><linearGradient id="lg" x1="20" y1="5" x2="80" y2="95" gradientUnits="userSpaceOnUse"><stop stop-color="#1d5fe6" /><stop offset="1" stop-color="#0a8bd6" /></linearGradient></defs>
+            <path d="M47 95Q46 74 44 61Q42 49 50 44Q58 49 56 61Q54 74 53 95Z" fill="url(#lg)" />
+            <path d="M50 44Q34 37 20 27Q29 25 38 31Q44 36 50 40" fill="url(#lg)" opacity=".9" />
+            <path d="M50 44Q66 37 80 27Q71 25 62 31Q56 36 50 40" fill="url(#lg)" opacity=".9" />
+            <path d="M42 29Q37 16 39 7Q45 11 45 20Q45 26 44 31" fill="url(#lg)" opacity=".85" />
+            <path d="M58 29Q63 16 61 7Q55 11 55 20Q55 26 56 31" fill="url(#lg)" opacity=".85" />
+            <ellipse cx="19" cy="25" rx="7" ry="4.5" fill="#1d5fe6" transform="rotate(-20 19 25)" />
+            <ellipse cx="81" cy="25" rx="7" ry="4.5" fill="#1d5fe6" transform="rotate(20 81 25)" />
+            <ellipse cx="50" cy="7" rx="6.5" ry="4" fill="#0a8bd6" />
+          </svg>
+          UROSI
+        </a>
+        <div class="links">
+          <a href="/missions">Missions</a>
+          <a href="#pourquoi">Pourquoi UROSI ?</a>
+          <a href="/inscription/structure">Espace structure</a>
+        </div>
+        <div class="actions">
+          <a class="btn btn-ghost btn-sm" href="/connexion">Se connecter</a>
+          <a class="btn btn-primary btn-sm" href="/acces">S’inscrire</a>
+        </div>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <span class="pill">Missions solidaires · Métropole de Lille</span>
+          <h1>Ton CV grandit<br /><span class="accent">avec l’expérience.</span></h1>
+          <p class="lead">Découvre des missions solidaires près de toi et construis ton parcours.</p>
+          <div class="ctas">
+            <a class="btn btn-primary" href="/missions">Découvrir les missions
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            </a>
+            <a class="btn btn-ghost" href="/inscription/structure">Espace structure</a>
           </div>
-          <div class="nav-actions">
-            <a class="btn btn-white" href="/connexion">Connexion</a>
-            <a class="btn btn-dark" href="/acces">S'inscrire</a>
+          <div class="reassure">
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" /></svg>Gratuit</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" /></svg>Sans justificatif</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" /></svg>Inscription en 1 minute</span>
           </div>
         </div>
-      </nav>
 
-      <main class="hero-stage wrap">
-        <header class="hero">
-          <div class="hero-kicker">Micro-missions solidaires · Métropole Européenne de Lille</div>
-          <h1>Ton CV grandit<br /><span class="grad-text">avec l'expérience.</span></h1>
-          <p class="lead">Découvre des missions solidaires près de toi et construis ton parcours.</p>
-          <div class="hero-ctas">
-            <a class="btn btn-dark" href="/missions">Découvrir les missions →</a>
-            <a class="btn btn-white" href="/inscription/structure">Espace structure</a>
-            <a class="link-demo" href="/missions">Voir la démo</a>
-          </div>
-          <div class="benefits">
-            <div class="benefit">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11Z" /><circle cx="12" cy="10" r="2.6" /></svg>
-              Des missions près de chez toi
-            </div>
-            <div class="benefit">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 20V13M10 20V9M16 20V5M22 20H2" /></svg>
-              Une expérience valorisée
-            </div>
-            <div class="benefit">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.2 7.5 9.5 4.3-1.3 7.5-4.9 7.5-9.5V6L12 3Z" /><path d="m8.8 12 2.2 2.2 4.3-4.4" /></svg>
-              Des structures vérifiées
-            </div>
-          </div>
-        </header>
-
-        <!-- Aperçu statique de l'application (aucune donnée réelle). -->
-        <div class="phone-zone" aria-label="Aperçu de l'application UROSI">
-          <div class="float-card float-a"><small>Lille</small><strong>et alentours</strong></div>
-          <div class="float-card float-b"><small>Après la mission</small><strong>✓ Expérience vérifiée</strong></div>
+        <!-- Aperçu illustratif de l'application (missions d'exemple). -->
+        <div class="stage" aria-label="Aperçu de l’application UROSI">
+          <div class="stage-bg"><div data-scene="evenementiel" data-seed="hero-stage"></div></div>
+          <div class="float float-c"><span class="ic" style="background:#e8f0ff;color:#1d5fe6">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11Z" /><circle cx="12" cy="10" r="2.6" /></svg></span>
+            <div><small>Autour de toi</small><strong>Lille et alentours</strong></div></div>
+          <div class="float float-a"><span class="ic" style="background:#e5f6ec;color:#13824a">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" /></svg></span>
+            <div><small>Après la mission</small><strong>Expérience vérifiée</strong></div></div>
+          <div class="float float-b"><span class="ic" style="background:#f0eaff;color:#6b43d8">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V13M10 20V9M16 20V5M22 20H2" /></svg></span>
+            <div><small>Ton parcours</small><strong>+ 3 h d’engagement</strong></div></div>
           <div class="phone" aria-hidden="true">
             <div class="phone-notch"></div>
-            <div class="screen">
-              <div class="s-hello">Bonjour ! 👋</div>
-              <div class="s-title">Des missions solidaires près de chez toi</div>
-              <div class="s-search">⌕ Rechercher une mission…</div>
-              <div class="s-chips">
-                <span class="s-chip on">Tous</span><span class="s-chip">Aide alimentaire</span><span class="s-chip">Événementiel</span>
-              </div>
-              <div class="m-card">
-                <div class="m-visual" style="background: linear-gradient(135deg, #0e7490, #16a34a)">🥫<span class="m-dist">📍 2,1 km</span><span class="m-heart">♥</span></div>
-                <div class="m-body">
-                  <div class="m-title">Distribution de colis alimentaires</div>
-                  <div class="m-org">Association d'aide alimentaire</div>
-                  <div class="m-meta">📅 Samedi · 9h–12h · ⏱ 3 h</div>
-                  <div class="m-tags"><span class="tag tag-green">Solidaire</span><span class="tag tag-cyan">Mission courte</span></div>
-                </div>
-              </div>
-              <div class="m-card">
-                <div class="m-visual" style="background: linear-gradient(135deg, #7c3aed, #db2777)">🎪<span class="m-dist">📍 5,4 km</span><span class="m-heart">♡</span></div>
-                <div class="m-body">
-                  <div class="m-title">Aide à l'organisation d'un festival</div>
-                  <div class="m-org">Festival associatif</div>
-                  <div class="m-meta">📅 Dimanche · ⏱ 4 h</div>
-                  <div class="m-tags"><span class="tag tag-green">Solidaire</span><span class="tag tag-violet">Événementiel</span></div>
-                </div>
-              </div>
+            <div class="ph-head">
+              <div class="ph-top">UROSI <small>Lille ▾</small></div>
+              <div class="ph-hello">Des missions solidaires<br />près de chez toi</div>
+              <div class="ph-chips"><span class="ph-chip on">Tous</span><span class="ph-chip">Solidarité</span><span class="ph-chip">Environnement</span></div>
             </div>
-            <div class="s-nav"><span class="on"><b>⌂</b>Accueil</span><span><b>◎</b>Missions</span><span><b>♡</b>Favoris</span><span><b>◯</b>Profil</span></div>
+            <div class="ph-feed" id="phone-feed"></div>
+            <div class="ph-nav"><span class="on"><b>⌂</b>Accueil</span><span><b>◎</b>Missions</span><span><b>♡</b>Favoris</span><span><b>◯</b>Profil</span></div>
           </div>
         </div>
-      </main>
+      </div>
+    </header>
 
-      <section id="comment" class="sec wrap reveal">
-        <div class="sec-kicker">Comment ça marche</div>
-        <div class="sec-title">Il y a déjà des choses que tu peux faire autour de toi.</div>
-        <div class="steps">
-          <div class="step"><div class="step-n">1</div><h3>Je découvre</h3><p>Des missions solidaires courtes, près de chez toi, sur le moment qui te convient.</p></div>
-          <div class="step"><div class="step-n">2</div><h3>Je candidate</h3><p>En un geste. Pour une mission partenaire, tu termines ta candidature sur son site.</p></div>
-          <div class="step"><div class="step-n">3</div><h3>Je participe</h3><p>Tu suis ta candidature étape par étape, jusqu'au jour de la mission.</p></div>
-          <div class="step"><div class="step-n">4</div><h3>Mon parcours grandit</h3><p>Chaque expérience vérifiée enrichit ton parcours et ton CV UROSI.</p></div>
+    <section class="benefits">
+      <div class="wrap grid-3">
+        <div class="card reveal">
+          <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11Z" /><circle cx="12" cy="10" r="2.6" /></svg></div>
+          <h3>Des missions près de chez toi</h3>
+          <p>Des missions courtes et utiles, dans ton quartier, quand tu es disponible.</p>
         </div>
-      </section>
-
-      <section id="parcours" class="sec wrap reveal">
-        <div class="split">
-          <div class="panel panel-light">
-            <div class="sec-kicker">Pour toi</div>
-            <h3>Un parcours qui raconte ce que tu as vraiment fait.</h3>
-            <p>Missions réalisées, heures d'engagement, structures rencontrées, compétences mobilisées : ton profil parle par les faits. Et tu télécharges ton CV quand tu veux.</p>
-            <ul>
-              <li>Aucun document à fournir pour commencer</li>
-              <li>Ce que tu déclares et ce qui est vérifié restent clairement distincts</li>
-              <li>Des avis croisés après chaque mission sur UROSI</li>
-            </ul>
-            <a class="btn btn-dark" href="/acces">Créer mon compte</a>
-          </div>
-          <div class="panel panel-dark">
-            <div class="sec-kicker" style="color:#67e8f9">Pour les structures</div>
-            <h3>Avant de publier, on identifie ta structure.</h3>
-            <p>Les missions sont réservées aux structures vérifiées. Cette vérification permet aux participants de savoir pour qui ils s'engagent.</p>
-            <ul>
-              <li>Publier une mission solidaire en quelques minutes</li>
-              <li>Recevoir et gérer les candidatures</li>
-              <li>Laisser un avis après la mission</li>
-            </ul>
-            <a class="btn btn-cyan" href="/inscription/structure">Espace structure</a>
-          </div>
+        <div class="card reveal">
+          <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M4 20V13M10 20V9M16 20V5M22 20H2" /></svg></div>
+          <h3>Une expérience valorisée</h3>
+          <p>Chaque mission enrichit ton parcours et ton CV, avec les compétences mobilisées.</p>
         </div>
-      </section>
+        <div class="card reveal">
+          <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.2 7.5 9.5 4.3-1.3 7.5-4.9 7.5-9.5V6L12 3Z" /><path d="m8.8 12 2.2 2.2 4.3-4.4" /></svg></div>
+          <h3>Des structures vérifiées</h3>
+          <p>Tu sais toujours pour qui tu t’engages : chaque structure est identifiée.</p>
+        </div>
+      </div>
+    </section>
 
-      <section class="sec wrap reveal" style="max-width: 720px">
-        <div class="sec-title" style="font-size: 30px">Questions fréquentes</div>
-        <details>
-          <summary>Qui peut participer ?</summary>
-          <p>Toute personne qui a envie d'agir près de chez elle. Il suffit d'un prénom, d'un email, d'un mot de passe et de ta ville. La photo est recommandée, jamais obligatoire.</p>
-        </details>
-        <details>
-          <summary>Dois-je fournir des documents ?</summary>
-          <p>Non. Aucune pièce d'identité ni aucun justificatif n'est demandé pour découvrir des missions et candidater.</p>
-        </details>
-        <details>
-          <summary>D'où viennent les missions ?</summary>
-          <p>Des structures vérifiées qui publient directement sur UROSI, et de plateformes partenaires de l'engagement. Pour ces dernières, tu poursuis ta candidature sur leur site : UROSI garde une trace pour t'aider à la suivre.</p>
-        </details>
-        <details>
-          <summary>C'est quoi, mon parcours UROSI ?</summary>
-          <p>L'historique de tes missions réalisées, tes heures d'engagement, les structures rencontrées, les avis reçus et les compétences mobilisées. Tu peux le télécharger sous forme de CV.</p>
-        </details>
-        <details>
-          <summary>Quelle différence entre « déclarée » et « vérifiée » ?</summary>
-          <p>Une mission que tu indiques avoir réalisée reste « déclarée ». Elle devient « vérifiée » quand la structure le confirme sur UROSI, ou après vérification par l'équipe UROSI. Les deux ne sont jamais mélangés.</p>
-        </details>
-        <details>
-          <summary>Qui peut publier des missions ?</summary>
-          <p>Les structures identifiées et vérifiées via leur SIRET. Les missions solidaires sont publiées par les associations.</p>
-        </details>
-      </section>
+    <section id="comment">
+      <div class="wrap">
+        <div class="kicker">Comment ça marche ?</div>
+        <h2>Quatre étapes, zéro complication.</h2>
+        <div class="grid-4 steps" style="margin-top:28px">
+          <div class="card step reveal"><div class="step-n">1</div><h3>Je découvre une mission</h3><p>Près de chez moi, sur le créneau qui me convient.</p><div class="art" data-scene="solidarite" data-seed="step1"></div></div>
+          <div class="card step reveal"><div class="step-n">2</div><h3>Je candidate</h3><p>En un geste, directement ou sur le site partenaire.</p><div class="art" data-scene="soutien_scolaire" data-seed="step2"></div></div>
+          <div class="card step reveal"><div class="step-n">3</div><h3>Je participe</h3><p>Je suis ma candidature étape par étape, jusqu’au jour J.</p><div class="art" data-scene="aide_alimentaire" data-seed="step3"></div></div>
+          <div class="card step reveal"><div class="step-n">4</div><h3>J’enrichis mon parcours</h3><p>L’expérience rejoint mon parcours et mon CV UROSI.</p><div class="art" data-scene="environnement" data-seed="step4"></div></div>
+        </div>
+      </div>
+    </section>
 
-      <footer class="wrap">
-        UROSI · missions solidaires · Métropole Européenne de Lille<br />
-        <a href="/mentions-legales">Mentions légales</a> · <a href="/cgu">CGU</a> · <a href="/confidentialite">Confidentialité</a>
-      </footer>
-    </div>
+    <section id="pourquoi">
+      <div class="wrap why">
+        <div class="reveal">
+          <div class="kicker">Pourquoi UROSI ?</div>
+          <h2>S’engager près de chez soi, et que ça compte.</h2>
+          <p class="sec-lead">UROSI rassemble les missions solidaires de la métropole et transforme chaque engagement en expérience visible.</p>
+          <div class="why-list">
+            <div class="why-item"><span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11Z" /><circle cx="12" cy="10" r="2.6" /></svg></span><div><strong>Missions locales</strong><span>Dans ta ville et autour, triées par proximité.</span></div></div>
+            <div class="why-item"><span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M4 20V13M10 20V9M16 20V5M22 20H2" /></svg></span><div><strong>Expérience valorisable</strong><span>Heures, compétences, avis : un CV que tu peux télécharger.</span></div></div>
+            <div class="why-item"><span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" /></svg></span><div><strong>Suivi simple</strong><span>Chaque candidature suivie, de l’envoi à l’expérience vérifiée.</span></div></div>
+            <div class="why-item"><span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.2 7.5 9.5 4.3-1.3 7.5-4.9 7.5-9.5V6L12 3Z" /><path d="m8.8 12 2.2 2.2 4.3-4.4" /></svg></span><div><strong>Associations vérifiées</strong><span>Identifiées par leur SIRET avant de publier.</span></div></div>
+          </div>
+          <a class="btn btn-primary" href="/acces" style="margin-top:28px">Créer mon compte</a>
+        </div>
+        <div class="cv reveal" aria-label="Exemple de parcours UROSI">
+          <div class="cv-head"><div class="cv-avatar">L</div><div><strong style="font-size:17px">Léa</strong><div style="font-size:13px;color:var(--sub)">Lille · Exemple de parcours</div></div></div>
+          <div class="cv-stats"><div><b>14 h</b><span>d’engagement</span></div><div><b>5</b><span>missions</span></div><div><b>4</b><span>structures</span></div></div>
+          <div class="cv-exp"><div class="thumb" data-scene="aide_alimentaire" data-seed="cv1"></div><div><strong>Distribution de colis</strong><span>3 h · Lille</span></div><span class="ok">✓</span></div>
+          <div class="cv-exp"><div class="thumb" data-scene="evenementiel" data-seed="cv2"></div><div><strong>Festival de quartier</strong><span>4 h · Lille</span></div><span class="ok">✓</span></div>
+          <div class="cv-exp"><div class="thumb" data-scene="soutien_scolaire" data-seed="cv3"></div><div><strong>Soutien scolaire</strong><span>2 h · Roubaix</span></div><span class="ok">✓</span></div>
+          <div class="cv-note">Illustration : chaque expérience vérifiée porte le badge ✓</div>
+        </div>
+      </div>
+    </section>
 
-    <script>
-      // Variation douce de luminosité au scroll.
-      (function () {
-        var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (reduceMotion) return;
-        var ticking = false;
-        function updateLight() {
-          var max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-          var progress = Math.min(1, Math.max(0, window.scrollY / max));
-          document.documentElement.style.setProperty('--luminosity', (0.42 + progress * 0.34).toFixed(2));
-          ticking = false;
-        }
-        window.addEventListener('scroll', function () {
-          if (!ticking) { window.requestAnimationFrame(updateLight); ticking = true; }
-        }, { passive: true });
-        updateLight();
-      })();
+    <section>
+      <div class="wrap">
+        <div class="asso reveal">
+          <div>
+            <div class="kicker" style="color:#bcd4ff">Espace structure</div>
+            <h2>Vous êtes une association ?</h2>
+            <p>Publiez une mission solidaire et trouvez des bénévoles motivés, près de chez vous. Gratuit, simple, et réservé aux structures vérifiées.</p>
+            <a class="btn" href="/inscription/structure">Accéder à l’espace structure
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            </a>
+          </div>
+          <div class="asso-art" data-scene="solidarite" data-seed="asso"></div>
+        </div>
+      </div>
+    </section>
 
-      // Révélation au scroll.
-      var els = document.querySelectorAll('.reveal');
-      if ('IntersectionObserver' in window) {
-        var io = new IntersectionObserver(function (entries) {
-          entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
-        }, { threshold: 0.12 });
-        els.forEach(function (el) { io.observe(el); });
-      } else { els.forEach(function (el) { el.classList.add('in'); }); }
-    </script>
+    <section style="padding-top:20px">
+      <div class="wrap" style="max-width:780px">
+        <div class="kicker">Questions fréquentes</div>
+        <h2 style="margin-bottom:22px">Tout ce qu’il faut savoir</h2>
+        <details><summary>Qui peut participer ?</summary><p>Toute personne majeure qui a envie d’agir près de chez elle. Il suffit d’un prénom, d’un email, d’un mot de passe et de ta ville. La photo est facultative.</p></details>
+        <details><summary>Dois-je fournir des documents ?</summary><p>Non. Aucune pièce d’identité ni aucun justificatif n’est demandé pour découvrir des missions et candidater.</p></details>
+        <details><summary>D’où viennent les missions ?</summary><p>Des associations vérifiées qui publient sur UROSI, et de plateformes partenaires de l’engagement. Pour ces dernières, tu poursuis ta candidature sur leur site : UROSI t’aide à la suivre.</p></details>
+        <details><summary>Qu’est-ce que mon parcours UROSI ?</summary><p>L’historique de tes missions réalisées, tes heures d’engagement, les structures rencontrées, les avis et les compétences mobilisées. Tu peux le télécharger sous forme de CV.</p></details>
+        <details><summary>Quelle différence entre « déclarée » et « vérifiée » ?</summary><p>Une mission que tu indiques avoir réalisée reste « déclarée ». Elle devient « vérifiée » quand la structure le confirme sur UROSI, ou après vérification par l’équipe UROSI.</p></details>
+      </div>
+    </section>
+
+    <footer>
+      <div class="wrap foot">
+        <div><strong style="color:var(--blue)">UROSI</strong> · missions solidaires · Métropole Européenne de Lille</div>
+        <div class="foot-links"><a href="/missions">Missions</a><a href="/inscription/structure">Espace structure</a><a href="/mentions-legales">Mentions légales</a><a href="/cgu">CGU</a><a href="/confidentialite">Confidentialité</a></div>
+      </div>
+    </footer>
   </body>
 </html>

@@ -4,6 +4,7 @@ import { categoryInfo } from '@/features/missions/categories';
 import { formatDistance } from '@/lib/geo';
 import { formatDay } from '@/lib/slots';
 import type { FeedMission } from '@/features/missions/solidarityMissions';
+import { sceneSvg } from '@/features/missions/categoryScene';
 import { useImpressionTracking } from './impressionTracking';
 
 // Visuel de mission, jamais vide : photo de mission > illustration fournie
@@ -27,25 +28,16 @@ export function MissionVisual({ mission, height = 132, radius = 12, children }: 
           style={{ width: '100%', height: '100%', objectFit: isIllustration ? 'contain' : 'cover', padding: isIllustration ? 18 : 0, background: isIllustration ? 'rgba(255,255,255,.9)' : undefined }}
         />
       ) : (
-        <CategoryIllustration glyph={info.glyph} />
+        <CategoryIllustration category={mission.category} seed={mission.key} />
       )}
       {children}
     </div>
   );
 }
 
-function CategoryIllustration({ glyph }: { glyph: string }) {
-  return (
-    <div aria-hidden="true" style={{ position: 'absolute', inset: 0 }}>
-      <svg width="100%" height="100%" viewBox="0 0 320 140" preserveAspectRatio="xMidYMid slice" style={{ position: 'absolute', inset: 0 }}>
-        <circle cx="270" cy="20" r="70" fill="rgba(255,255,255,.12)" />
-        <circle cx="40" cy="150" r="80" fill="rgba(255,255,255,.08)" />
-        <circle cx="200" cy="120" r="30" fill="rgba(255,255,255,.1)" />
-        <path d="M0 110 Q80 80 160 105 T320 95 V140 H0 Z" fill="rgba(255,255,255,.1)" />
-      </svg>
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 46, filter: 'drop-shadow(0 6px 14px rgba(0,0,0,.25))' }}>{glyph}</div>
-    </div>
-  );
+function CategoryIllustration({ category, seed }: { category: FeedMission['category']; seed: string }) {
+  // Scène SVG statique générée par UROSI (aucune donnée utilisateur).
+  return <div aria-hidden="true" style={{ position: 'absolute', inset: 0 }} dangerouslySetInnerHTML={{ __html: sceneSvg(category, seed) }} />;
 }
 
 const AVATAR_HUES = [198, 24, 265, 150, 340, 45, 210, 110];

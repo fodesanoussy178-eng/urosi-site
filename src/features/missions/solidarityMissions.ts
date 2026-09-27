@@ -15,6 +15,7 @@ import { features } from '@/lib/features';
 import type { Database } from '@/types/database.types';
 import { toCategory, type SolidarityCategory } from './categories';
 import { fetchOpenMissions, type MissionWithStructure } from './missionsService';
+import { demoMissions, demoMissionsEnabled } from './demoMissions';
 
 export type MissionKind = 'external_solidarity_mission' | 'urosi_solidarity_mission' | 'paid_mission';
 export type ExternalMission = Database['public']['Tables']['external_missions']['Row'];
@@ -47,6 +48,8 @@ export interface FeedMission {
   // Tracking diffuseur API Engagement : impression d'une mission affichée.
   impressionUrl: string | null;
   isShort: boolean;
+  // Mission d'exemple (catalogue vide) : jamais candidatable, toujours signalée.
+  isDemo?: boolean;
 }
 
 export const SOURCE_LABELS: Record<string, string> = {
@@ -341,4 +344,19 @@ export function matchesSearch(m: FeedMission, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
   return [m.title, m.organization.name, m.city ?? '', m.description ?? ''].some((v) => v.toLowerCase().includes(q));
+}
+
+export interface PublicCatalog {
+  missions: FeedMission[];
+  // true : aucune mission réelle disponible, missions d'exemple affichées.
+  demo: boolean;
+}
+
+// Catalogue des pages publiques : jamais vide ni bloqué. Tant qu'aucune
+// mission réelle n'est disponible (import non configuré, aucune mission
+// native), des missions d'exemple clairement signalées prennent le relais.
+export async function fetchPublicCatalog(timeoutMs = FEED_SOURCE_TIMEOUT_MS): Promise<PublicCatalog> {
+  const result = await fetchSolidarityFeedResult(timeoutMs);
+  if (result.missions.length > 0 || !demoMissionsEnabled) return { missions: result.missions, demo: false };
+  return { missions: demoMissions(), demo: true };
 }

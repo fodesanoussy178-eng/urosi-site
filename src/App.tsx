@@ -20,6 +20,7 @@ const StructureSignupPage = lazy(() => import('@/features/auth/StructureSignupPa
 const ResetPasswordPage = lazy(() => import('@/features/auth/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })));
 const WorkerApp = lazy(() => import('@/features/worker/WorkerApp').then((m) => ({ default: m.WorkerApp })));
 const ParticipantApp = lazy(() => import('@/features/participant/ParticipantApp').then((m) => ({ default: m.ParticipantApp })));
+const PublicMissionPage = lazy(() => import('@/features/participant/PublicMissionPage').then((m) => ({ default: m.PublicMissionPage })));
 const PublicMissionsPage = lazy(() => import('@/features/participant/PublicMissionsPage').then((m) => ({ default: m.PublicMissionsPage })));
 const StructureApp = lazy(() => import('@/features/structure/StructureApp').then((m) => ({ default: m.StructureApp })));
 const CheckinPage = lazy(() => import('@/features/missions/CheckinPage').then((m) => ({ default: m.CheckinPage })));
@@ -125,6 +126,7 @@ function AppShell() {
         <Route path="/app" element={<Navigate to="/connexion" replace />} />
         <Route path="/acces" element={<EntryPage />} />
         <Route path="/missions" element={<PublicMissionsPage />} />
+        <Route path="/missions/:key" element={<PublicMissionPage />} />
         <Route path="/demo" element={features.paidLayer ? <DemoExperience /> : <Navigate to="/missions" replace />} />
         <Route path="/connexion" element={<SignInPage />} />
         <Route path="/inscription/participant" element={<WorkerSignupPage />} />
@@ -224,6 +226,7 @@ function AppShell() {
         <Route path="/" element={<StaticHome />} />
         <Route path="/demo" element={features.paidLayer ? <DemoExperience /> : <Navigate to="/app" replace />} />
         <Route path="/missions" element={<Navigate to="/app" replace />} />
+        <Route path="/missions/:key" element={<Navigate to="/app" replace />} />
         <Route path="/connexion" element={<SignInPage />} />
         <Route
           path="/app"
