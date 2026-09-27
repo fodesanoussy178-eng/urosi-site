@@ -48,3 +48,26 @@ export async function runApiEngagementImport(): Promise<ExternalImportRun & { ru
   if (error) throw error;
   return data as ExternalImportRun & { run_id: string };
 }
+
+// Participations déclarées (« J'y suis allé ») en attente de la structure.
+// Aucun email n'est envoyé automatiquement : le lien est transmis par l'équipe.
+export interface PendingParticipation {
+  id: string;
+  participant: string;
+  mission_title: string;
+  organization_name: string | null;
+  organization_url: string | null;
+  mission_date: string | null;
+  declared_at: string | null;
+  token: string;
+}
+
+export async function fetchPendingParticipations(): Promise<PendingParticipation[]> {
+  const { data, error } = await supabase.rpc('founder_pending_participations');
+  if (error) throw error;
+  return (data as unknown as PendingParticipation[]) ?? [];
+}
+
+export function confirmationLink(token: string): string {
+  return `${window.location.origin}/confirmer/${token}`;
+}

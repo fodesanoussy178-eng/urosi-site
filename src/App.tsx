@@ -19,9 +19,11 @@ const MandatAcceptancePage = lazy(() => import('@/features/auth/MandatAcceptance
 const StructureSignupPage = lazy(() => import('@/features/auth/StructureSignupPage').then((m) => ({ default: m.StructureSignupPage })));
 const ResetPasswordPage = lazy(() => import('@/features/auth/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })));
 const WorkerApp = lazy(() => import('@/features/worker/WorkerApp').then((m) => ({ default: m.WorkerApp })));
-const ParticipantApp = lazy(() => import('@/features/participant/ParticipantApp').then((m) => ({ default: m.ParticipantApp })));
-const PublicMissionPage = lazy(() => import('@/features/participant/PublicMissionPage').then((m) => ({ default: m.PublicMissionPage })));
-const PublicMissionsPage = lazy(() => import('@/features/participant/PublicMissionsPage').then((m) => ({ default: m.PublicMissionsPage })));
+const MissionsHome = lazy(() => import('@/features/journey/MissionsHome').then((m) => ({ default: m.MissionsHome })));
+const MissionPage = lazy(() => import('@/features/journey/MissionPage').then((m) => ({ default: m.MissionPage })));
+const ProfilePage = lazy(() => import('@/features/journey/ProfilePage').then((m) => ({ default: m.ProfilePage })));
+const PublicProfilePage = lazy(() => import('@/features/journey/PublicProfilePage').then((m) => ({ default: m.PublicProfilePage })));
+const ConfirmParticipationPage = lazy(() => import('@/features/journey/ConfirmParticipationPage').then((m) => ({ default: m.ConfirmParticipationPage })));
 const StructureApp = lazy(() => import('@/features/structure/StructureApp').then((m) => ({ default: m.StructureApp })));
 const CheckinPage = lazy(() => import('@/features/missions/CheckinPage').then((m) => ({ default: m.CheckinPage })));
 const ScanPage = lazy(() => import('@/features/missions/ScanPage').then((m) => ({ default: m.ScanPage })));
@@ -93,6 +95,13 @@ function FounderTestBanner() {
 
 // Le site vitrine (/) est une page statique servie par Vercel, hors React :
 // une navigation interne vers "/" recharge la page.
+function VisitorJourneySync({ userId }: { userId: string }) {
+  useEffect(() => {
+    void import('@/features/journey/journeyService').then((m) => m.syncVisitorJourney()).catch(() => undefined);
+  }, [userId]);
+  return null;
+}
+
 function StaticHome() {
   useEffect(() => {
     window.location.replace('/');
@@ -125,8 +134,11 @@ function AppShell() {
         {/* Non connecté : /app passe par la connexion, puis l'app s'ouvre. */}
         <Route path="/app" element={<Navigate to="/connexion" replace />} />
         <Route path="/acces" element={<EntryPage />} />
-        <Route path="/missions" element={<PublicMissionsPage />} />
-        <Route path="/missions/:key" element={<PublicMissionPage />} />
+        <Route path="/missions" element={<MissionsHome />} />
+        <Route path="/missions/:key" element={<MissionPage />} />
+        <Route path="/p/:id" element={<PublicProfilePage />} />
+        <Route path="/confirmer/:token" element={<ConfirmParticipationPage />} />
+        <Route path="/profil" element={<Navigate to="/connexion?next=/profil" replace />} />
         <Route path="/demo" element={features.paidLayer ? <DemoExperience /> : <Navigate to="/missions" replace />} />
         <Route path="/connexion" element={<SignInPage />} />
         <Route path="/inscription/participant" element={<WorkerSignupPage />} />
@@ -225,12 +237,17 @@ function AppShell() {
       <Routes>
         <Route path="/" element={<StaticHome />} />
         <Route path="/demo" element={features.paidLayer ? <DemoExperience /> : <Navigate to="/app" replace />} />
-        <Route path="/missions" element={<Navigate to="/app" replace />} />
-        <Route path="/missions/:key" element={<Navigate to="/app" replace />} />
+        <Route path="/missions" element={<MissionsHome />} />
+        <Route path="/missions/:key" element={<MissionPage />} />
+        <Route path="/p/:id" element={<PublicProfilePage />} />
+        <Route path="/confirmer/:token" element={<ConfirmParticipationPage />} />
+        <Route path="/profil" element={profile.role === 'structure_admin' ? <Navigate to="/app" replace /> : <ProfilePage />} />
         <Route path="/connexion" element={<SignInPage />} />
         <Route
           path="/app"
-          element={profile.role === 'structure_admin' ? <StructureApp /> : features.paidLayer ? <WorkerApp /> : <ParticipantApp />}
+          element={
+            profile.role === 'structure_admin' ? <StructureApp /> : features.paidLayer ? <WorkerApp /> : <Navigate to="/missions" replace />
+          }
         />
         <Route path="/fondateur" element={<FounderAdminPage />} />
         <Route path="/fondateur/kyc" element={<Navigate to="/fondateur?section=kyc" replace />} />
@@ -246,10 +263,13 @@ function AppShell() {
       </Routes>
     );
   }
+  // Participant connecté : les candidatures faites en visiteur rejoignent son compte.
+  const journeySync = profile.role !== 'structure_admin' && !features.paidLayer ? <VisitorJourneySync userId={profile.id} /> : null;
 
   return (
     <>
       {isFounderTest && <FounderTestBanner />}
+      {journeySync}
       <div style={{ paddingTop: isFounderTest ? 'calc(30px + env(safe-area-inset-top))' : 0 }}>{content}</div>
     </>
   );

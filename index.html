@@ -75,11 +75,11 @@
       .ph-body { padding: 9px 11px 11px; }
       .ph-title { font-size: 12.5px; font-weight: 900; line-height: 1.25; }
       .ph-org { font-size: 10.5px; color: var(--sub); font-weight: 600; margin-top: 2px; }
-      .ph-meta { font-size: 10px; color: var(--mu); margin-top: 3px; text-transform: capitalize; }
+      .ph-meta { font-size: 10px; color: var(--sub); font-weight: 700; margin-top: 4px; }
       .ph-tags { display: flex; gap: 5px; margin-top: 6px; }
       .tag { font-size: 9px; font-weight: 800; border-radius: 999px; padding: 2px 8px; }
       .tag-green { background: #e5f6ec; color: #13824a; } .tag-blue { background: #e7f0ff; color: var(--blue); } .tag-violet { background: #f0eaff; color: #6b43d8; }
-      .ph-nav { position: absolute; left: 0; right: 0; bottom: 0; height: 58px; background: #fff; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(4, 1fr); align-items: center; z-index: 3; }
+      .ph-nav { position: absolute; left: 0; right: 0; bottom: 0; height: 58px; background: #fff; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(2, 1fr); align-items: center; z-index: 3; }
       .ph-nav span { text-align: center; font-size: 9.5px; font-weight: 800; color: var(--mu); }
       .ph-nav span.on { color: var(--blue); }
       .ph-nav b { display: block; font-size: 14px; }
@@ -247,11 +247,11 @@
             <div class="phone-notch"></div>
             <div class="ph-head">
               <div class="ph-top">UROSI <small>Lille ▾</small></div>
-              <div class="ph-hello">Des missions solidaires<br />près de chez toi</div>
-              <div class="ph-chips"><span class="ph-chip on">Tous</span><span class="ph-chip">Solidarité</span><span class="ph-chip">Environnement</span></div>
+              <div class="ph-hello">Missions près de toi</div>
+              <div class="ph-chips"><span class="ph-chip on">📍 Près de moi</span><span class="ph-chip">Voir dans ma ville</span></div>
             </div>
             <div class="ph-feed" id="phone-feed"></div>
-            <div class="ph-nav"><span class="on"><b>⌂</b>Accueil</span><span><b>◎</b>Missions</span><span><b>♡</b>Favoris</span><span><b>◯</b>Profil</span></div>
+            <div class="ph-nav"><span class="on"><b>◎</b>Missions</span><span><b>◯</b>Mon profil</span></div>
           </div>
         </div>
       </div>
@@ -267,7 +267,7 @@
         <div class="card reveal">
           <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M4 20V13M10 20V9M16 20V5M22 20H2" /></svg></div>
           <h3>Une expérience valorisée</h3>
-          <p>Chaque mission enrichit ton parcours et ton CV, avec les compétences mobilisées.</p>
+          <p>Chaque mission confirmée par la structure rejoint ton profil.</p>
         </div>
         <div class="card reveal">
           <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.2 7.5 9.5 4.3-1.3 7.5-4.9 7.5-9.5V6L12 3Z" /><path d="m8.8 12 2.2 2.2 4.3-4.4" /></svg></div>
@@ -280,12 +280,12 @@
     <section id="comment">
       <div class="wrap">
         <div class="kicker">Comment ça marche ?</div>
-        <h2>Quatre étapes, zéro complication.</h2>
+        <h2>Trouver, participer, prouver.</h2>
         <div class="grid-4 steps" style="margin-top:28px">
-          <div class="card step reveal"><div class="step-n">1</div><h3>Je découvre une mission</h3><p>Près de chez moi, sur le créneau qui me convient.</p><div class="art" data-scene="solidarite" data-seed="step1"></div></div>
-          <div class="card step reveal"><div class="step-n">2</div><h3>Je candidate</h3><p>En un geste, directement ou sur le site partenaire.</p><div class="art" data-scene="soutien_scolaire" data-seed="step2"></div></div>
-          <div class="card step reveal"><div class="step-n">3</div><h3>Je participe</h3><p>Je suis ma candidature étape par étape, jusqu’au jour J.</p><div class="art" data-scene="aide_alimentaire" data-seed="step3"></div></div>
-          <div class="card step reveal"><div class="step-n">4</div><h3>J’enrichis mon parcours</h3><p>L’expérience rejoint mon parcours et mon CV UROSI.</p><div class="art" data-scene="environnement" data-seed="step4"></div></div>
+          <div class="card step reveal"><div class="step-n">1</div><h3>Je trouve une mission</h3><p>Près de moi, en un coup d’œil : où, quand, combien de temps.</p><div class="art" data-scene="solidarite" data-seed="step1"></div></div>
+          <div class="card step reveal"><div class="step-n">2</div><h3>Je candidate</h3><p>En un geste, directement sur le site de l’organisateur.</p><div class="art" data-scene="soutien_scolaire" data-seed="step2"></div></div>
+          <div class="card step reveal"><div class="step-n">3</div><h3>J’y vais</h3><p>Après la mission, je dis simplement si j’y suis allé.</p><div class="art" data-scene="aide_alimentaire" data-seed="step3"></div></div>
+          <div class="card step reveal"><div class="step-n">4</div><h3>La structure confirme</h3><p>L’expérience confirmée apparaît sur mon profil.</p><div class="art" data-scene="environnement" data-seed="step4"></div></div>
         </div>
       </div>
     </section>
@@ -298,19 +298,19 @@
           <p class="sec-lead">UROSI rassemble les missions solidaires de la métropole et transforme chaque engagement en expérience visible.</p>
           <div class="why-list">
             <div class="why-item"><span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11Z" /><circle cx="12" cy="10" r="2.6" /></svg></span><div><strong>Missions locales</strong><span>Dans ta ville et autour, triées par proximité.</span></div></div>
-            <div class="why-item"><span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M4 20V13M10 20V9M16 20V5M22 20H2" /></svg></span><div><strong>Expérience valorisable</strong><span>Heures, compétences, avis : un CV que tu peux télécharger.</span></div></div>
-            <div class="why-item"><span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" /></svg></span><div><strong>Suivi simple</strong><span>Chaque candidature suivie, de l’envoi à l’expérience vérifiée.</span></div></div>
+            <div class="why-item"><span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M4 20V13M10 20V9M16 20V5M22 20H2" /></svg></span><div><strong>Expérience prouvée</strong><span>Chaque mission confirmée par la structure rejoint ton profil.</span></div></div>
+            <div class="why-item"><span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" /></svg></span><div><strong>Rien à gérer</strong><span>Après la mission, une seule question : « Alors, tu y es allé ? »</span></div></div>
             <div class="why-item"><span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.2 7.5 9.5 4.3-1.3 7.5-4.9 7.5-9.5V6L12 3Z" /><path d="m8.8 12 2.2 2.2 4.3-4.4" /></svg></span><div><strong>Associations vérifiées</strong><span>Identifiées par leur SIRET avant de publier.</span></div></div>
           </div>
           <a class="btn btn-primary" href="/acces" style="margin-top:28px">Créer mon compte</a>
         </div>
         <div class="cv reveal" aria-label="Exemple de parcours UROSI">
-          <div class="cv-head"><div class="cv-avatar">L</div><div><strong style="font-size:17px">Léa</strong><div style="font-size:13px;color:var(--sub)">Lille · Exemple de parcours</div></div></div>
+          <div class="cv-head"><div class="cv-avatar">L</div><div><strong style="font-size:17px">Léa M.</strong><div style="font-size:13px;color:var(--sub)">Lille · Exemple de parcours</div></div></div>
           <div class="cv-stats"><div><b>14 h</b><span>d’engagement</span></div><div><b>5</b><span>missions</span></div><div><b>4</b><span>structures</span></div></div>
           <div class="cv-exp"><div class="thumb" data-scene="aide_alimentaire" data-seed="cv1"></div><div><strong>Distribution de colis</strong><span>3 h · Lille</span></div><span class="ok">✓</span></div>
           <div class="cv-exp"><div class="thumb" data-scene="evenementiel" data-seed="cv2"></div><div><strong>Festival de quartier</strong><span>4 h · Lille</span></div><span class="ok">✓</span></div>
           <div class="cv-exp"><div class="thumb" data-scene="soutien_scolaire" data-seed="cv3"></div><div><strong>Soutien scolaire</strong><span>2 h · Roubaix</span></div><span class="ok">✓</span></div>
-          <div class="cv-note">Illustration : chaque expérience vérifiée porte le badge ✓</div>
+          <div class="cv-note">Illustration : ✓ = participation confirmée par la structure</div>
         </div>
       </div>
     </section>
@@ -335,11 +335,11 @@
       <div class="wrap" style="max-width:780px">
         <div class="kicker">Questions fréquentes</div>
         <h2 style="margin-bottom:22px">Tout ce qu’il faut savoir</h2>
-        <details><summary>Qui peut participer ?</summary><p>Toute personne majeure qui a envie d’agir près de chez elle. Il suffit d’un prénom, d’un email, d’un mot de passe et de ta ville. La photo est facultative.</p></details>
+        <details><summary>Qui peut participer ?</summary><p>Toute personne majeure qui a envie d’agir près de chez elle. Tu peux voir les missions et candidater sans compte ; un profil (prénom, email, mot de passe) sert seulement à garder tes missions confirmées.</p></details>
         <details><summary>Dois-je fournir des documents ?</summary><p>Non. Aucune pièce d’identité ni aucun justificatif n’est demandé pour découvrir des missions et candidater.</p></details>
-        <details><summary>D’où viennent les missions ?</summary><p>Des associations vérifiées qui publient sur UROSI, et de plateformes partenaires de l’engagement. Pour ces dernières, tu poursuis ta candidature sur leur site : UROSI t’aide à la suivre.</p></details>
-        <details><summary>Qu’est-ce que mon parcours UROSI ?</summary><p>L’historique de tes missions réalisées, tes heures d’engagement, les structures rencontrées, les avis et les compétences mobilisées. Tu peux le télécharger sous forme de CV.</p></details>
-        <details><summary>Quelle différence entre « déclarée » et « vérifiée » ?</summary><p>Une mission que tu indiques avoir réalisée reste « déclarée ». Elle devient « vérifiée » quand la structure le confirme sur UROSI, ou après vérification par l’équipe UROSI.</p></details>
+        <details><summary>D’où viennent les missions ?</summary><p>Des associations vérifiées qui publient sur UROSI, et de plateformes partenaires de l’engagement. Pour ces dernières, tu poursuis ta candidature directement sur leur site.</p></details>
+        <details><summary>Qu’est-ce que mon profil UROSI ?</summary><p>Tes missions confirmées par les structures, tes heures d’engagement et les structures auprès desquelles tu t’es engagé. Tu choisis s’il est public ou privé.</p></details>
+        <details><summary>Quelle différence entre « déclarée » et « vérifiée » ?</summary><p>Une mission que tu indiques avoir réalisée reste « déclarée », visible par toi seul. Elle devient « confirmée » (pastille verte) uniquement quand la structure confirme ta participation.</p></details>
       </div>
     </section>
 

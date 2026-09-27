@@ -547,13 +547,16 @@ export function StructureApp() {
   // personne a participé. Réutilise la validation à distance existante
   // (début puis fin) : la fin déclenche l'entrée au parcours, la demande
   // d'avis croisée et la vérification (structure ou automatique à 48 h).
-  async function confirmParticipation(c: CandWithMission) {
-    if (!window.confirm(`Confirmer que ${c.profile?.display_name || 'cette personne'} a bien participé à « ${c.missionTitle} » ?`)) return;
+  async function confirmParticipation(c: CandWithMission, options: { skipPrompt?: boolean } = {}) {
+    if (!options.skipPrompt && !window.confirm(`Confirmer que ${c.profile?.display_name || 'cette personne'} a bien participé à « ${c.missionTitle} » ?`)) return;
     try {
       if (!c.actual_start_at) await confirmRemoteAttendance(c.id, 'start');
       await confirmRemoteAttendance(c.id, 'end');
+      // Phase 0 : la confirmation de la structure vaut vérification — une
+      // seule action, l'expérience entre directement dans le profil.
+      if (!features.paidLayer) await verifyMissionCvEntry(c.id).catch(() => undefined);
       await loadMissionData(mis);
-      notif('Participation confirmée — l’expérience rejoint le parcours du bénévole.');
+      notif('Participation confirmée — l’expérience rejoint le profil du bénévole.');
     } catch (e) {
       await loadMissionData(mis).catch(() => undefined);
       notif(describeError(e, 'la confirmation de participation'));
@@ -1069,7 +1072,21 @@ export function StructureApp() {
                               )}
                             </button>
                           )}
-                          {c.status === 'accepted' && (
+                          {!features.paidLayer && c.participant_declared_completed === true && ['accepted', 'in_progress'].includes(c.status) && (
+                            <div role="note" style={{ background: T.greenBg, border: `1px solid ${T.greenBorder}`, borderRadius: 10, padding: '10px 12px', fontSize: 11.5, color: T.text, lineHeight: 1.5 }}>
+                              <strong>{c.profile?.display_name || 'Le bénévole'}</strong> indique avoir réalisé cette mission le{' '}
+                              {new Date(`${missionFor(c)?.scheduled_date ?? ''}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}. Pouvez-vous confirmer sa participation ?
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 8 }}>
+                                <button onClick={() => confirmParticipation(c, { skipPrompt: true })} style={{ background: T.green, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 0', fontSize: 11.5, fontWeight: 800, cursor: 'pointer' }}>
+                                  ✓ Oui, a participé
+                                </button>
+                                <button onClick={() => signalerAbsence(c)} style={{ background: T.card, color: T.red, border: `1px solid ${T.redBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 11.5, fontWeight: 800, cursor: 'pointer' }}>
+                                  ✕ Non
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                          {c.status === 'accepted' && !(c.participant_declared_completed === true && !features.paidLayer) && (
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                               <button onClick={() => (features.qrAttendance ? validationDistance(c, 'start') : confirmParticipation(c))} style={{ background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
                                 {features.qrAttendance ? 'Début à distance' : '✓ Confirmer la participation'}

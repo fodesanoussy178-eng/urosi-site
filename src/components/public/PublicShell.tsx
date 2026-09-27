@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { useOptionalAuth } from '@/features/auth/AuthContext';
 
 // Logo UROSI (même dessin que Logo.tsx) décliné en bleu pour les fonds clairs.
 export function BrandLogo({ size = 30 }: { size?: number }) {
@@ -23,7 +24,14 @@ export function BrandLogo({ size = 30 }: { size?: number }) {
   );
 }
 
-export function PublicNav({ active, minimal = false }: { active?: 'missions' | 'structure'; minimal?: boolean }) {
+type Active = 'missions' | 'structure' | 'profil';
+
+// Navigation minimale : Missions et, une fois connecté, Mon profil.
+export function PublicNav({ active, minimal = false }: { active?: Active; minimal?: boolean }) {
+  const auth = useOptionalAuth();
+  const session = auth?.session ?? null;
+  const profile = auth?.profile ?? null;
+  const structure = profile?.role === 'structure_admin';
   return (
     <header className="pub-nav">
       <div className="pub-wrap pub-nav-inner">
@@ -34,13 +42,22 @@ export function PublicNav({ active, minimal = false }: { active?: 'missions' | '
         {!minimal && (
           <nav className="pub-links" aria-label="Navigation">
             <Link to="/missions" aria-current={active === 'missions' ? 'page' : undefined}>Missions</Link>
-            <a href="/#pourquoi">Pourquoi UROSI ?</a>
-            <Link to="/inscription/structure" aria-current={active === 'structure' ? 'page' : undefined}>Espace structure</Link>
+            {!session && <Link to="/inscription/structure" aria-current={active === 'structure' ? 'page' : undefined}>Espace structure</Link>}
           </nav>
         )}
         <div className="pub-actions">
-          <Link className="pub-btn pub-btn-ghost" to="/connexion">Se connecter</Link>
-          {!minimal && <Link className="pub-btn pub-btn-primary pub-hide-sm" to="/acces">S’inscrire</Link>}
+          {session ? (
+            structure ? (
+              <Link className="pub-btn pub-btn-ghost" to="/app">Mon espace</Link>
+            ) : (
+              <Link className="pub-btn pub-btn-ghost" to="/profil" aria-current={active === 'profil' ? 'page' : undefined}>Mon profil</Link>
+            )
+          ) : (
+            <>
+              <Link className="pub-btn pub-btn-ghost" to="/connexion">Se connecter</Link>
+              {!minimal && <Link className="pub-btn pub-btn-primary pub-hide-sm" to="/acces">S’inscrire</Link>}
+            </>
+          )}
         </div>
       </div>
     </header>
@@ -59,7 +76,7 @@ export function PublicFooter() {
   );
 }
 
-export function PublicShell({ children, active, minimal, footer = true }: { children: ReactNode; active?: 'missions' | 'structure'; minimal?: boolean; footer?: boolean }) {
+export function PublicShell({ children, active, minimal, footer = true }: { children: ReactNode; active?: Active; minimal?: boolean; footer?: boolean }) {
   return (
     <div className="pub">
       <PublicNav active={active} minimal={minimal} />

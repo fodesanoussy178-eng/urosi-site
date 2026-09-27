@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { T } from '@/components/ui/theme';
 import { describeError } from '@/lib/errors';
-import { fetchExternalMissionsOverview, runApiEngagementImport, type ExternalImportRun, type ExternalMissionsOverview } from '../externalMissionsAdminService';
+import {
+  confirmationLink,
+  fetchExternalMissionsOverview,
+  fetchPendingParticipations,
+  runApiEngagementImport,
+  type ExternalImportRun,
+  type ExternalMissionsOverview,
+  type PendingParticipation,
+} from '../externalMissionsAdminService';
 import { founderButton, founderCard, founderDate, founderNotice } from '../founderUi';
 
 const STATUS_LABELS: Record<ExternalImportRun['status'], { label: string; color: string }> = {
@@ -27,8 +35,11 @@ const APPLICATION_LABELS: Record<string, string> = {
   external_application_started: 'commencées',
   accepted_declared: 'acceptées (déclarées)',
   completed_declared: 'réalisées (déclarées)',
-  verified: 'vérifiées',
+  verified: 'vérifiées (équipe)',
   withdrawn: 'retirées',
+  not_done_declared: 'non réalisées (déclaré)',
+  verified_completed: 'confirmées par la structure',
+  not_confirmed: 'non confirmées',
 };
 
 function Stat({ value, label }: { value: string | number; label: string }) {
@@ -45,8 +56,10 @@ export function FounderExternalMissionsPanel() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<PendingParticipation[]>([]);
 
   const load = useCallback(async () => {
+    fetchPendingParticipations().then(setPending).catch(() => setPending([]));
     try {
       setData(await fetchExternalMissionsOverview());
       setError('');
@@ -107,6 +120,33 @@ export function FounderExternalMissionsPanel() {
             .join(' · ')}
         </div>
       )}
+
+      <div style={founderCard}>
+        <div style={{ fontSize: 12.5, fontWeight: 900, color: T.text, marginBottom: 4 }}>Participations à confirmer ({pending.length})</div>
+        <div style={{ fontSize: 10.5, color: T.mu, marginBottom: 8 }}>
+          Le bénévole a déclaré « J’y suis allé ». Transmettez le lien à l’organisation : elle confirme en un clic, sans compte. Aucun email n’est envoyé automatiquement.
+        </div>
+        {pending.length === 0 && <div style={{ fontSize: 11.5, color: T.mu }}>Aucune pour l’instant.</div>}
+        {pending.map((p) => (
+          <div key={p.id} style={{ borderTop: `1px solid ${T.cb}`, padding: '8px 0', fontSize: 11, display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ color: T.text, fontWeight: 800 }}>{p.participant} · {p.mission_title}</div>
+              <div style={{ color: T.mu }}>
+                {[p.organization_name, p.mission_date ? new Date(`${p.mission_date}T12:00:00`).toLocaleDateString('fr-FR') : null].filter(Boolean).join(' · ')}
+                {p.organization_url && (
+                  <>
+                    {' · '}
+                    <a href={p.organization_url} target="_blank" rel="noopener noreferrer" style={{ color: T.cyan }}>site de l’organisation</a>
+                  </>
+                )}
+              </div>
+            </div>
+            <button type="button" style={{ ...founderButton, flexShrink: 0 }} onClick={() => void navigator.clipboard?.writeText(confirmationLink(p.token)).then(() => setMessage('Lien de confirmation copié.'))}>
+              Copier le lien
+            </button>
+          </div>
+        ))}
+      </div>
 
       <div style={founderCard}>
         <div style={{ fontSize: 12.5, fontWeight: 900, color: T.text, marginBottom: 8 }}>Sources</div>

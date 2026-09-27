@@ -76,7 +76,10 @@ export type ExternalApplicationStatus =
   | 'external_application_started'
   | 'accepted_declared'
   | 'completed_declared'
+  | 'not_done_declared'
   | 'verified'
+  | 'verified_completed'
+  | 'not_confirmed'
   | 'withdrawn';
 export type ExternalImportStatus = 'running' | 'success' | 'partial' | 'error' | 'not_configured';
 export type CvStatus = 'pending_verification' | 'verified' | 'disputed' | 'rejected';
@@ -153,6 +156,7 @@ export interface Database {
           bio: string | null;
           skills: string[];
           public_first_name: string | null;
+          public_profile?: boolean;
           show_last_name: boolean;
           is_founder_test_account: boolean;
           kyc_status: ProfileKycStatus;
@@ -775,6 +779,8 @@ export interface Database {
           payment_ready_at: string | null;
           conversation_status: ConversationStatus;
           cv_status: CvStatus | null;
+          // « J'y suis allé » / « Je n'y suis pas allé » (parcours Phase 0).
+          participant_declared_completed?: boolean | null;
           cv_status_reason: string | null;
           cv_verified_at: string | null;
           stripe_payment_intent_id: string | null;
@@ -1841,6 +1847,35 @@ export interface Database {
         Returns: boolean;
       };
       founder_external_missions_overview: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      // Parcours Phase 0 (migration 20260928120000).
+      record_application_click: {
+        Args: { p_external_mission_id: string; p_visitor_id?: string | null };
+        Returns: string;
+      };
+      claim_visitor_clicks: {
+        Args: { p_visitor_id: string };
+        Returns: number;
+      };
+      declare_participation: {
+        Args: { p_kind: string; p_mission_id: string; p_went: boolean };
+        Returns: string;
+      };
+      get_participation_request: {
+        Args: { p_token: string };
+        Returns: Json;
+      };
+      answer_participation_request: {
+        Args: { p_token: string; p_confirmed: boolean };
+        Returns: string;
+      };
+      public_participant_profile: {
+        Args: { p_user_id: string };
+        Returns: Json;
+      };
+      founder_pending_participations: {
         Args: Record<string, never>;
         Returns: Json;
       };

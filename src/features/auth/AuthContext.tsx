@@ -192,3 +192,8 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }
+
+// Variante tolérante (navigation publique rendue hors du fournisseur, ex. tests).
+export function useOptionalAuth() {
+  return useContext(AuthContext);
+}

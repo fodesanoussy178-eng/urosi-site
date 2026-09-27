@@ -2,7 +2,6 @@
 // les mêmes missions d'exemple et illustrations que le catalogue /missions,
 // pour une façade cohérente même avant l'import des missions réelles.
 import { sceneSvg } from '@/features/missions/categoryScene';
-import { categoryInfo } from '@/features/missions/categories';
 import { demoMissions } from '@/features/missions/demoMissions';
 
 const PHONE_IDS = ['colis', 'festival', 'devoirs', 'vetements', 'berges'];
@@ -15,14 +14,12 @@ function escapeHtml(value: string): string {
 function card(m: ReturnType<typeof demoMissions>[number], distance: string): string {
   const d = m.date ? DAY.format(new Date(`${m.date}T12:00:00`)).replace('.', '') : '';
   const hours = m.durationMinutes ? `${Math.round(m.durationMinutes / 60)} h` : '';
-  const info = categoryInfo(m.category);
   return `<article class="ph-card">
-    <div class="ph-visual">${sceneSvg(m.category, m.key)}<span class="ph-heart" aria-hidden="true">♥</span><span class="ph-dist">${distance}</span></div>
+    <div class="ph-visual">${sceneSvg(m.category, m.key)}</div>
     <div class="ph-body">
       <div class="ph-title">${escapeHtml(m.title)}</div>
       <div class="ph-org">${escapeHtml(m.organization.name)}</div>
-      <div class="ph-meta">${escapeHtml([d, hours].filter(Boolean).join(' · '))}</div>
-      <div class="ph-tags"><span class="tag tag-green">Solidaire</span>${m.isShort ? '<span class="tag tag-blue">Mission courte</span>' : `<span class="tag tag-violet">${escapeHtml(info.label)}</span>`}</div>
+      <div class="ph-meta">📍 ${escapeHtml(distance)} · ${escapeHtml([d, hours].filter(Boolean).join(' · '))}</div>
     </div>
   </article>`;
 }

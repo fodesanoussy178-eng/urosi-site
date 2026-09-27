@@ -174,3 +174,77 @@
 .pub-gallery button { position: relative; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; border: 2px solid transparent; padding: 0; cursor: pointer; background: #eef3fb; }
 .pub-gallery button[aria-pressed="true"] { border-color: var(--pub-blue); }
 .pub-gallery img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ── Parcours Phase 0 (5 comportements) ─────────────────────────────── */
+.j-home { padding-top: 22px; }
+.j-title { font-size: 26px; font-weight: 900; letter-spacing: -0.5px; margin: 6px 0 14px; }
+.j-card-body { padding: 14px 16px 16px; gap: 4px; }
+.j-card-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13.5px; color: var(--urosi-sub); font-weight: 600; margin-top: 4px; }
+.j-locate { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #fff; border: 1px solid var(--urosi-border); border-radius: 16px; padding: 12px 14px; font-size: 14px; color: var(--urosi-sub); margin-bottom: 16px; }
+.j-pulse { font-size: 20px; animation: j-pulse 1.4s ease-in-out infinite; }
+@keyframes j-pulse { 50% { transform: translateY(-3px); } }
+.j-city-form { display: grid; gap: 8px; background: #fff; border: 1px solid var(--urosi-border); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+.j-city-form label { font-size: 15px; font-weight: 800; }
+.j-city-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.j-error { color: #c0262d; font-size: 13px; }
+.j-modes { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.j-seg { display: inline-flex; background: #eaf0fa; border-radius: 999px; padding: 4px; gap: 4px; }
+.j-seg button { border: 0; background: transparent; border-radius: 999px; padding: 9px 16px; font: inherit; font-size: 14px; font-weight: 800; color: var(--urosi-sub); cursor: pointer; }
+.j-seg button[aria-selected='true'] { background: var(--pub-blue); color: #fff; box-shadow: 0 6px 14px rgba(29, 95, 230, 0.25); }
+.j-where { border: 0; background: none; font: inherit; font-size: 13.5px; font-weight: 700; color: var(--urosi-sub); cursor: pointer; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; }
+.j-demo-note { font-size: 13px; color: var(--urosi-muted); margin: -4px 0 14px; }
+.j-empty { background: #fff; border: 1px solid var(--urosi-border); border-radius: 18px; padding: 28px 20px; text-align: center; display: grid; gap: 12px; justify-items: center; font-size: 15px; color: var(--urosi-sub); }
+.j-ask { background: linear-gradient(160deg, #eef4ff, #e3edff); border: 1px solid #cfdcf6; border-radius: 20px; padding: 18px; margin-bottom: 20px; display: grid; gap: 8px; }
+.j-ask-title { font-size: 18px; font-weight: 900; }
+.j-ask-sub { font-size: 14px; color: var(--urosi-sub); margin: 0; }
+.j-ask-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.j-page { padding-top: 18px; max-width: 760px; }
+.j-back { display: inline-block; font-size: 14px; font-weight: 700; color: var(--urosi-sub); text-decoration: none; margin-bottom: 12px; }
+.j-mission-title { font-size: 28px; font-weight: 900; line-height: 1.2; letter-spacing: -0.5px; margin: 18px 0 4px; }
+.j-mission-org { font-size: 16px; font-weight: 700; color: var(--urosi-sub); }
+.j-facts { list-style: none; padding: 0; margin: 18px 0 8px; display: grid; gap: 10px; font-size: 15.5px; }
+.j-facts li { display: flex; gap: 10px; align-items: flex-start; }
+.j-h2 { font-size: 18px; font-weight: 900; margin: 22px 0 8px; }
+.j-description { font-size: 15.5px; line-height: 1.7; color: #33445e; white-space: pre-line; margin: 0; }
+.j-cta-box { margin: 24px 0 8px; }
+.j-cta { min-height: 56px; font-size: 17px; }
+.j-cta-note { font-size: 13px; color: var(--urosi-muted); text-align: center; margin: 10px 0 0; }
+.j-cta-note a { color: var(--pub-blue); font-weight: 800; }
+.j-cta-done { font-size: 15px; font-weight: 800; color: #13824a; margin: 0; }
+.j-profile-head { display: flex; gap: 16px; align-items: center; margin-bottom: 18px; }
+.j-avatar { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.j-avatar-initial { display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1d5fe6, #0a8bd6); color: #fff; font-weight: 900; }
+.j-avatar-edit { cursor: pointer; position: relative; }
+.j-avatar-edit input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.j-profile-name { font-size: 24px; font-weight: 900; margin: 0; }
+.j-summary { font-size: 15px; font-weight: 800; color: var(--urosi-text); margin-top: 2px; }
+.j-muted { font-size: 13.5px; color: var(--urosi-muted); margin: 4px 0; }
+.j-visibility { background: #fff; border: 1px solid var(--urosi-border); border-radius: 16px; padding: 14px 16px; }
+.j-switch { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 800; cursor: pointer; }
+.j-switch input { width: 20px; height: 20px; accent-color: var(--pub-blue); }
+.j-share { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 6px; font-size: 14px; font-weight: 700; }
+.j-city-inline { display: flex; gap: 6px; margin: 4px 0; }
+.j-city-inline .pub-input { min-height: 38px; max-width: 200px; }
+.j-xps { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 10px; }
+.j-xp { display: flex; gap: 12px; background: #fff; border: 1px solid var(--urosi-border); border-radius: 16px; padding: 14px 16px; }
+.j-xp-dot { width: 12px; height: 12px; border-radius: 50%; background: #c3ccd9; margin-top: 5px; flex-shrink: 0; }
+.j-xp-verified .j-xp-dot { background: #16a34a; box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.15); }
+.j-xp-title { font-size: 15.5px; font-weight: 900; }
+.j-xp-org { font-size: 14px; color: var(--urosi-sub); font-weight: 600; }
+.j-xp-meta { font-size: 13px; color: var(--urosi-muted); margin-top: 2px; }
+.j-xp-status { font-size: 12.5px; font-weight: 800; margin-top: 4px; color: var(--urosi-muted); }
+.j-xp-verified .j-xp-status { color: #13824a; }
+.j-legend { margin-top: 14px; }
+.j-profile-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 26px; border-top: 1px solid var(--urosi-border); padding-top: 14px; }
+.j-confirm { max-width: 620px; }
+.j-confirm-card { padding: 24px; display: grid; gap: 10px; margin-top: 30px; }
+.j-confirm-title { font-size: 20px; font-weight: 900; line-height: 1.35; margin: 0; }
+.j-confirm-question { font-size: 16px; font-weight: 800; margin: 6px 0 0; }
+@media (max-width: 760px) {
+  .j-title { font-size: 22px; }
+  .j-mission-title { font-size: 23px; }
+  .j-seg { width: 100%; }
+  .j-seg button { flex: 1; padding: 9px 8px; font-size: 13.5px; }
+  .j-city-row { grid-template-columns: 1fr; }
+  .j-page .j-cta-box { display: none; }
+}
