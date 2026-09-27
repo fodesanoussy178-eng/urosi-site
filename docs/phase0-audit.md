@@ -107,7 +107,16 @@ Non nécessaires en phase 0 (volontairement pas faits) : colonne
 `mission_kind` sur `missions` (dérivée de `is_solidaire`), table de favoris
 (stockage local par appareil), renommage des rôles.
 
-## ⚠️ Points à trancher par toi
+## Mise à jour du 27/09/2026
+
+- Mandat : section 6 de la migration phase 0 — jamais exigé pour une mission
+  solidaire (candidature ou publication) ; conservé pour les missions
+  rémunérées. Le fichier `.PENDING` est marqué comme remplacé.
+- CGU, confidentialité, mentions légales réécrites pour la phase 0.
+- Import API Engagement vérifié sur la documentation officielle :
+  `docs/api-engagement.md`. Rapport de tests : `docs/phase0-validation.md`.
+
+## ⚠️ Points à trancher par toi (état initial de l'audit)
 
 1. **Mandat en staging.** La policy restrictive `mandat_required_to_apply` /
    `mandat_required_to_publish` (fichier `.PENDING`) est appliquée en

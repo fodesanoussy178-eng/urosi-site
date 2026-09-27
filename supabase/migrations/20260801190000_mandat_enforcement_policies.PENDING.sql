@@ -1,3 +1,9 @@
+-- ⛔ REMPLACE PAR LA SECTION 6 DE 20260926120000_phase0_solidarity_missions.sql
+-- Ne plus appliquer ce fichier : dans sa forme ci-dessous il exige un mandat
+-- pour TOUTE candidature et TOUTE publication, y compris solidaires, ce que
+-- la phase 0 interdit. La version en vigueur ne l'exige que pour les missions
+-- remunerees (categorie inactive en phase 0).
+--
 -- ⚠️ NE PAS APPLIQUER EN PRODUCTION AVANT QUE L'ECRAN D'ACCEPTATION DU
 -- MANDAT SOIT DEPLOYE ET BRANCHE SUR main.
 --

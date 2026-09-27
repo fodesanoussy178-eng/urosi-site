@@ -973,15 +973,31 @@ export function StructureApp() {
                   if (c.attendance_status === 'end_confirmed') {
                     const realized = realizedByWorker.get(c.worker_id) ?? 0;
                     return (
-                      <div key={c.id} style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 11, alignItems: 'center' }}>
-                        <div style={{ width: 38, height: 38, borderRadius: 11, background: 'hsl(24 58% 46%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 15, flexShrink: 0 }}>
-                          {(c.profile?.display_name || 'C').charAt(0).toUpperCase()}
+                      <div key={c.id} style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 12, padding: '12px 14px' }}>
+                        <div style={{ display: 'flex', gap: 11, alignItems: 'center' }}>
+                          <div style={{ width: 38, height: 38, borderRadius: 11, background: 'hsl(24 58% 46%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 15, flexShrink: 0 }}>
+                            {(c.profile?.display_name || 'C').charAt(0).toUpperCase()}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{c.profile?.display_name || 'Candidat'}</div>
+                            <div style={{ fontSize: 10, color: T.mu, marginTop: 2 }}>{realized} mission{realized > 1 ? 's' : ''} réalisée{realized > 1 ? 's' : ''} avec vous</div>
+                          </div>
+                          <span style={{ fontSize: 9.5, fontWeight: 800, color: T.cyan, flexShrink: 0 }}>{features.paidLayer ? 'paiement J+3' : c.cv_status === 'verified' ? 'expérience vérifiée' : 'participation confirmée'}</span>
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{c.profile?.display_name || 'Candidat'}</div>
-                          <div style={{ fontSize: 10, color: T.mu, marginTop: 2 }}>{realized} mission{realized > 1 ? 's' : ''} réalisée{realized > 1 ? 's' : ''} avec vous</div>
-                        </div>
-                        <span style={{ fontSize: 9.5, fontWeight: 800, color: T.cyan, flexShrink: 0 }}>{features.paidLayer ? 'paiement J+3' : c.cv_status === 'verified' ? 'expérience vérifiée' : 'participation confirmée'}</span>
+                        {/* La validation de l'expérience n'est possible qu'APRÈS la fin
+                            confirmée (cv_status pending_verification) : elle doit donc
+                            figurer ici, sur la carte de fin de mission. Sans action,
+                            la vérification automatique intervient à 48 h. */}
+                        {c.cv_status === 'pending_verification' && (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 10 }}>
+                            <button onClick={() => validerMissionCv(c)} style={{ background: T.greenBg, color: T.green, border: `1px solid ${T.greenBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+                              {features.paidLayer ? '✓ Valider la mission' : '✓ Valider l’expérience'}
+                            </button>
+                            <button onClick={() => contesterMissionCv(c)} style={{ background: T.amberBg, color: T.amber, border: `1px solid ${T.amberBorder}`, borderRadius: 8, padding: '9px 0', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+                              Contester
+                            </button>
+                          </div>
+                        )}
                       </div>
                     );
                   }

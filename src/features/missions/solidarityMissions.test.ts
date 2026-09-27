@@ -1,38 +1,20 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { features } from '@/lib/features';
-import { fromExternalMission, fromNativeMission, isVisibleKind, partnerHost, sortFeed, type ExternalMission } from './solidarityMissions';
+
+// Aucune requête réseau : les deux sources « ne répondent jamais ».
+vi.mock('@/lib/supabase', () => {
+  const never = () => new Promise(() => undefined);
+  const builder: Record<string, unknown> = {};
+  for (const k of ['select', 'eq', 'order', 'limit']) builder[k] = () => builder;
+  builder.then = (resolve: unknown, reject: unknown) => never().then(resolve as never, reject as never);
+  return { supabase: { from: () => builder } };
+});
+import { fetchSolidarityFeedResult, fromExternalMission, fromNativeMission, impressionUrlFor, isVisibleKind, partnerHost, partnerLabel, sortFeed, type ExternalMission } from './solidarityMissions';
 import type { MissionWithStructure } from './missionsService';
+import { externalMissionRow } from '@/test/fixtures';
 
 function external(overrides: Partial<ExternalMission> = {}): ExternalMission {
-  return {
-    id: 'ext-1',
-    source: 'api_engagement',
-    external_id: 'abc',
-    title: 'Distribution de colis alimentaires',
-    description: 'Aider à préparer les colis.',
-    organization_name: 'Banque Alimentaire',
-    organization_logo_url: null,
-    image_url: null,
-    source_illustration_url: 'https://cdn.example.org/domain.png',
-    category: 'aide_alimentaire',
-    city: 'Lille',
-    postal_code: '59000',
-    address: 'Fives',
-    lat: 50.63,
-    lng: 3.09,
-    starts_at: '2026-10-03T07:00:00Z',
-    ends_at: '2026-10-03T10:00:00Z',
-    schedule_text: null,
-    duration_minutes: 180,
-    places: 8,
-    application_url: 'https://www.jeveuxaider.gouv.fr/missions/123',
-    source_url: null,
-    is_active: true,
-    raw: null,
-    imported_at: '2026-09-20T00:00:00Z',
-    updated_at: '2026-09-20T00:00:00Z',
-    ...overrides,
-  };
+  return externalMissionRow(overrides);
 }
 
 function native(overrides: Partial<MissionWithStructure> = {}): MissionWithStructure {
@@ -69,7 +51,9 @@ describe('modèle unifié des missions', () => {
     expect(m.endTime).toBe('12:00');
     expect(m.isShort).toBe(true);
     expect(m.illustrationUrl).toBe('https://cdn.example.org/domain.png');
-    expect(m.applicationUrl).toContain('jeveuxaider');
+    expect(m.applicationUrl).toContain('/r/66f1a2b3c4d5e6f7a8b9c0d1/');
+    expect(m.partnerName).toBe('JeVeuxAider.gouv.fr');
+    expect(m.impressionUrl).toBe('https://api.api-engagement.beta.gouv.fr/r/impression/66f1a2b3c4d5e6f7a8b9c0d1/65aa00000000000000000001');
   });
 
   it('distingue mission solidaire UROSI et mission rémunérée, et rattache les anciennes catégories', () => {
@@ -97,5 +81,29 @@ describe('modèle unifié des missions', () => {
   it('extrait le site partenaire de l’URL de candidature', () => {
     expect(partnerHost('https://www.jeveuxaider.gouv.fr/missions/1')).toBe('jeveuxaider.gouv.fr');
     expect(partnerHost('pas une url')).toBeNull();
+  });
+
+  it('n’affiche jamais le domaine technique de tracking comme site partenaire', () => {
+    expect(partnerLabel({ partnerName: null, applicationUrl: 'https://api.api-engagement.beta.gouv.fr/r/a/b' })).toBeNull();
+    expect(partnerLabel({ partnerName: 'Benenova', applicationUrl: 'https://api.api-engagement.beta.gouv.fr/r/a/b' })).toBe('Benenova');
+    expect(impressionUrlFor('https://www.jeveuxaider.gouv.fr/missions/1')).toBeNull();
+  });
+
+  it('une mission native n’a ni lien tracké ni impression', () => {
+    const m = fromNativeMission(native());
+    expect(m.impressionUrl).toBeNull();
+    expect(m.applicationUrl).toBeNull();
+  });
+});
+
+describe('chargement du fil', () => {
+  it('ne reste jamais bloqué : une source qui ne répond pas est traitée comme vide', async () => {
+    vi.useFakeTimers();
+    const pending = fetchSolidarityFeedResult(50);
+    await vi.advanceTimersByTimeAsync(60);
+    const result = await pending;
+    vi.useRealTimers();
+    expect(result.missions).toEqual([]);
+    expect(result.unavailable).toBe(true);
   });
 });

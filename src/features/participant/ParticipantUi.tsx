@@ -4,6 +4,7 @@ import { categoryInfo } from '@/features/missions/categories';
 import { formatDistance } from '@/lib/geo';
 import { formatDay } from '@/lib/slots';
 import type { FeedMission } from '@/features/missions/solidarityMissions';
+import { useImpressionTracking } from './impressionTracking';
 
 // Visuel de mission, jamais vide : photo de mission > illustration fournie
 // par la source > illustration UROSI de la catégorie. Une image qui ne se
@@ -96,6 +97,13 @@ export function MissionBadges({ mission }: { mission: FeedMission }) {
     <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
       <Badge tone="green">Solidaire</Badge>
       {mission.isShort && <Badge tone="cyan">Mission courte</Badge>}
+      {/* Distinction explicite : mission importée d'une plateforme partenaire
+          (candidature sur son site) ou publiée directement sur UROSI. */}
+      {mission.kind === 'external_solidarity_mission' ? (
+        <Badge tone="neutral">↗ Via {mission.partnerName ?? 'un partenaire'}</Badge>
+      ) : (
+        <Badge tone="neutral">Publiée sur UROSI</Badge>
+      )}
       {info.key !== 'autre' && <Badge tone="violet">{info.label}</Badge>}
     </div>
   );
@@ -150,8 +158,9 @@ export function FeedMissionCard({
   compact?: boolean;
 }) {
   const duration = durationLabel(mission.durationMinutes);
+  const impressionRef = useImpressionTracking<HTMLElement>(mission.impressionUrl);
   return (
-    <article style={{ position: 'relative', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 16, overflow: 'hidden', boxShadow: '0 6px 18px rgba(15,23,42,.06)' }}>
+    <article ref={impressionRef} data-mission-kind={mission.kind} style={{ position: 'relative', background: T.card, border: `1px solid ${T.cb}`, borderRadius: 16, overflow: 'hidden', boxShadow: '0 6px 18px rgba(15,23,42,.06)' }}>
       <button type="button" onClick={onOpen} aria-label={`Voir la mission ${mission.title}`} style={{ position: 'absolute', inset: 0, zIndex: 1, background: 'transparent', border: 0, cursor: 'pointer' }} />
       <MissionVisual mission={mission} height={compact ? 110 : 138} radius={0}>
         {distance != null && (

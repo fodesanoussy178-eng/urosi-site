@@ -1,6 +1,6 @@
 import { T } from '@/components/ui/theme';
 import { categoryInfo } from '@/features/missions/categories';
-import { partnerHost, type FeedMission } from '@/features/missions/solidarityMissions';
+import { partnerLabel, type FeedMission } from '@/features/missions/solidarityMissions';
 import { formatDistance } from '@/lib/geo';
 import { Badge, HeartButton, MissionBadges, MissionVisual, OrgLogo, durationLabel, whenLabel } from './ParticipantUi';
 
@@ -32,7 +32,7 @@ export function MissionDetailSheet({
   onOpenTracking: () => void;
 }) {
   const external = mission.kind === 'external_solidarity_mission';
-  const host = partnerHost(mission.applicationUrl);
+  const host = partnerLabel(mission);
   const duration = durationLabel(mission.durationMinutes);
   const info = categoryInfo(mission.category);
 

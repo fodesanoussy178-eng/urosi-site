@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { T, FONT } from '@/components/ui/theme';
 import { Logo } from '@/components/ui/Logo';
-import { fetchSolidarityFeed, missionDistance, type FeedMission } from '@/features/missions/solidarityMissions';
+import { fetchSolidarityFeedResult, missionDistance, type FeedMission } from '@/features/missions/solidarityMissions';
 import { useApproxPosition, useFavorites } from './hooks';
 import { MissionBrowser } from './MissionBrowser';
 import { MissionDetailSheet } from './MissionDetailSheet';
@@ -19,10 +19,20 @@ export function PublicMissionsPage() {
   const { position } = useApproxPosition(null);
 
   useEffect(() => {
-    fetchSolidarityFeed()
-      .then(setFeed)
-      .catch(() => setFailed(true))
-      .finally(() => setLoading(false));
+    // Ne reste jamais bloquée : chaque source a un délai maximum. Sans import
+    // API Engagement, seules les missions natives s'affichent (ou l'état vide).
+    let active = true;
+    fetchSolidarityFeedResult()
+      .then((result) => {
+        if (!active) return;
+        setFeed(result.missions);
+        setFailed(result.unavailable && result.missions.length === 0);
+      })
+      .catch(() => active && setFailed(true))
+      .finally(() => active && setLoading(false));
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (
@@ -45,7 +55,13 @@ export function PublicMissionsPage() {
         <div style={{ fontSize: 11, fontWeight: 800, color: T.mu, letterSpacing: 0.4, textTransform: 'uppercase' }}>Missions solidaires · Métropole de Lille</div>
         <h1 style={{ fontSize: 25, fontWeight: 900, color: T.text, lineHeight: 1.15, margin: '6px 0 14px' }}>Des missions près de chez toi</h1>
         {failed ? (
-          <div style={{ fontSize: 12, color: T.sub }}>Impossible de charger les missions pour le moment. Réessaie dans un instant.</div>
+          <div role="status" style={{ background: T.card, border: `1px dashed ${T.cb}`, borderRadius: 16, padding: '24px 18px', textAlign: 'center', fontSize: 12, color: T.sub, lineHeight: 1.55 }}>
+            Les missions ne peuvent pas être chargées pour le moment.
+            <br />
+            <button type="button" onClick={() => window.location.reload()} style={{ marginTop: 10, background: T.row, border: `1px solid ${T.cb}`, color: T.text, borderRadius: 10, padding: '8px 14px', fontWeight: 800, cursor: 'pointer' }}>
+              Réessayer
+            </button>
+          </div>
         ) : (
           <MissionBrowser missions={feed} loading={loading} position={position} favorites={favorites} onToggleFavorite={toggleFavorite} onOpen={setDetail} />
         )}

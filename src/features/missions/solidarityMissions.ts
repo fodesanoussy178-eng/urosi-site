@@ -39,7 +39,13 @@ export interface FeedMission {
   scheduleText: string | null;
   durationMinutes: number | null;
   places: number | null;
+  // Lien de candidature. Pour une mission API Engagement, c'est le lien
+  // tracké officiel (compte le clic puis redirige vers l'annonceur).
   applicationUrl: string | null;
+  // Plateforme où la candidature se poursuit (ex. « JeVeuxAider.gouv.fr »).
+  partnerName: string | null;
+  // Tracking diffuseur API Engagement : impression d'une mission affichée.
+  impressionUrl: string | null;
   isShort: boolean;
 }
 
@@ -60,6 +66,25 @@ export function partnerHost(url: string | null): string | null {
   } catch {
     return null;
   }
+}
+
+// Libellé affiché pour « Tu continueras ta candidature sur … ». Le lien
+// tracké pointe vers api-engagement.beta.gouv.fr : on affiche le nom de la
+// plateforme de l'annonceur plutôt que ce domaine technique.
+export function partnerLabel(mission: Pick<FeedMission, 'partnerName' | 'applicationUrl'>): string | null {
+  if (mission.partnerName) return mission.partnerName;
+  const host = partnerHost(mission.applicationUrl);
+  return host && !host.endsWith('api-engagement.beta.gouv.fr') ? host : null;
+}
+
+// Tracking diffuseur (doc API Engagement) : l'impression se déclare sur
+// GET /r/impression/{missionId}/{diffuseurId}, dérivé du lien tracké
+// https://api.api-engagement.beta.gouv.fr/r/{missionId}/{diffuseurId}.
+export function impressionUrlFor(applicationUrl: string | null): string | null {
+  if (!applicationUrl) return null;
+  const match = /^(https:\/\/[^/]*api-engagement\.beta\.gouv\.fr)\/r\/([^/?#]+)\/([^/?#]+)/.exec(applicationUrl);
+  if (!match || match[2] === 'impression') return null;
+  return `${match[1]}/r/impression/${match[2]}/${match[3]}`;
 }
 
 // Mission courte : quatre heures ou moins.
@@ -112,6 +137,8 @@ export function fromExternalMission(m: ExternalMission): FeedMission {
     durationMinutes: m.duration_minutes,
     places: m.places,
     applicationUrl: m.application_url,
+    partnerName: m.publisher_name,
+    impressionUrl: m.source === 'api_engagement' ? impressionUrlFor(m.application_url) : null,
     isShort: m.duration_minutes != null && m.duration_minutes <= SHORT_MISSION_MAX_MINUTES,
   };
 }
@@ -145,6 +172,8 @@ export function fromNativeMission(m: MissionWithStructure): FeedMission {
     durationMinutes: m.duration_minutes || null,
     places: m.positions ?? m.places ?? null,
     applicationUrl: null,
+    partnerName: null,
+    impressionUrl: null,
     isShort: m.duration_minutes > 0 && m.duration_minutes <= SHORT_MISSION_MAX_MINUTES,
   };
 }
@@ -158,6 +187,71 @@ export function isVisibleKind(kind: MissionKind, paidLayer = features.paidLayer)
 function isMissingRelation(error: { code?: string; message?: string } | null): boolean {
   if (!error) return false;
   return error.code === '42P01' || error.code === 'PGRST205' || /does not exist|schema cache/i.test(error.message ?? '');
+}
+
+// Vue publique (sans compte) : missions solidaires natives ouvertes, colonnes
+// non sensibles uniquement (migration phase 0, section 7).
+export interface PublicSolidarityMission {
+  id: string;
+  structure_id: string;
+  title: string;
+  detail: string | null;
+  city: string | null;
+  address: string | null;
+  location: string | null;
+  lat: number | null;
+  lng: number | null;
+  scheduled_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  duration_minutes: number;
+  mission_category: string;
+  places: number;
+  positions: number | null;
+  structure_name: string;
+  structure_logo_url: string | null;
+  structure_verification_status: string;
+}
+
+export function fromPublicMission(m: PublicSolidarityMission): FeedMission {
+  return {
+    key: `urosi:${m.id}`,
+    id: m.id,
+    kind: 'urosi_solidarity_mission',
+    source: 'urosi',
+    title: m.title,
+    description: m.detail,
+    organization: { id: m.structure_id, name: m.structure_name || 'Structure', logoUrl: m.structure_logo_url, verified: true },
+    imageUrl: null,
+    illustrationUrl: null,
+    category: toCategory(m.mission_category),
+    city: m.city,
+    address: m.address || m.location,
+    coords: coordsOf(m.lat, m.lng, m.city, m.address),
+    date: m.scheduled_date,
+    startTime: m.start_time ? m.start_time.slice(0, 5) : null,
+    endTime: m.end_time ? m.end_time.slice(0, 5) : null,
+    scheduleText: null,
+    durationMinutes: m.duration_minutes || null,
+    places: m.positions ?? m.places ?? null,
+    applicationUrl: null,
+    partnerName: null,
+    impressionUrl: null,
+    isShort: m.duration_minutes > 0 && m.duration_minutes <= SHORT_MISSION_MAX_MINUTES,
+  };
+}
+
+export async function fetchPublicSolidarityMissions(): Promise<PublicSolidarityMission[]> {
+  const { data, error } = await supabase.from('public_solidarity_missions' as never).select('*').order('scheduled_date', { ascending: true }).limit(300);
+  if (isMissingRelation(error)) return [];
+  if (error) throw error;
+  return (data ?? []) as unknown as PublicSolidarityMission[];
+}
+
+async function fetchNativeFeed(): Promise<FeedMission[]> {
+  const { data } = await supabase.auth.getSession();
+  if (!data.session) return (await fetchPublicSolidarityMissions()).map(fromPublicMission);
+  return (await fetchOpenMissions()).map(fromNativeMission);
 }
 
 export async function fetchExternalMissions(): Promise<ExternalMission[]> {
@@ -179,16 +273,51 @@ function isUpcoming(m: FeedMission, today: string): boolean {
   return !m.date || m.date >= today;
 }
 
-export async function fetchSolidarityFeed(): Promise<FeedMission[]> {
-  const [external, native] = await Promise.all([
-    fetchExternalMissions(),
-    // En navigation anonyme, la lecture des missions natives peut être
-    // refusée : le catalogue externe suffit alors.
-    fetchOpenMissions().catch(() => [] as MissionWithStructure[]),
+// Aucune source ne doit bloquer l'écran : au-delà de ce délai, elle est
+// considérée comme vide (le fil affiche l'autre source ou un état vide).
+export const FEED_SOURCE_TIMEOUT_MS = 8000;
+
+function settle<T>(promise: Promise<T>, fallback: T, timeoutMs: number): Promise<{ value: T; failed: boolean }> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve({ value: fallback, failed: true }), timeoutMs);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve({ value, failed: false });
+      },
+      () => {
+        clearTimeout(timer);
+        resolve({ value: fallback, failed: true });
+      },
+    );
+  });
+}
+
+export interface FeedResult {
+  missions: FeedMission[];
+  // true si les deux sources ont échoué (réseau) : l'écran le signale.
+  unavailable: boolean;
+}
+
+export async function fetchSolidarityFeedResult(timeoutMs = FEED_SOURCE_TIMEOUT_MS): Promise<FeedResult> {
+  const [externalResult, nativeResult] = await Promise.all([
+    // Catalogue externe vide (et non en erreur) tant que l'import API
+    // Engagement n'est pas configuré : les missions natives s'affichent seules.
+    settle(fetchExternalMissions(), [] as ExternalMission[], timeoutMs),
+    // Sans compte : vue publique des missions solidaires natives.
+    settle(fetchNativeFeed(), [] as FeedMission[], timeoutMs),
   ]);
+  const external = externalResult.value;
+  const native = nativeResult.value;
   const today = new Date().toISOString().slice(0, 10);
-  return [...native.map(fromNativeMission), ...external.map(fromExternalMission)]
-    .filter((m) => isVisibleKind(m.kind) && isUpcoming(m, today));
+  const missions = [...native, ...external.map(fromExternalMission)].filter(
+    (m) => isVisibleKind(m.kind) && isUpcoming(m, today),
+  );
+  return { missions, unavailable: externalResult.failed && nativeResult.failed };
+}
+
+export async function fetchSolidarityFeed(): Promise<FeedMission[]> {
+  return (await fetchSolidarityFeedResult()).missions;
 }
 
 export function missionDistance(m: FeedMission, position: LatLng | null): number | null {

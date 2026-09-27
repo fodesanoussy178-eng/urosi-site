@@ -23,11 +23,13 @@ import { FounderRatingsPanel } from './panels/FounderRatingsPanel';
 import { FounderRevenuePanel } from './panels/FounderRevenuePanel';
 import { FounderAuditPanel } from './panels/FounderAuditPanel';
 import { FounderLabPanel } from './panels/FounderLabPanel';
+import { FounderExternalMissionsPanel } from './panels/FounderExternalMissionsPanel';
 
 const sections = [
   ['dashboard', '📊', 'Vue globale', 'Chiffres clés de la plateforme'],
   ['accounts', '👥', 'Utilisateurs', 'Comptes travailleurs et structures'],
   ['missions', '🧭', 'Missions', 'Interventions et statuts'],
+  ['external', '↗', 'Missions externes', 'Import API Engagement, candidatures externes'],
   ['kyc', '🪪', 'KYC', "Dossiers d'identité à traiter"],
   ['reports', '⚠️', 'Signalements', 'Litiges et incidents'],
   ['ratings', '⭐', 'Évaluations', 'Notes travailleurs ↔ structures'],
@@ -42,6 +44,7 @@ const PANELS: Record<SectionKey, ComponentType> = {
   dashboard: FounderDashboardPanel,
   accounts: FounderAccountsPanel,
   missions: FounderMissionsPanel,
+  external: FounderExternalMissionsPanel,
   kyc: FounderKycPanel,
   reports: FounderReportsPanel,
   ratings: FounderRatingsPanel,

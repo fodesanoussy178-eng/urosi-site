@@ -52,7 +52,9 @@ const externalMission: FeedMission = {
   scheduleText: null,
   durationMinutes: 180,
   places: 8,
-  applicationUrl: 'https://www.jeveuxaider.gouv.fr/missions/1',
+  applicationUrl: 'https://api.api-engagement.beta.gouv.fr/r/66f1a2b3c4d5e6f7a8b9c0d1/65aa00000000000000000001',
+  partnerName: 'JeVeuxAider.gouv.fr',
+  impressionUrl: 'https://api.api-engagement.beta.gouv.fr/r/impression/66f1a2b3c4d5e6f7a8b9c0d1/65aa00000000000000000001',
   isShort: true,
 };
 
@@ -82,13 +84,13 @@ describe('ParticipantApp — phase 0', () => {
     render(<ParticipantApp />);
     await user.click(await screen.findByRole('button', { name: 'Voir la mission Distribution de colis alimentaires' }));
     const dialog = screen.getByRole('dialog', { name: /Distribution de colis alimentaires/ });
-    expect(within(dialog).getByText(/Tu continueras ta candidature sur le site partenaire \(jeveuxaider\.gouv\.fr\)/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Tu continueras ta candidature sur le site partenaire \(JeVeuxAider\.gouv\.fr\)/)).toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: /^Accepter$/ })).toBeNull();
 
     await user.click(within(dialog).getByRole('button', { name: 'Candidater ↗' }));
 
     await waitFor(() => expect(participantService.recordExternalApplication).toHaveBeenCalledWith('user-1', 'em-1', 'api_engagement'));
-    await waitFor(() => expect(fakeWindow.location.href).toBe('https://www.jeveuxaider.gouv.fr/missions/1'));
+    await waitFor(() => expect(fakeWindow.location.href).toBe('https://api.api-engagement.beta.gouv.fr/r/66f1a2b3c4d5e6f7a8b9c0d1/65aa00000000000000000001'));
     expect(fakeWindow.opener).toBeNull();
     open.mockRestore();
   });

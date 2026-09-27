@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildExperiences, externalHeadline, externalTimeline, nativeHeadline, nativeTimeline, summarize } from './journey';
+import { externalMissionRow } from '@/test/fixtures';
 import type { ExternalApplicationWithMission, ParticipantApplication, ParticipantRating } from './participantService';
 
 const TODAY = '2026-10-05';
@@ -19,34 +20,13 @@ function ext(overrides: Partial<ExternalApplicationWithMission> = {}): ExternalA
     verified_at: null,
     verified_by: null,
     verification_note: null,
-    mission: {
+    mission: externalMissionRow({
       id: 'em-1',
-      source: 'api_engagement',
-      external_id: 'x',
       title: 'Distribution de colis',
-      description: null,
       organization_name: 'Banque Alimentaire',
-      organization_logo_url: null,
-      image_url: null,
-      source_illustration_url: null,
-      category: 'aide_alimentaire',
-      city: 'Lille',
-      postal_code: null,
-      address: null,
-      lat: null,
-      lng: null,
       starts_at: '2026-10-10T07:00:00Z',
       ends_at: '2026-10-10T10:00:00Z',
-      schedule_text: null,
-      duration_minutes: 180,
-      places: null,
-      application_url: 'https://www.jeveuxaider.gouv.fr/m/1',
-      source_url: null,
-      is_active: true,
-      raw: null,
-      imported_at: '2026-09-01T00:00:00Z',
-      updated_at: '2026-09-01T00:00:00Z',
-    },
+    }),
     ...overrides,
   };
 }

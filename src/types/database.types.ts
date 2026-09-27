@@ -78,6 +78,7 @@ export type ExternalApplicationStatus =
   | 'completed_declared'
   | 'verified'
   | 'withdrawn';
+export type ExternalImportStatus = 'running' | 'success' | 'partial' | 'error' | 'not_configured';
 export type CvStatus = 'pending_verification' | 'verified' | 'disputed' | 'rejected';
 export type RatingRequestStatus = 'pending' | 'completed' | 'dismissed';
 export type RatingVisibilityStatus = 'pending' | 'published';
@@ -393,15 +394,30 @@ export interface Database {
           id: string;
           source: string;
           external_id: string;
+          client_id: string | null;
+          publisher_id: string | null;
+          publisher_name: string | null;
+          publisher_url: string | null;
+          publisher_logo_url: string | null;
+          mission_type: string | null;
+          domain: string | null;
+          activities: string[];
+          status_code: string | null;
+          remote: string | null;
           title: string;
           description: string | null;
           organization_name: string | null;
           organization_logo_url: string | null;
+          organization_url: string | null;
+          organization_rna: string | null;
+          organization_siren: string | null;
+          organization_status_juridique: string | null;
           image_url: string | null;
           source_illustration_url: string | null;
           category: string;
           city: string | null;
           postal_code: string | null;
+          department_code: string | null;
           address: string | null;
           lat: number | null;
           lng: number | null;
@@ -413,6 +429,10 @@ export interface Database {
           application_url: string;
           source_url: string | null;
           is_active: boolean;
+          source_created_at: string | null;
+          source_updated_at: string | null;
+          source_deleted_at: string | null;
+          last_seen_at: string;
           raw: Json | null;
           imported_at: string;
           updated_at: string;
@@ -446,6 +466,26 @@ export interface Database {
           updated_at?: string;
         };
         Update: Partial<Database['public']['Tables']['external_missions']['Insert']>;
+        Relationships: [];
+      };
+      external_import_runs: {
+        Row: {
+          id: string;
+          source: string;
+          trigger: 'manual' | 'cron';
+          triggered_by: string | null;
+          status: ExternalImportStatus;
+          started_at: string;
+          finished_at: string | null;
+          fetched: number;
+          imported: number;
+          skipped: number;
+          deactivated: number;
+          skip_reasons: Json;
+          error_message: string | null;
+        };
+        Insert: Partial<Database['public']['Tables']['external_import_runs']['Row']> & { source: string; trigger: 'manual' | 'cron' };
+        Update: Partial<Database['public']['Tables']['external_import_runs']['Row']>;
         Relationships: [];
       };
       external_applications: {
@@ -1718,6 +1758,10 @@ export interface Database {
       is_french_holiday: {
         Args: { p_date: string };
         Returns: boolean;
+      };
+      founder_external_missions_overview: {
+        Args: Record<string, never>;
+        Returns: Json;
       };
       founder_verify_external_application: {
         Args: { p_application_id: string; p_note?: string | null };

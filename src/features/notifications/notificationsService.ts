@@ -127,3 +127,27 @@ export function isVisibleInCurrentPhase(n: { kind: string; title?: string | null
   if (features.paidLayer) return true;
   return !PAID_LAYER_PATTERN.test(`${n.kind} ${n.title ?? ''} ${n.body ?? ''}`);
 }
+
+// Phase 0 : certains textes produits par d'anciens triggers SQL parlent de
+// « travailleur » ou de « CV vivant ». Ils sont reformulés à l'affichage
+// (les triggers restent intacts pour la future couche rémunérée).
+const PHASE0_WORDING: Array<[RegExp, string]> = [
+  [/\bnote le travailleur\b/gi, 'note le bénévole'],
+  [/\bnoter le travailleur\b/gi, 'noter le bénévole'],
+  [/\bton salarié\b/gi, 'ton bénévole'],
+  [/\btravailleurs\b/gi, 'bénévoles'],
+  [/\btravailleur\b/gi, 'bénévole'],
+  [/\bCV vivant\b/gi, 'parcours'],
+  [/Mission terminee/g, 'Mission terminée'],
+  [/est confirmee/g, 'est confirmée'],
+  [/Validation a distance confirmee/g, 'Participation confirmée'],
+  [/\bDebut confirme\(e\)/g, 'Début confirmé'],
+  [/\bFin confirme\(e\)/g, 'Fin confirmée'],
+  [/de 1 a 5 etoiles/g, 'de 1 à 5 étoiles'],
+  [/a ajoute une note a ton/g, 'a ajouté une note à ton'],
+];
+
+export function phaseWording(text: string | null | undefined): string {
+  if (!text || features.paidLayer) return text ?? '';
+  return PHASE0_WORDING.reduce((acc, [pattern, replacement]) => acc.replace(pattern, replacement), text);
+}

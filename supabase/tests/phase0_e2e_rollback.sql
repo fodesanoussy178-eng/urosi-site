@@ -1,3 +1,17 @@
+-- Test de bout en bout phase 0, TOUJOURS ANNULE : le bloc applique la migration
+-- phase 0, cree des comptes de test @urosi.internal, joue les parcours sous RLS
+-- (participant, association, entreprise) puis leve volontairement une exception
+-- finale : rien ne persiste. Le rapport est dans le message d'erreur E2E_REPORT.
+-- Embarque la migration 20260926120000 : a regenerer si elle change.
+do $test$
+declare
+  r jsonb := '{}'::jsonb;
+  p_id uuid := gen_random_uuid();
+  s_id uuid := gen_random_uuid();
+  e_id uuid := gen_random_uuid();
+  v_struct uuid; v_struct2 uuid; v_mission uuid; v_ext uuid; v_ea uuid; v_app uuid; v_n int; v_json jsonb;
+begin
+  execute $mig$
 -- Phase 0 — missions solidaires.
 --
 -- Strictement additif : aucune table, colonne, fonction ou policy existante
@@ -499,3 +513,192 @@ where m.status = 'open'
 
 revoke all on public.public_solidarity_missions from public;
 grant select on public.public_solidarity_missions to anon, authenticated;
+
+$mig$;
+  r := r || jsonb_build_object('00_migration_phase0_appliquee', true);
+  -- ── Comptes de test (domaine interne @urosi.internal) ──────────────────
+  insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  values
+    ('00000000-0000-0000-0000-000000000000', p_id, 'authenticated', 'authenticated', 'phase0-e2e-participant@urosi.internal', '', now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Léa Testeuse","role":"worker","city":"Lille","interests":["aide_alimentaire"]}', now(), now()),
+    ('00000000-0000-0000-0000-000000000000', s_id, 'authenticated', 'authenticated', 'phase0-e2e-asso@urosi.internal', '', now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Asso Test","role":"structure_admin","structure_name":"Asso Test Solidaire","siret":"12345678900012"}', now(), now()),
+    ('00000000-0000-0000-0000-000000000000', e_id, 'authenticated', 'authenticated', 'phase0-e2e-entreprise@urosi.internal', '', now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Entreprise Test","role":"structure_admin","structure_name":"Entreprise Test","siret":"98765432100019"}', now(), now());
+
+  select count(*) into v_n from public.profiles where id in (p_id, s_id, e_id);
+  r := r || jsonb_build_object('01_inscription_profils_crees', v_n = 3, 'roles', (select jsonb_object_agg(full_name, role) from public.profiles where id in (p_id, s_id, e_id)));
+  r := r || jsonb_build_object('02_aucun_mandat_actif', not exists (select 1 from public.mandat_acceptances where user_id in (p_id, s_id, e_id)));
+  r := r || jsonb_build_object('03_policies_mandat', (select jsonb_agg(tablename || ':' || policyname || ':' || with_check) from pg_policies where policyname like 'mandat_required%'));
+
+  -- Mission externe importée (écriture service_role = postgres ici)
+  insert into public.external_missions (source, external_id, client_id, publisher_id, publisher_name, mission_type, domain, status_code, remote, title, organization_name, category, city, lat, lng, starts_at, ends_at, duration_minutes, places, application_url, last_seen_at)
+  values ('api_engagement', 'e2e-66f1a2b3', 'mission-123', '5f5931496c7ea514150a818f', 'JeVeuxAider.gouv.fr', 'benevolat', 'solidarite-insertion', 'ACCEPTED', 'no', 'Distribution de colis (test e2e)', 'Banque Alimentaire', 'aide_alimentaire', 'Lille', 50.63, 3.09, now() + interval '5 days', now() + interval '5 days 3 hours', 180, 8, 'https://api.api-engagement.beta.gouv.fr/r/e2e-66f1a2b3/65aa00000000000000000001', now())
+  returning id into v_ext;
+
+  -- ── /missions en anonyme ────────────────────────────────────────────────
+  begin
+    perform set_config('request.jwt.claims', '{"role":"anon"}', true);
+    set local role anon;
+    select count(*) into v_n from public.external_missions where id = v_ext;
+    reset role;
+    r := r || jsonb_build_object('04_anon_voit_mission_externe', v_n = 1);
+  exception when others then r := r || jsonb_build_object('04_anon_voit_mission_externe', 'ERREUR: ' || sqlerrm);
+  end;
+  begin
+    set local role anon;
+    select count(*) into v_n from public.public_solidarity_missions;
+    reset role;
+    r := r || jsonb_build_object('05_anon_lit_vue_publique_missions_natives', 'ok (' || v_n || ')');
+  exception when others then r := r || jsonb_build_object('05_anon_lit_vue_publique_missions_natives', 'ERREUR: ' || sqlerrm);
+  end;
+
+  -- ── Participant ─────────────────────────────────────────────────────────
+  perform set_config('request.jwt.claims', json_build_object('sub', p_id, 'role', 'authenticated', 'email', 'phase0-e2e-participant@urosi.internal')::text, true);
+  begin
+    set local role authenticated;
+    update public.profiles set interests = array['aide_alimentaire','evenementiel'], avatar_url = null, bio = 'Envie d''agir' where id = p_id;
+    reset role;
+    r := r || jsonb_build_object('06_profil_interets_modifiables', (select interests from public.profiles where id = p_id));
+  exception when others then r := r || jsonb_build_object('06_profil_interets_modifiables', 'ERREUR: ' || sqlerrm);
+  end;
+  begin
+    set local role authenticated;
+    insert into public.external_applications (user_id, external_mission_id, source, status) values (p_id, v_ext, 'api_engagement', 'external_application_started') returning id into v_ea;
+    reset role;
+    r := r || jsonb_build_object('07_candidature_externe_tracee', (select status || ' @ ' || clicked_at from public.external_applications where id = v_ea));
+  exception when others then r := r || jsonb_build_object('07_candidature_externe_tracee', 'ERREUR: ' || sqlerrm);
+  end;
+  begin
+    set local role authenticated;
+    insert into public.external_applications (user_id, external_mission_id, source, status) values (p_id, v_ext, 'api_engagement', 'verified');
+    reset role;
+    r := r || jsonb_build_object('08_insertion_verified_refusee', false);
+  exception when others then r := r || jsonb_build_object('08_insertion_verified_refusee', 'oui: ' || sqlerrm);
+  end;
+  begin
+    set local role authenticated;
+    update public.external_applications set status = 'accepted_declared' where id = v_ea;
+    reset role;
+    r := r || jsonb_build_object('09_acceptee_declaree', (select status || ' / accepted_declared_at=' || (accepted_declared_at is not null) from public.external_applications where id = v_ea));
+  exception when others then r := r || jsonb_build_object('09_acceptee_declaree', 'ERREUR: ' || sqlerrm);
+  end;
+  begin
+    set local role authenticated;
+    update public.external_applications set status = 'verified' where id = v_ea;
+    reset role;
+    r := r || jsonb_build_object('10_auto_verification_refusee', false);
+  exception when others then r := r || jsonb_build_object('10_auto_verification_refusee', 'oui: ' || sqlerrm);
+  end;
+  begin
+    set local role authenticated;
+    update public.external_applications set status = 'completed_declared', declared_minutes = 150 where id = v_ea;
+    select count(*) into v_n from public.external_applications ea join public.external_missions m on m.id = ea.external_mission_id where ea.user_id = p_id;
+    reset role;
+    r := r || jsonb_build_object('11_realisee_declaree_et_suivi_lisible', v_n = 1);
+  exception when others then r := r || jsonb_build_object('11_realisee_declaree_et_suivi_lisible', 'ERREUR: ' || sqlerrm);
+  end;
+  begin
+    set local role authenticated;
+    perform public.founder_external_missions_overview();
+    reset role;
+    r := r || jsonb_build_object('12_vue_fondateur_refusee_au_participant', false);
+  exception when others then r := r || jsonb_build_object('12_vue_fondateur_refusee_au_participant', 'oui: ' || sqlerrm);
+  end;
+
+  -- ── Structure association ───────────────────────────────────────────────
+  perform set_config('request.jwt.claims', json_build_object('sub', s_id, 'role', 'authenticated', 'email', 'phase0-e2e-asso@urosi.internal')::text, true);
+  begin
+    set local role authenticated;
+    insert into public.structures (owner_id, name, siret) values (s_id, 'Asso Test Solidaire', '12345678900012') returning id into v_struct;
+    -- Même appel que l'Edge Function verify-structure après lecture du registre
+    -- (catégorie juridique 9220 = association déclarée).
+    perform public.apply_structure_siret_verification(v_struct, 'verified', p_legal_category_code => '9220');
+    reset role;
+    r := r || jsonb_build_object('13_structure_asso_verifiee', (select verification_status || ' / association=' || is_association from public.structures where id = v_struct));
+  exception when others then r := r || jsonb_build_object('13_structure_asso_verifiee', 'ERREUR: ' || sqlerrm);
+  end;
+  begin
+    set local role authenticated;
+    insert into public.missions (structure_id, title, detail, city, address, location, scheduled_date, start_time, end_time, starts_at, ends_at, duration_minutes, duration_minutes_per_person, mission_days, slots, places, positions, worker_rate_cents, base_rate_cents, hourly_rate, worker_amount, worker_subtotal, service_fee, structure_total, total_worker_hours, time_slot, day_of_week, mission_category, is_solidaire, no_salaried_substitution)
+    values (v_struct, 'Tri de dons (test e2e)', 'Trier des dons', 'Lille', '12 rue Nationale, Lille', '12 rue Nationale, Lille', current_date + 3, '09:00', '12:00', (current_date + 3) + time '09:00', (current_date + 3) + time '12:00', 180, 180, 1,
+            jsonb_build_array(jsonb_build_object('date', (current_date + 3)::text, 'start', '09:00', 'end', '12:00')), 2, 2, 0, null, null, 0, 0, 0, 0, 6, 'morning', 'monday', 'aide_alimentaire', true, true)
+    returning id into v_mission;
+    reset role;
+    r := r || jsonb_build_object('14_publication_solidaire_sans_mandat', v_mission is not null);
+  exception when others then r := r || jsonb_build_object('14_publication_solidaire_sans_mandat', 'ERREUR: ' || sqlerrm);
+  end;
+  begin
+    set local role authenticated;
+    insert into public.missions (structure_id, title, city, scheduled_date, start_time, end_time, duration_minutes, slots, places, positions, worker_rate_cents, worker_amount, mission_category, is_solidaire)
+    values (v_struct, 'Mission payée (test e2e)', 'Lille', current_date + 3, '09:00', '12:00', 180, jsonb_build_array(jsonb_build_object('date', (current_date + 3)::text, 'start', '09:00', 'end', '12:00')), 1, 1, 4200, 42, 'autre', false);
+    reset role;
+    r := r || jsonb_build_object('15_mission_payante_sans_mandat_bloquee', false);
+  exception when others then r := r || jsonb_build_object('15_mission_payante_sans_mandat_bloquee', 'oui: ' || sqlerrm);
+  end;
+
+  -- ── Structure non association ───────────────────────────────────────────
+  perform set_config('request.jwt.claims', json_build_object('sub', e_id, 'role', 'authenticated', 'email', 'phase0-e2e-entreprise@urosi.internal')::text, true);
+  begin
+    set local role authenticated;
+    insert into public.structures (owner_id, name, siret) values (e_id, 'Entreprise Test', '98765432100019') returning id into v_struct2;
+    perform public.apply_structure_siret_verification(v_struct2, 'verified', p_legal_category_code => '5710');
+    insert into public.missions (structure_id, title, city, scheduled_date, start_time, end_time, duration_minutes, slots, places, positions, worker_rate_cents, worker_amount, mission_category, is_solidaire, no_salaried_substitution)
+    values (v_struct2, 'Solidaire par entreprise (test e2e)', 'Lille', current_date + 3, '09:00', '12:00', 180, jsonb_build_array(jsonb_build_object('date', (current_date + 3)::text, 'start', '09:00', 'end', '12:00')), 1, 1, 0, 0, 'autre', true, true);
+    reset role;
+    r := r || jsonb_build_object('16_solidaire_reservee_associations', false);
+  exception when others then r := r || jsonb_build_object('16_solidaire_reservee_associations', 'oui: ' || sqlerrm);
+  end;
+
+  -- ── Candidature native → acceptation → confirmation → vérification ─────
+  perform set_config('request.jwt.claims', json_build_object('sub', p_id, 'role', 'authenticated')::text, true);
+  begin
+    set local role authenticated;
+    insert into public.applications (mission_id, worker_id) values (v_mission, p_id) returning id into v_app;
+    reset role;
+    r := r || jsonb_build_object('17_candidature_solidaire_sans_mandat', v_app is not null);
+  exception when others then r := r || jsonb_build_object('17_candidature_solidaire_sans_mandat', 'ERREUR: ' || sqlerrm);
+  end;
+  perform set_config('request.jwt.claims', json_build_object('sub', s_id, 'role', 'authenticated')::text, true);
+  begin
+    set local role authenticated;
+    update public.applications set status = 'accepted' where id = v_app;
+    reset role;
+    r := r || jsonb_build_object('18_structure_accepte', (select status from public.applications where id = v_app));
+  exception when others then r := r || jsonb_build_object('18_structure_accepte', 'ERREUR: ' || sqlerrm);
+  end;
+  begin
+    set local role authenticated;
+    perform public.confirm_remote_attendance(v_app, 'start');
+    perform public.confirm_remote_attendance(v_app, 'end');
+    reset role;
+    r := r || jsonb_build_object('19_participation_confirmee', (select attendance_status || ' / cv=' || coalesce(cv_status, 'null') from public.applications where id = v_app),
+                                 '19b_notification_structure', (select body from public.notifications where profile_id = s_id and kind = 'rating_request' order by created_at desc limit 1));
+  exception when others then r := r || jsonb_build_object('19_participation_confirmee', 'ERREUR: ' || sqlerrm);
+  end;
+  begin
+    set local role authenticated;
+    perform public.verify_mission_cv_entry(v_app);
+    insert into public.ratings (application_id, structure_id, worker_id, score, direction, comment) values (v_app, v_struct, p_id, 5, 'structure_to_worker', 'Très investie');
+    reset role;
+    r := r || jsonb_build_object('20_experience_verifiee_et_avis_structure', (select cv_status from public.applications where id = v_app));
+  exception when others then r := r || jsonb_build_object('20_experience_verifiee_et_avis_structure', 'ERREUR: ' || sqlerrm);
+  end;
+  perform set_config('request.jwt.claims', json_build_object('sub', p_id, 'role', 'authenticated')::text, true);
+  begin
+    set local role authenticated;
+    insert into public.ratings (application_id, structure_id, worker_id, score, direction, comment) values (v_app, v_struct, p_id, 5, 'worker_to_structure', 'Super accueil');
+    select jsonb_build_object('mission_lisible', m.title is not null, 'structure_lisible', s.name is not null, 'cv', a.cv_status)
+      into v_json
+      from public.applications a left join public.missions m on m.id = a.mission_id left join public.structures s on s.id = m.structure_id
+      where a.id = v_app;
+    select count(*) into v_n from public.ratings where worker_id = p_id;
+    reset role;
+    r := r || jsonb_build_object('21_avis_participant_et_parcours_lisible', v_json || jsonb_build_object('avis_visibles', v_n));
+  exception when others then r := r || jsonb_build_object('21_avis_participant_et_parcours_lisible', 'ERREUR: ' || sqlerrm);
+  end;
+  select count(*) into v_n from public.notifications where profile_id in (p_id, s_id) and (title || ' ' || coalesce(body, '')) ~* '(paiement|€|wallet|salari|travailleur|mandat)';
+  r := r || jsonb_build_object('22_notifications_avec_vocabulaire_payant', v_n,
+        '22b_textes', (select jsonb_agg(kind || ': ' || title || ' — ' || coalesce(body,'')) from public.notifications where profile_id in (p_id, s_id)));
+
+  -- Annule TOUT (migration, comptes, données) : rien ne persiste.
+  raise exception 'E2E_REPORT %', r::text;
+end
+$test$;

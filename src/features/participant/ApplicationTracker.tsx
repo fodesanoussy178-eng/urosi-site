@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { T, inp } from '@/components/ui/theme';
-import { partnerHost } from '@/features/missions/solidarityMissions';
+import { partnerLabel } from '@/features/missions/solidarityMissions';
 import { formatDay } from '@/lib/slots';
 import type { TimelineStep } from './journey';
 import type { ExternalApplicationWithMission, ParticipantApplication } from './participantService';
@@ -109,7 +109,7 @@ export function ApplicationTracker({
 
   const ext = tracked.origin === 'external' ? tracked.app : null;
   const native = tracked.origin === 'urosi' ? tracked.app : null;
-  const host = ext ? partnerHost(ext.mission?.application_url ?? null) : null;
+  const host = ext ? partnerLabel({ partnerName: ext.mission?.publisher_name ?? null, applicationUrl: ext.mission?.application_url ?? null }) : null;
   const hoursValue = Number(hours.replace(',', '.'));
   const hoursOk = !hours || (Number.isFinite(hoursValue) && hoursValue > 0 && hoursValue <= 72);
 
