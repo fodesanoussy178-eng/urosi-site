@@ -1875,6 +1875,18 @@ export interface Database {
         Args: { p_user_id: string };
         Returns: Json;
       };
+      founder_issue_confirmation_request: {
+        Args: { p_application_id: string; p_channel_note: string };
+        Returns: string;
+      };
+      structure_pending_external_confirmations: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      structure_answer_external_participation: {
+        Args: { p_application_id: string; p_confirmed: boolean };
+        Returns: string;
+      };
       founder_pending_participations: {
         Args: Record<string, never>;
         Returns: Json;

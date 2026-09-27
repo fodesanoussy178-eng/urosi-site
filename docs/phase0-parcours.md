@@ -19,16 +19,25 @@ Code : `src/features/journey/`.
 
 ## 1. Je vois des missions
 
-- À l'arrivée, UROSI demande la localisation. Si elle est acceptée, les
-  missions s'affichent aussitôt, triées par **proximité réelle**, y compris
-  celles de la commune voisine.
-- **Voir dans ma ville** affiche uniquement les missions de la commune
-  détectée, jamais au-delà. La commune est trouvée par l'API Adresse
-  (data.gouv.fr) ; à défaut, c'est la commune connue la plus proche.
-- Si la localisation est refusée, seule la ville est demandée. Les missions
-  restent visibles pendant la saisie.
-- La position est arrondie à environ 100 m et reste sur l'appareil ; elle
-  n'est jamais envoyée en base.
+- La localisation n'est demandée que sur `/missions`, et seulement si
+  nécessaire. On ne redemande pas si elle est déjà autorisée (position lue
+  sans question), refusée, ou si une ville a déjà été choisie.
+- Si elle est acceptée, UROSI affiche « 📍 Tourcoing » puis
+  **[Près de moi] [Voir dans ma ville]**, avec « Près de moi » par défaut.
+  - **Près de moi** trie par distance réelle ; une commune voisine proche est
+    incluse.
+  - **Voir dans ma ville** se limite strictement à la commune détectée (API
+    Adresse data.gouv.fr ; à défaut, la commune connue la plus proche).
+- Si elle est refusée, UROSI demande seulement « Dans quelle ville
+  cherches-tu ? ». Il trie ensuite par proximité du centre de la ville, sans
+  afficher de fausse « distance réelle ». Aucun rayon, département, région ni
+  adresse n'est jamais demandé.
+- Conservation :
+  - la position GPS, arrondie à environ 100 m, ne vit que le temps de
+    l'onglet (`sessionStorage`) et n'est jamais envoyée en base ;
+  - seuls le nom de la commune et son point de référence public sont gardés
+    sur l'appareil (`localStorage`, clé `urosi_place_v1`) ;
+  - l'ancienne clé, qui gardait la position durablement, est effacée.
 - Une carte affiche uniquement : photo, titre, structure, distance, date et
   durée.
 
@@ -67,25 +76,28 @@ bouton, « Candidater ↗ ». Pour une mission externe, il est suivi de la menti
 
 ## 5. La structure confirme
 
-Deux cas :
+La pastille verte signifie **exactement** : participation confirmée par la
+structure. Trois méthodes de vérification sont prévues (migration
+`20260929120000_confirmation_hardening.sql`) ; aucune n'est simulée.
 
-- **Mission d'une plateforme partenaire**
-  - La déclaration crée un lien unique `/confirmer/:jeton`. La structure y lit
-    « Hugo M. indique avoir réalisé la mission … le 28 septembre 2026.
-    Pouvez-vous confirmer sa participation ? » et répond **✓ Oui, a
-    participé** ou **✕ Non**, sans compte.
-  - La réponse est unique et définitive. « Oui » passe la mission à
-    `verified_completed`.
-  - **Aucun email n'est envoyé automatiquement**, faute de service d'envoi
-    configuré. Le Centre Fondateur (Missions externes → « Participations à
-    confirmer ») liste les demandes avec **Copier le lien**, à transmettre à
-    l'organisation.
-- **Mission UROSI**
-  - La structure voit « X indique avoir réalisé cette mission le … Pouvez-vous
-    confirmer sa participation ? » dans son espace (et reçoit une
-    notification).
-  - **✓ Oui, a participé** confirme et vérifie en un seul geste.
-    **✕ Non** signale l'absence.
+| Méthode | Quand | État aujourd'hui |
+|---|---|---|
+| `urosi_native_confirmation` | Mission UROSI, ou mission externe dont le SIREN de l'organisation correspond à une structure **inscrite et vérifiée** | Active : la structure est prévenue dans son espace et confirme en un clic (« ✓ Oui, a participé » / « ✕ Non ») |
+| `structure_confirmation` | Structure non inscrite, joignable par un canal officiel **vérifié par l'équipe UROSI** | Manuelle. Aucun lien n'existe tant que l'équipe ne l'a pas émis depuis le Centre Fondateur (« Émettre un lien »), en notant le canal officiel utilisé. Le lien est unique, à réponse unique et expire au bout de 30 jours |
+| `partner_status` | La plateforme partenaire transmet un statut de participation | Indisponible : aucune source ne le fournit (`mission_sources.partner_status_available = false`) |
+
+Garanties :
+
+- UROSI ne suppose jamais connaître l'email d'une organisation d'API
+  Engagement, et n'envoie **aucun** message automatiquement.
+- « J'y suis allé » reste une déclaration, affichée « En attente de
+  confirmation » côté utilisateur.
+- L'équipe UROSI ne peut plus « vérifier » à la place de la structure
+  (`founder_verify_external_application` est désactivée). L'ancien statut
+  `verified` ne donne pas de pastille.
+- La base refuse un statut `verified_completed` sans méthode identifiée.
+- Mission UROSI : la pastille verte exige une fin de mission confirmée par la
+  structure (`attendance_status = end_confirmed`) et une expérience validée.
 
 Le profil (`/profil`) et le profil public (`/p/:id`) n'affichent que :
 

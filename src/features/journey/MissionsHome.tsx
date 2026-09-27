@@ -51,7 +51,10 @@ export function MissionsHome() {
         .sort((a, b) => (a.date ?? '9999').localeCompare(b.date ?? '9999'))
         .map((mission) => ({ mission, distance: null as number | null }));
     }
-    return mode === 'city' ? missionsInCity(missions, location.city, location) : missionsNearMe(missions, location);
+    const ranked = mode === 'city' ? missionsInCity(missions, location.city, location) : missionsNearMe(missions, location);
+    // Distance affichée seulement si elle est réelle (position GPS) : depuis
+    // une ville choisie, on trie par proximité du centre sans l'afficher.
+    return location.source === 'gps' ? ranked : ranked.map((x) => ({ ...x, distance: null }));
   }, [missions, phase, location, mode]);
 
   async function submitCity(e: FormEvent) {
@@ -88,7 +91,7 @@ export function MissionsHome() {
 
         {phase === 'need_city' && (
           <form className="j-city-form" onSubmit={submitCity}>
-            <label htmlFor="j-city">Dans quelle ville cherches-tu une mission ?</label>
+            <label htmlFor="j-city">Dans quelle ville cherches-tu ?</label>
             <div className="j-city-row">
               <input id="j-city" className="pub-input" list="j-cities" value={cityInput} onChange={(e) => setCityInput(e.target.value)} placeholder="Ex. Lille" autoComplete="address-level2" autoFocus />
               <button type="submit" className="pub-btn pub-btn-primary">Voir les missions</button>
@@ -101,17 +104,17 @@ export function MissionsHome() {
 
         {phase === 'ready' && location && (
           <div className="j-modes">
+            <button type="button" className="j-place" onClick={changeCity} aria-label={`Ville : ${location.city}. Changer de ville`}>
+              📍 {location.city}
+            </button>
             <div className="j-seg" role="tablist" aria-label="Zone">
               <button type="button" role="tab" aria-selected={mode === 'near'} onClick={() => setMode('near')}>
-                📍 {location.source === 'gps' ? 'Près de moi' : `Autour de ${location.city}`}
+                Près de moi
               </button>
               <button type="button" role="tab" aria-selected={mode === 'city'} onClick={() => setMode('city')}>
                 Voir dans ma ville
               </button>
             </div>
-            <button type="button" className="j-where" onClick={changeCity}>
-              {location.city} · changer
-            </button>
           </div>
         )}
 

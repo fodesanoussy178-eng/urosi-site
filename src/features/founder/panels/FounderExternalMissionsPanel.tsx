@@ -5,6 +5,7 @@ import {
   confirmationLink,
   fetchExternalMissionsOverview,
   fetchPendingParticipations,
+  issueConfirmationRequest,
   runApiEngagementImport,
   type ExternalImportRun,
   type ExternalMissionsOverview,
@@ -35,7 +36,7 @@ const APPLICATION_LABELS: Record<string, string> = {
   external_application_started: 'commencées',
   accepted_declared: 'acceptées (déclarées)',
   completed_declared: 'réalisées (déclarées)',
-  verified: 'vérifiées (équipe)',
+  verified: 'vérifiées par l’équipe (ancien, sans pastille)',
   withdrawn: 'retirées',
   not_done_declared: 'non réalisées (déclaré)',
   verified_completed: 'confirmées par la structure',
@@ -123,8 +124,9 @@ export function FounderExternalMissionsPanel() {
 
       <div style={founderCard}>
         <div style={{ fontSize: 12.5, fontWeight: 900, color: T.text, marginBottom: 4 }}>Participations à confirmer ({pending.length})</div>
-        <div style={{ fontSize: 10.5, color: T.mu, marginBottom: 8 }}>
-          Le bénévole a déclaré « J’y suis allé ». Transmettez le lien à l’organisation : elle confirme en un clic, sans compte. Aucun email n’est envoyé automatiquement.
+        <div style={{ fontSize: 10.5, color: T.mu, marginBottom: 8, lineHeight: 1.5 }}>
+          Le bénévole a déclaré « J’y suis allé ». Seule la structure peut confirmer. Aucun message n’est envoyé automatiquement : un lien n’est émis
+          que vers un canal officiel que vous avez vérifié (jamais un email supposé).
         </div>
         {pending.length === 0 && <div style={{ fontSize: 11.5, color: T.mu }}>Aucune pour l’instant.</div>}
         {pending.map((p) => (
@@ -140,10 +142,39 @@ export function FounderExternalMissionsPanel() {
                   </>
                 )}
               </div>
+              <div style={{ color: T.sub, marginTop: 2 }}>
+                {p.method === 'urosi_native_confirmation'
+                  ? 'Structure inscrite sur UROSI : elle confirme dans son espace.'
+                  : p.method === 'partner_status'
+                    ? 'Statut de la plateforme partenaire.'
+                    : p.token
+                      ? `Lien émis (canal : ${p.channel_note ?? '—'}) · expire le ${p.expires_at ? new Date(p.expires_at).toLocaleDateString('fr-FR') : '—'}`
+                      : 'Aucun canal officiel enregistré : en attente.'}
+              </div>
             </div>
-            <button type="button" style={{ ...founderButton, flexShrink: 0 }} onClick={() => void navigator.clipboard?.writeText(confirmationLink(p.token)).then(() => setMessage('Lien de confirmation copié.'))}>
-              Copier le lien
-            </button>
+            {p.method === 'structure_confirmation' && (
+              p.token ? (
+                <button type="button" style={{ ...founderButton, flexShrink: 0 }} onClick={() => void navigator.clipboard?.writeText(confirmationLink(p.token!)).then(() => setMessage('Lien de confirmation copié.'))}>
+                  Copier le lien
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  style={{ ...founderButton, flexShrink: 0 }}
+                  onClick={() => {
+                    const channel = window.prompt('Canal officiel vérifié par lequel vous transmettrez le lien (ex. « email publié sur le site officiel de l’association ») :');
+                    if (!channel || channel.trim().length < 5) return;
+                    void issueConfirmationRequest(p.id, channel.trim())
+                      .then((token) => navigator.clipboard?.writeText(confirmationLink(token)))
+                      .then(() => setMessage('Lien émis et copié : transmettez-le par ce canal uniquement.'))
+                      .catch((e) => setMessage(describeError(e, 'l’émission du lien')))
+                      .finally(() => void load());
+                  }}
+                >
+                  Émettre un lien
+                </button>
+              )
+            )}
           </div>
         ))}
       </div>

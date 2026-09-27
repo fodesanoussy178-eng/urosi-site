@@ -40,6 +40,7 @@ export interface NativeRow {
   mission_id: string;
   status: string;
   cv_status: string | null;
+  attendance_status?: string | null;
   participant_declared_completed: boolean | null;
   mission: {
     title: string;
@@ -59,10 +60,12 @@ export function externalItem(row: ExternalRow, today: string): JourneyItem {
   const askAfter = date ?? addDays(parisDay(row.clicked_at), 7);
   let state: JourneyState;
   switch (row.status) {
+    // Seule une confirmation de la structure donne la pastille verte.
+    // L'ancien statut « verified » (équipe UROSI) n'en est pas une.
     case 'verified_completed':
-    case 'verified':
       state = 'verified';
       break;
+    case 'verified':
     case 'completed_declared':
       state = 'declared';
       break;
@@ -91,7 +94,8 @@ export function nativeItem(row: NativeRow, today: string): JourneyItem | null {
   if (!row.mission || ['cancelled', 'rejected'].includes(row.status)) return null;
   const date = row.mission.scheduled_date;
   let state: JourneyState;
-  if (row.cv_status === 'verified') state = 'verified';
+  // Pastille verte : fin de mission confirmée par la structure + expérience validée.
+  if (row.cv_status === 'verified' && row.attendance_status === 'end_confirmed') state = 'verified';
   else if (row.participant_declared_completed === false || row.cv_status === 'disputed' || row.cv_status === 'rejected') state = 'closed';
   else if (row.participant_declared_completed === true) state = 'declared';
   // On ne demande « Alors ? » que si la structure avait retenu la candidature.
@@ -125,7 +129,7 @@ export async function fetchMyJourney(userId: string, today: string): Promise<Jou
       .order('clicked_at', { ascending: false }),
     supabase
       .from('applications')
-      .select('mission_id, status, cv_status, participant_declared_completed, mission:missions(title, scheduled_date, duration_minutes, structure:structures(name, trade_name))')
+      .select('mission_id, status, cv_status, attendance_status, participant_declared_completed, mission:missions(title, scheduled_date, duration_minutes, structure:structures(name, trade_name))')
       .eq('worker_id', userId)
       .order('created_at', { ascending: false }),
   ]);

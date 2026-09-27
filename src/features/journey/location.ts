@@ -1,9 +1,10 @@
 // Comportement 1 : « J'arrive → je vois des missions ». UROSI demande la
 // localisation ; si elle est refusée, seulement la ville. Rien d'autre.
 //
-// La position reste sur l'appareil (arrondie à ~100 m), jamais en base.
-// Commune détectée via l'API Adresse de l'État (reverse), sinon la commune
-// connue la plus proche.
+// Demandée uniquement ici, pour trier les missions par proximité. Aucun
+// rayon, département, région ni adresse personnelle n'est demandé. La
+// position n'est jamais envoyée en base ; voir useUserLocation pour sa durée
+// de conservation.
 import { useCallback, useEffect, useState } from 'react';
 import { distanceKm, type LatLng } from '@/lib/geo';
 import type { FeedMission } from '@/features/missions/solidarityMissions';
@@ -15,7 +16,6 @@ export interface UserLocation extends LatLng {
 
 export type LocationPhase = 'asking' | 'ready' | 'need_city';
 
-const STORAGE_KEY = 'urosi_location_v1';
 
 // Communes de la métropole (secours hors ligne, recherche instantanée).
 export const KNOWN_COMMUNES: Array<{ name: string } & LatLng> = [
@@ -107,18 +107,27 @@ async function fetchJson(url: string, timeoutMs = 4000): Promise<unknown> {
   }
 }
 
-// Commune de la position (API Adresse, data.gouv.fr), sinon la plus proche connue.
-export async function reverseCity(point: LatLng): Promise<string> {
+// Commune de la position (API Adresse, data.gouv.fr) et son point de
+// référence public ; sinon la commune connue la plus proche.
+export async function reverseCity(point: LatLng): Promise<{ name: string } & LatLng> {
   try {
     const body = (await fetchJson(`https://api-adresse.data.gouv.fr/reverse/?lon=${point.lng}&lat=${point.lat}&type=municipality&limit=1`)) as {
-      features?: Array<{ properties?: { city?: string; name?: string } }>;
+      features?: Array<{ geometry?: { coordinates?: [number, number] }; properties?: { city?: string; name?: string } }>;
     };
-    const city = body.features?.[0]?.properties?.city ?? body.features?.[0]?.properties?.name;
-    if (city) return city;
+    const feature = body.features?.[0];
+    const name = feature?.properties?.city ?? feature?.properties?.name;
+    const coords = feature?.geometry?.coordinates;
+    if (name) {
+      const known = findKnownCommune(name);
+      if (known) return known;
+      if (coords) return { name, lat: coords[1], lng: coords[0] };
+      return { name, lat: round(point.lat, 2), lng: round(point.lng, 2) };
+    }
   } catch {
     // réseau indisponible : secours local
   }
-  return nearestKnownCommune(point);
+  const nearest = nearestKnownCommune(point);
+  return findKnownCommune(nearest)!;
 }
 
 // Recherche d'une commune saisie (API Découpage administratif, geo.api.gouv.fr).
@@ -139,35 +148,86 @@ export async function searchCity(query: string): Promise<({ name: string } & Lat
   return null;
 }
 
-function round(value: number): number {
-  return Math.round(value * 1000) / 1000;
+function round(value: number, digits = 3): number {
+  const f = 10 ** digits;
+  return Math.round(value * f) / f;
 }
 
-export function readStoredLocation(): UserLocation | null {
+// Deux mémoires distinctes :
+//   - la COMMUNE (nom + point de référence public de la commune) reste sur
+//     l'appareil pour ne pas redemander à chaque visite ;
+//   - la POSITION GPS (arrondie à ~100 m) ne vit que le temps de l'onglet
+//     (sessionStorage) : jamais conservée durablement, jamais envoyée en base.
+const PLACE_KEY = 'urosi_place_v1';
+const POSITION_KEY = 'urosi_position_v1';
+const LEGACY_KEY = 'urosi_location_v1';
+
+interface StoredPlace extends LatLng {
+  city: string;
+  source: 'gps' | 'city';
+}
+
+function readJson<T>(storage: Storage | undefined, key: string): T | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const v = raw ? (JSON.parse(raw) as Partial<UserLocation>) : null;
-    if (v && typeof v.lat === 'number' && typeof v.lng === 'number' && typeof v.city === 'string' && (v.source === 'gps' || v.source === 'city')) {
-      return v as UserLocation;
-    }
+    const raw = storage?.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
   } catch {
-    // stockage indisponible
+    return null;
   }
-  return null;
 }
 
-function store(location: UserLocation | null) {
+function writeJson(storage: Storage | undefined, key: string, value: unknown) {
   try {
-    if (location) localStorage.setItem(STORAGE_KEY, JSON.stringify(location));
-    else localStorage.removeItem(STORAGE_KEY);
+    if (value == null) storage?.removeItem(key);
+    else storage?.setItem(key, JSON.stringify(value));
   } catch {
-    // stockage indisponible : la position vaut pour la visite
+    // stockage indisponible : valable pour la visite seulement
+  }
+}
+
+function local(): Storage | undefined {
+  return typeof localStorage === 'undefined' ? undefined : localStorage;
+}
+
+function session(): Storage | undefined {
+  return typeof sessionStorage === 'undefined' ? undefined : sessionStorage;
+}
+
+function readPlace(): StoredPlace | null {
+  const v = readJson<Partial<StoredPlace>>(local(), PLACE_KEY);
+  return v && typeof v.city === 'string' && typeof v.lat === 'number' && typeof v.lng === 'number' && (v.source === 'gps' || v.source === 'city') ? (v as StoredPlace) : null;
+}
+
+function readPosition(): LatLng | null {
+  const v = readJson<Partial<LatLng>>(session(), POSITION_KEY);
+  return v && typeof v.lat === 'number' && typeof v.lng === 'number' ? { lat: v.lat, lng: v.lng } : null;
+}
+
+// Position GPS de la visite en cours (distance réelle sur la fiche), sinon null.
+export function readStoredLocation(): LatLng | null {
+  return readPosition();
+}
+
+function currentLocation(): UserLocation | null {
+  const place = readPlace();
+  if (!place) return null;
+  const position = place.source === 'gps' ? readPosition() : null;
+  if (place.source === 'gps' && !position) return null;
+  return position ? { ...position, city: place.city, source: 'gps' } : { lat: place.lat, lng: place.lng, city: place.city, source: 'city' };
+}
+
+async function geolocationPermission(): Promise<PermissionState | 'unknown'> {
+  try {
+    const status = await navigator.permissions?.query({ name: 'geolocation' as PermissionName });
+    return status?.state ?? 'unknown';
+  } catch {
+    return 'unknown';
   }
 }
 
 export function useUserLocation() {
-  const [location, setLocation] = useState<UserLocation | null>(() => readStoredLocation());
-  const [phase, setPhase] = useState<LocationPhase>(() => (readStoredLocation() ? 'ready' : 'asking'));
+  const [location, setLocation] = useState<UserLocation | null>(() => currentLocation());
+  const [phase, setPhase] = useState<LocationPhase>(() => (currentLocation() ? 'ready' : 'asking'));
 
   const askGps = useCallback(() => {
     if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
@@ -178,35 +238,64 @@ export function useUserLocation() {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const point = { lat: round(pos.coords.latitude), lng: round(pos.coords.longitude) };
-        const city = await reverseCity(point);
-        const next: UserLocation = { ...point, city, source: 'gps' };
-        store(next);
-        setLocation(next);
+        const commune = await reverseCity(point);
+        writeJson(session(), POSITION_KEY, point);
+        writeJson(local(), PLACE_KEY, { city: commune.name, lat: commune.lat, lng: commune.lng, source: 'gps' });
+        setLocation({ ...point, city: commune.name, source: 'gps' });
         setPhase('ready');
       },
-      () => setPhase('need_city'),
+      () => {
+        // Refus ou échec : on ne demande que la ville.
+        const place = readPlace();
+        if (place) {
+          setLocation({ lat: place.lat, lng: place.lng, city: place.city, source: 'city' });
+          setPhase('ready');
+        } else {
+          setPhase('need_city');
+        }
+      },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 },
     );
   }, []);
 
   useEffect(() => {
-    if (!location) askGps();
+    writeJson(local(), LEGACY_KEY, null); // ancienne clé : position conservée durablement
+    if (location) return;
+    let alive = true;
+    void geolocationPermission().then((permission) => {
+      if (!alive) return;
+      const place = readPlace();
+      if (permission === 'granted') {
+        askGps(); // déjà autorisée : aucune question affichée
+      } else if (permission === 'denied' || place?.source === 'city') {
+        // Refusée, ou ville déjà choisie : on ne redemande pas.
+        if (place) {
+          setLocation({ lat: place.lat, lng: place.lng, city: place.city, source: 'city' });
+          setPhase('ready');
+        } else {
+          setPhase('need_city');
+        }
+      } else {
+        askGps();
+      }
+    });
+    return () => {
+      alive = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const chooseCity = useCallback(async (query: string): Promise<boolean> => {
     const found = await searchCity(query);
     if (!found) return false;
-    const next: UserLocation = { lat: found.lat, lng: found.lng, city: found.name, source: 'city' };
-    store(next);
-    setLocation(next);
+    writeJson(session(), POSITION_KEY, null);
+    writeJson(local(), PLACE_KEY, { city: found.name, lat: found.lat, lng: found.lng, source: 'city' });
+    setLocation({ lat: found.lat, lng: found.lng, city: found.name, source: 'city' });
     setPhase('ready');
     return true;
   }, []);
 
-  const changeCity = useCallback(() => {
-    setPhase('need_city');
-  }, []);
+  const changeCity = useCallback(() => setPhase('need_city'), []);
 
   return { location, phase, askGps, chooseCity, changeCity };
 }

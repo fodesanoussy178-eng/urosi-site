@@ -49,8 +49,16 @@ export async function runApiEngagementImport(): Promise<ExternalImportRun & { ru
   return data as ExternalImportRun & { run_id: string };
 }
 
-// Participations déclarées (« J'y suis allé ») en attente de la structure.
-// Aucun email n'est envoyé automatiquement : le lien est transmis par l'équipe.
+// Participations déclarées (« J'y suis allé ») en attente de la structure,
+// avec la méthode de vérification RÉELLEMENT disponible pour chacune :
+//   urosi_native_confirmation  structure inscrite (même SIREN) : elle confirme
+//                              dans son espace, rien à faire ici ;
+//   structure_confirmation     lien unique à émettre vers un canal officiel
+//                              vérifié par l'équipe (aucun email supposé,
+//                              aucun envoi automatique) ;
+//   partner_status             statut de la plateforme : non disponible à ce jour.
+export type VerificationMethod = 'partner_status' | 'structure_confirmation' | 'urosi_native_confirmation';
+
 export interface PendingParticipation {
   id: string;
   participant: string;
@@ -59,13 +67,24 @@ export interface PendingParticipation {
   organization_url: string | null;
   mission_date: string | null;
   declared_at: string | null;
-  token: string;
+  method: VerificationMethod;
+  token: string | null;
+  channel_note: string | null;
+  expires_at: string | null;
 }
 
 export async function fetchPendingParticipations(): Promise<PendingParticipation[]> {
   const { data, error } = await supabase.rpc('founder_pending_participations');
   if (error) throw error;
   return (data as unknown as PendingParticipation[]) ?? [];
+}
+
+// Émet le lien de confirmation, en notant le canal officiel vérifié par
+// lequel il sera transmis (ex. « email publié sur le site officiel »).
+export async function issueConfirmationRequest(applicationId: string, channelNote: string): Promise<string> {
+  const { data, error } = await supabase.rpc('founder_issue_confirmation_request', { p_application_id: applicationId, p_channel_note: channelNote });
+  if (error) throw error;
+  return data as string;
 }
 
 export function confirmationLink(token: string): string {

@@ -15,6 +15,7 @@ import { fetchMyStructures, createStructure, updateStructureAbout, requestStruct
 import { StatsPanel, StructureStatsSummary, StructurePerformances } from './StatsPanel';
 import { StructureHistoryPanel } from './StructureHistoryPanel';
 import { uploadDraftImages } from '@/features/missions/missionImagesService';
+import { ExternalConfirmations } from './ExternalConfirmations';
 import { MissionPhotosDraft, MissionPhotosManager, type DraftPhoto } from './MissionPhotos';
 import { fetchMissionsForStructure, createMission, updateMission, cancelMission, replaceMissionWorker, notifyReplacementSearch, type MissionNonSensitivePatch } from '@/features/missions/missionsService';
 import {
@@ -952,6 +953,7 @@ export function StructureApp() {
                 {/* ── CANDIDATS ── */}
                 {tab === 'candidats' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {!features.paidLayer && <ExternalConfirmations onDone={notif} />}
                     {candMis ? (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#22d3ee12', border: '1px solid #0e7490', borderRadius: 10, padding: '9px 12px' }}>
                         <span style={{ fontSize: 11, color: T.cyan, fontWeight: 800 }}>Candidats pour « {misTitle(candMis)} »</span>

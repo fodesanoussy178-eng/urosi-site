@@ -76,6 +76,8 @@ describe('comportements 3 à 5 — candidature, déclaration, confirmation', () 
     expect(externalItem({ ...base, status: 'verified_completed' }, '2026-10-01').state).toBe('verified');
     expect(externalItem({ ...base, status: 'not_done_declared' }, '2026-10-01').state).toBe('closed');
     expect(externalItem({ ...base, status: 'not_confirmed' }, '2026-10-01').state).toBe('closed');
+    // L'ancienne vérification par l'équipe UROSI n'est pas une confirmation de la structure.
+    expect(externalItem({ ...base, status: 'verified' }, '2026-10-01').state).toBe('declared');
   });
 
   it('mission UROSI : question seulement si la candidature avait été retenue', () => {
@@ -83,7 +85,8 @@ describe('comportements 3 à 5 — candidature, déclaration, confirmation', () 
     expect(nativeItem(row, '2026-09-28')?.state).toBe('ask');
     expect(nativeItem({ ...row, status: 'pending' }, '2026-09-28')).toBeNull();
     expect(nativeItem({ ...row, participant_declared_completed: true }, '2026-09-28')?.state).toBe('declared');
-    expect(nativeItem({ ...row, participant_declared_completed: true, cv_status: 'verified' }, '2026-09-28')?.state).toBe('verified');
+    expect(nativeItem({ ...row, participant_declared_completed: true, cv_status: 'verified', attendance_status: 'end_confirmed' }, '2026-09-28')?.state).toBe('verified');
+    expect(nativeItem({ ...row, participant_declared_completed: true, cv_status: 'verified', attendance_status: 'not_started' }, '2026-09-28')?.state).toBe('declared');
   });
 
   it('affiche « Hugo M. »', () => {

@@ -187,7 +187,8 @@
 .j-city-form label { font-size: 15px; font-weight: 800; }
 .j-city-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
 .j-error { color: #c0262d; font-size: 13px; }
-.j-modes { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.j-modes { display: grid; gap: 10px; justify-items: start; margin-bottom: 16px; }
+.j-place { border: 0; background: none; font: inherit; font-size: 17px; font-weight: 900; color: var(--urosi-text); cursor: pointer; padding: 0; }
 .j-seg { display: inline-flex; background: #eaf0fa; border-radius: 999px; padding: 4px; gap: 4px; }
 .j-seg button { border: 0; background: transparent; border-radius: 999px; padding: 9px 16px; font: inherit; font-size: 14px; font-weight: 800; color: var(--urosi-sub); cursor: pointer; }
 .j-seg button[aria-selected='true'] { background: var(--pub-blue); color: #fff; box-shadow: 0 6px 14px rgba(29, 95, 230, 0.25); }
