@@ -4,40 +4,19 @@ import { categoryInfo } from '@/features/missions/categories';
 import { formatDistance } from '@/lib/geo';
 import { formatDay } from '@/lib/slots';
 import type { FeedMission } from '@/features/missions/solidarityMissions';
-import { sceneSvg } from '@/features/missions/categoryScene';
+import { MissionArt } from '@/components/public/MissionArt';
 import { useImpressionTracking } from './impressionTracking';
 
-// Visuel de mission, jamais vide : photo de mission > illustration fournie
-// par la source > illustration UROSI de la catégorie. Une image qui ne se
-// charge pas passe automatiquement au niveau suivant.
+// Visuel de mission, jamais vide : même hiérarchie que les pages publiques
+// (photo > logo de l'organisation > logo du domaine > illustration UROSI).
 export function MissionVisual({ mission, height = 132, radius = 12, children }: { mission: FeedMission; height?: number; radius?: number; children?: ReactNode }) {
-  const candidates = [mission.imageUrl, mission.illustrationUrl].filter((u): u is string => Boolean(u));
-  const [failed, setFailed] = useState(0);
-  const src = candidates[failed];
   const info = categoryInfo(mission.category);
-  const isIllustration = src != null && src === mission.illustrationUrl && src !== mission.imageUrl;
-
   return (
     <div style={{ position: 'relative', height, borderRadius: radius, overflow: 'hidden', background: `linear-gradient(135deg, ${info.from}, ${info.to})`, flexShrink: 0 }}>
-      {src ? (
-        <img
-          src={src}
-          alt=""
-          loading="lazy"
-          onError={() => setFailed((n) => n + 1)}
-          style={{ width: '100%', height: '100%', objectFit: isIllustration ? 'contain' : 'cover', padding: isIllustration ? 18 : 0, background: isIllustration ? 'rgba(255,255,255,.9)' : undefined }}
-        />
-      ) : (
-        <CategoryIllustration category={mission.category} seed={mission.key} />
-      )}
+      <MissionArt mission={mission} />
       {children}
     </div>
   );
-}
-
-function CategoryIllustration({ category, seed }: { category: FeedMission['category']; seed: string }) {
-  // Scène SVG statique générée par UROSI (aucune donnée utilisateur).
-  return <div aria-hidden="true" style={{ position: 'absolute', inset: 0 }} dangerouslySetInnerHTML={{ __html: sceneSvg(category, seed) }} />;
 }
 
 const AVATAR_HUES = [198, 24, 265, 150, 340, 45, 210, 110];

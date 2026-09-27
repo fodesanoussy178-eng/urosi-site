@@ -1,11 +1,12 @@
 // Fiche mission publique (/missions/:key) : éditoriale, claire, crédible.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { categoryInfo } from '@/features/missions/categories';
 import { missionDistance, partnerLabel, type FeedMission } from '@/features/missions/solidarityMissions';
 import { formatDistance, geocodeMelCity } from '@/lib/geo';
 import { PublicShell } from '@/components/public/PublicShell';
 import { MissionArt } from '@/components/public/MissionArt';
+import { fetchMissionImages } from '@/features/missions/missionImagesService';
 import { MissionBadgeRow, durationText } from '@/components/public/PublicMissionCard';
 import { Icon } from '@/components/public/icons';
 import { OrgLogo } from './ParticipantUi';
@@ -20,6 +21,51 @@ function longDate(date: string | null): string | null {
   if (Number.isNaN(d.getTime())) return null;
   const label = LONG_DAY.format(d);
   return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+// Photos d'une mission native : la principale en grand, les autres en
+// vignettes. Sans photo, le visuel suit la hiérarchie commune (MissionArt).
+function MissionGallery({ mission }: { mission: FeedMission }) {
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [selected, setSelected] = useState(0);
+  const nativeId = mission.kind === 'urosi_solidarity_mission' && !mission.isDemo ? mission.id : null;
+  useEffect(() => {
+    if (!nativeId) return;
+    let alive = true;
+    fetchMissionImages(nativeId)
+      .then((images) => {
+        if (alive) setPhotos(images.map((i) => i.image_url));
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [nativeId]);
+
+  const current = photos[selected];
+  return (
+    <>
+      <div className="pub-detail-visual">
+        {current ? (
+          <div className="m-art" data-visual="native_photo">
+            <img className="m-photo" src={current} alt={`Photo ${selected + 1} de la mission « ${mission.title} »`} />
+          </div>
+        ) : (
+          <MissionArt mission={mission} />
+        )}
+        {mission.isDemo && <span className="m-card-demo" style={{ position: 'absolute', top: 14, left: 14 }}>Exemple</span>}
+      </div>
+      {photos.length > 1 && (
+        <div className="pub-gallery" role="group" aria-label="Photos de la mission">
+          {photos.map((url, i) => (
+            <button key={url} type="button" aria-pressed={i === selected} aria-label={`Voir la photo ${i + 1}`} onClick={() => setSelected(i)}>
+              <img src={url} alt="" loading="lazy" />
+            </button>
+          ))}
+        </div>
+      )}
+    </>
+  );
 }
 
 function Cta({ mission, onSignup }: { mission: FeedMission; onSignup: () => void }) {
@@ -119,10 +165,7 @@ export function PublicMissionPage() {
 
         <div className="pub-detail">
           <article>
-            <div className="pub-detail-visual">
-              <MissionArt mission={mission} />
-              {mission.isDemo && <span className="m-card-demo" style={{ position: 'absolute', top: 14, left: 14 }}>Exemple</span>}
-            </div>
+            <MissionGallery mission={mission} />
             <h1 className="pub-h1" style={{ marginTop: 22 }}>{mission.title}</h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '8px 0 12px' }}>
               <span style={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', display: 'inline-flex', boxShadow: '0 2px 8px rgba(15,31,58,.12)' }}>

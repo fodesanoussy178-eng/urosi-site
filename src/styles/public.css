@@ -80,8 +80,7 @@
 .m-card:hover { transform: translateY(-3px); box-shadow: 0 16px 36px rgba(15, 31, 58, 0.12); }
 .m-card-hit { position: absolute; inset: 0; z-index: 1; border: 0; background: transparent; cursor: pointer; border-radius: 18px; }
 .m-card-visual { position: relative; aspect-ratio: 16 / 10; background: #eef3fb; }
-.m-card-visual > img, .m-card-visual > .m-scene { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.m-card-visual > .m-scene svg { display: block; width: 100%; height: 100%; }
+.m-card-visual > .m-art { position: absolute; inset: 0; }
 .m-card-heart { position: absolute; z-index: 2; top: 10px; right: 10px; }
 .m-card-demo { position: absolute; z-index: 2; top: 10px; left: 10px; font-size: 10.5px; font-weight: 800; background: rgba(255, 255, 255, 0.92); color: var(--urosi-sub); border-radius: 999px; padding: 3px 9px; }
 .m-card-logo { position: absolute; z-index: 2; left: 14px; bottom: -18px; width: 38px; height: 38px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 4px 10px rgba(15, 31, 58, 0.15); overflow: hidden; background: #fff; display: flex; align-items: center; justify-content: center; }
@@ -101,7 +100,7 @@
 /* Fiche mission */
 .pub-detail { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
 .pub-detail-visual { border-radius: 20px; overflow: hidden; aspect-ratio: 16 / 9; background: #eef3fb; position: relative; }
-.pub-detail-visual > img, .pub-detail-visual > .m-scene { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.pub-detail-visual > .m-art { position: absolute; inset: 0; }
 .pub-facts { display: grid; gap: 10px; font-size: 15px; color: var(--urosi-text); margin: 18px 0 6px; }
 .pub-facts li { display: flex; align-items: center; gap: 10px; list-style: none; }
 .pub-aside { position: sticky; top: 84px; display: grid; gap: 14px; }
@@ -163,3 +162,15 @@
   .pub-sticky-cta { display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(12px); border-top: 1px solid var(--urosi-border); padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); }
   .pub-detail-page { padding-bottom: 120px; }
 }
+
+/* Visuel de mission (MissionArt) : photo, logo en médaillon ou illustration. */
+.m-art { position: absolute; inset: 0; overflow: hidden; }
+.m-art .m-photo { display: block; width: 100%; height: 100%; object-fit: cover; }
+.m-art .m-scene, .m-art .m-scene svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.m-art-logo .m-scene { opacity: 0.55; filter: saturate(0.85); }
+.m-logo-tile { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 34%; max-width: 150px; min-width: 64px; aspect-ratio: 1; background: #fff; border-radius: 18px; box-shadow: 0 10px 28px rgba(15, 31, 58, 0.16); display: flex; align-items: center; justify-content: center; padding: 12%; box-sizing: border-box; }
+.m-logo-tile img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.pub-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 10px; margin-top: 12px; }
+.pub-gallery button { position: relative; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; border: 2px solid transparent; padding: 0; cursor: pointer; background: #eef3fb; }
+.pub-gallery button[aria-pressed="true"] { border-color: var(--pub-blue); }
+.pub-gallery img { width: 100%; height: 100%; object-fit: cover; display: block; }

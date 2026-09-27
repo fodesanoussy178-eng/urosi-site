@@ -91,8 +91,27 @@ describe('import API Engagement (contrat officiel v0)', () => {
     expect(row.activities).toEqual(['distribution', 'logistique']);
     expect(row.category).toBe('aide_alimentaire');
     expect(row.description).toBe('Aider à la préparation des colis.');
+    expect(row.domain_logo_url).toBe('https://cdn.example.org/domain.jpg');
+  });
+
+  it('ne lit aucun champ photo : `image` n’existe pas dans la réponse v0, organizationLogo reste un logo', () => {
+    const row = ok({ ...base, image: 'https://cdn.example.org/photo.jpg' });
     expect(row.image_url).toBeNull();
-    expect(row.source_illustration_url).toBe('https://cdn.example.org/domain.jpg');
+    expect(row.organization_logo_url).toBe('https://cdn.example.org/logo.png');
+  });
+
+  it('trace la provenance exacte de la mission', () => {
+    const row = ok(base);
+    expect(row.source).toBe('api_engagement');
+    expect(row.source_type).toBe('api');
+    expect(row.source_name).toBe('API Engagement');
+    expect(row.source_url).toBe('https://api.api-engagement.beta.gouv.fr/v0/mission/66f1a2b3c4d5e6f7a8b9c0d1');
+  });
+
+  it('rend l’identifiant externe d’une mission écartée (pour la désactiver si elle était publiée)', () => {
+    const r = mapApiEngagementMission({ ...base, deleted: true }, { now: NOW });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.externalId).toBe('66f1a2b3c4d5e6f7a8b9c0d1');
   });
 
   it('sans duration, déduit la durée d’une plage courte mais pas d’une période longue', () => {

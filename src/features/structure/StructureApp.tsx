@@ -14,6 +14,8 @@ import { StructurePaymentMethodSheet } from '@/components/ui/StructurePaymentMet
 import { fetchMyStructures, createStructure, updateStructureAbout, requestStructureVerification } from './structureService';
 import { StatsPanel, StructureStatsSummary, StructurePerformances } from './StatsPanel';
 import { StructureHistoryPanel } from './StructureHistoryPanel';
+import { uploadDraftImages } from '@/features/missions/missionImagesService';
+import { MissionPhotosDraft, MissionPhotosManager, type DraftPhoto } from './MissionPhotos';
 import { fetchMissionsForStructure, createMission, updateMission, cancelMission, replaceMissionWorker, notifyReplacementSearch, type MissionNonSensitivePatch } from '@/features/missions/missionsService';
 import {
   fetchApplicationsForMissions,
@@ -1281,12 +1283,12 @@ export function StructureApp() {
                 structure={structure}
                 initial={duplicateSeed}
                 onClose={() => { setShowPub(false); setDuplicateSeed(null); }}
-                onPublished={(m) => {
+                onPublished={(m, warning) => {
                   setMis((l) => [m, ...l]);
                   setShowPub(false);
                   setDuplicateSeed(null);
                   setTab('missions');
-                  notif(`« ${m.title} » publiée${m.pricing_breakdown && Array.isArray(m.pricing_breakdown.adjustments) && m.pricing_breakdown.adjustments.length > 0 ? ` à ${euros(m.worker_rate_cents)} (rémunération boostée)` : ''}.`);
+                  notif(`« ${m.title} » publiée${m.pricing_breakdown && Array.isArray(m.pricing_breakdown.adjustments) && m.pricing_breakdown.adjustments.length > 0 ? ` à ${euros(m.worker_rate_cents)} (rémunération boostée)` : ''}.${warning ? ` ${warning}` : ''}`);
                 }}
               />
             )}
@@ -1295,6 +1297,7 @@ export function StructureApp() {
             )}
             {manage && (
               <MissionManageSheet
+                ownerId={structure?.owner_id ?? session?.user.id ?? ''}
                 mission={manage.mission}
                 mode={manage.mode}
                 bucket={missionBucket(manage.mission)}
@@ -1430,6 +1433,7 @@ function AboutEditor({ structure, onSaved, notif }: { structure: Structure; onSa
 // uniquement du bucket (statut de la candidature la plus avancee), jamais
 // d'un bouton "Contacter" laisse visible par erreur apres la fin de mission.
 function MissionManageSheet({
+  ownerId,
   mission,
   mode,
   bucket,
@@ -1449,6 +1453,7 @@ function MissionManageSheet({
   onReplaceWith,
   onNotifyNearby,
 }: {
+  ownerId: string;
   mission: Mission;
   mode: ManageMode;
   bucket: MissionBucket;
@@ -1539,6 +1544,9 @@ function MissionManageSheet({
             </Fld>
             <Fld label="Consignes">
               <textarea aria-label="Consignes" value={edit.instructions} onChange={(e) => setEdit((x) => ({ ...x, instructions: e.target.value }))} rows={3} style={{ ...inp, resize: 'none', lineHeight: 1.5 }} />
+            </Fld>
+            <Fld label="Photos de la mission">
+              <MissionPhotosManager ctx={{ structureId: mission.structure_id, missionId: mission.id, userId: ownerId }} />
             </Fld>
             <div style={{ fontSize: 9.5, color: T.mu, lineHeight: 1.5 }}>{features.paidLayer ? 'Le prix, les horaires' : 'Les horaires'} et le nombre de places restent fixés une fois la mission publiée.</div>
             <button
@@ -1650,7 +1658,7 @@ function SheetAction({ label, onClick, danger }: { label: string; onClick: () =>
   );
 }
 
-function PublishModal({ structure, initial, onClose, onPublished }: { structure: Structure; initial?: Mission | null; onClose: () => void; onPublished: (m: Mission) => void }) {
+function PublishModal({ structure, initial, onClose, onPublished }: { structure: Structure; initial?: Mission | null; onClose: () => void; onPublished: (m: Mission, warning?: string) => void }) {
   const [f, setF] = useState(() => ({
     t: initial ? `${initial.title} (copie)` : '',
     city: initial?.city ?? '',
@@ -1681,6 +1689,8 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
     });
   });
   const [showDetail, setShowDetail] = useState(false);
+  const [photos, setPhotos] = useState<DraftPhoto[]>([]);
+  const [photosAttested, setPhotosAttested] = useState(false);
   const [showPaymentSetup, setShowPaymentSetup] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1729,7 +1739,9 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
                     ? 'Renseigne un tarif valide.'
                     : f.solid && !f.noSalariedSubstitution
                       ? "Coche l'attestation : une mission solidaire ne doit pas remplacer un poste salarié."
-                      : null;
+                      : photos.length > 0 && !photosAttested
+                        ? 'Coche l’attestation de droits sur les photos (ou retire-les).'
+                        : null;
   const ok = !validationMessage && !busy;
 
   function setSlot(i: number, patch: Partial<MissionSlot>) {
@@ -1811,7 +1823,12 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
         is_solidaire: f.solid,
         no_salaried_substitution: f.solid ? f.noSalariedSubstitution : false,
       });
-      onPublished(mission);
+      let warning: string | undefined;
+      if (photos.length > 0) {
+        const result = await uploadDraftImages({ structureId: structure.id, missionId: mission.id, userId: structure.owner_id }, photos.map((p) => p.file));
+        if (result.failed > 0) warning = `${result.failed} photo${result.failed > 1 ? 's' : ''} non enregistrée${result.failed > 1 ? 's' : ''} : ajoutez-la depuis « Modifier la mission ».`;
+      }
+      onPublished(mission, warning);
     } catch (e) {
       setError(describeError(e, 'la publication de la mission'));
     } finally {
@@ -1983,6 +2000,9 @@ function PublishModal({ structure, initial, onClose, onPublished }: { structure:
 
         <Fld label="Descriptif">
           <textarea aria-label="Descriptif" value={f.desc} onChange={(e) => setF((x) => ({ ...x, desc: e.target.value }))} rows={3} placeholder={`Ce que le ${PERSON} fera concrètement…`} style={{ ...inp, resize: 'none', lineHeight: 1.5 }} />
+        </Fld>
+        <Fld label="Photos de la mission">
+          <MissionPhotosDraft value={photos} onChange={setPhotos} attested={photosAttested} onAttestedChange={setPhotosAttested} />
         </Fld>
         <Fld label="Tenue demandée">
           <input aria-label="Tenue demandée" value={f.dressCode} onChange={(e) => setF((x) => ({ ...x, dressCode: e.target.value }))} placeholder="Ex. pantalon noir et chaussures fermées" style={inp} />

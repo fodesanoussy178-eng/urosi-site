@@ -16,8 +16,21 @@ import type { Database } from '@/types/database.types';
 import { toCategory, type SolidarityCategory } from './categories';
 import { fetchOpenMissions, type MissionWithStructure } from './missionsService';
 import { demoMissions, demoMissionsEnabled } from './demoMissions';
+import { fetchPrimaryImages } from './missionImagesService';
 
 export type MissionKind = 'external_solidarity_mission' | 'urosi_solidarity_mission' | 'paid_mission';
+export type PhotoLevel = 'native_photo' | 'partner_mission_image' | 'authorized_image';
+
+const PUBLISHABLE_RIGHTS = new Set(['source_provided', 'licensed', 'authorized']);
+
+// Photo d'une mission importée : seulement si l'agent l'a retenue comme
+// photo (jamais un logo) et que ses droits sont connus.
+export function externalPhoto(m: Pick<ExternalMission, 'image_url' | 'image_source' | 'image_rights_status'>): { url: string; level: PhotoLevel } | null {
+  if (!m.image_url) return null;
+  if (m.image_source !== 'partner_mission_image' && m.image_source !== 'authorized_image') return null;
+  if (!PUBLISHABLE_RIGHTS.has(m.image_rights_status ?? '')) return null;
+  return { url: m.image_url, level: m.image_source };
+}
 export type ExternalMission = Database['public']['Tables']['external_missions']['Row'];
 
 export interface FeedMission {
@@ -28,8 +41,12 @@ export interface FeedMission {
   title: string;
   description: string | null;
   organization: { id: string | null; name: string; logoUrl: string | null; verified: boolean };
+  // Visuels, hiérarchie commune (supabase/functions/_shared/missionVisual.ts) :
+  // photo (native ou partenaire, droits connus) > logo de l'organisation >
+  // logo du domaine > illustration UROSI de la catégorie.
   imageUrl: string | null;
-  illustrationUrl: string | null;
+  imageLevel: PhotoLevel | null;
+  domainLogoUrl: string | null;
   category: SolidarityCategory;
   city: string | null;
   address: string | null;
@@ -119,6 +136,7 @@ export function fromExternalMission(m: ExternalMission): FeedMission {
   const start = m.starts_at ? parisParts(m.starts_at) : null;
   const end = m.ends_at ? parisParts(m.ends_at) : null;
   const sameDay = start && end && start.date === end.date;
+  const photo = externalPhoto(m);
   return {
     key: `external:${m.id}`,
     id: m.id,
@@ -127,8 +145,9 @@ export function fromExternalMission(m: ExternalMission): FeedMission {
     title: m.title,
     description: m.description,
     organization: { id: null, name: m.organization_name || 'Association partenaire', logoUrl: m.organization_logo_url, verified: false },
-    imageUrl: m.image_url,
-    illustrationUrl: m.source_illustration_url,
+    imageUrl: photo?.url ?? null,
+    imageLevel: photo?.level ?? null,
+    domainLogoUrl: m.domain_logo_url ?? m.source_illustration_url,
     category: toCategory(m.category),
     city: m.city,
     address: m.address,
@@ -146,7 +165,7 @@ export function fromExternalMission(m: ExternalMission): FeedMission {
   };
 }
 
-export function fromNativeMission(m: MissionWithStructure): FeedMission {
+export function fromNativeMission(m: MissionWithStructure, primaryImageUrl: string | null = null): FeedMission {
   const structure = m.structure;
   const verified = structure?.verification_status === 'verified' || structure?.verification_status === 'founder_bypass';
   return {
@@ -162,8 +181,9 @@ export function fromNativeMission(m: MissionWithStructure): FeedMission {
       logoUrl: structure?.logo_url ?? null,
       verified,
     },
-    imageUrl: null,
-    illustrationUrl: null,
+    imageUrl: primaryImageUrl,
+    imageLevel: primaryImageUrl ? 'native_photo' : null,
+    domainLogoUrl: null,
     category: toCategory(m.mission_category),
     city: m.city,
     address: m.address || m.location,
@@ -214,6 +234,9 @@ export interface PublicSolidarityMission {
   structure_name: string;
   structure_logo_url: string | null;
   structure_verification_status: string;
+  // Photo principale fournie par la structure (migration 20260927120000).
+  primary_image_url?: string | null;
+  image_count?: number | null;
 }
 
 export function fromPublicMission(m: PublicSolidarityMission): FeedMission {
@@ -225,8 +248,9 @@ export function fromPublicMission(m: PublicSolidarityMission): FeedMission {
     title: m.title,
     description: m.detail,
     organization: { id: m.structure_id, name: m.structure_name || 'Structure', logoUrl: m.structure_logo_url, verified: true },
-    imageUrl: null,
-    illustrationUrl: null,
+    imageUrl: m.primary_image_url ?? null,
+    imageLevel: m.primary_image_url ? 'native_photo' : null,
+    domainLogoUrl: null,
     category: toCategory(m.mission_category),
     city: m.city,
     address: m.address || m.location,
@@ -254,7 +278,9 @@ export async function fetchPublicSolidarityMissions(): Promise<PublicSolidarityM
 async function fetchNativeFeed(): Promise<FeedMission[]> {
   const { data } = await supabase.auth.getSession();
   if (!data.session) return (await fetchPublicSolidarityMissions()).map(fromPublicMission);
-  return (await fetchOpenMissions()).map(fromNativeMission);
+  const missions = await fetchOpenMissions();
+  const photos = await fetchPrimaryImages(missions.filter((m) => m.is_solidaire).map((m) => m.id)).catch(() => new Map<string, string>());
+  return missions.map((m) => fromNativeMission(m, photos.get(m.id) ?? null));
 }
 
 export async function fetchExternalMissions(): Promise<ExternalMission[]> {
@@ -268,7 +294,9 @@ export async function fetchExternalMissions(): Promise<ExternalMission[]> {
   // est simplement vide : l'app reste utilisable avec les missions natives.
   if (isMissingRelation(error)) return [];
   if (error) throw error;
-  return data ?? [];
+  // Les doublons sont masqués par RLS, sauf pour l'équipe UROSI qui lit tout :
+  // le fil ne les montre jamais.
+  return (data ?? []).filter((m) => !m.duplicate_of_external && !m.duplicate_of_mission);
 }
 
 function isUpcoming(m: FeedMission, today: string): boolean {

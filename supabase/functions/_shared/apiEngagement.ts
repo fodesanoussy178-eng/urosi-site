@@ -42,6 +42,8 @@ export type SolidarityCategory =
 
 export interface ExternalMissionRow {
   source: string;
+  source_type: string;
+  source_name: string;
   external_id: string;
   client_id: string | null;
   publisher_id: string | null;
@@ -61,8 +63,12 @@ export interface ExternalMissionRow {
   organization_rna: string | null;
   organization_siren: string | null;
   organization_status_juridique: string | null;
+  // Photo de mission fournie par la source (niveau 2). Toujours null pour
+  // l'API Engagement v0 : aucun champ photo dans la réponse.
   image_url: string | null;
+  // Obsolète, conservé pour compatibilité : même valeur que domain_logo_url.
   source_illustration_url: string | null;
+  domain_logo_url: string | null;
   category: SolidarityCategory;
   city: string | null;
   postal_code: string | null;
@@ -102,7 +108,9 @@ export type SkipReason =
   | 'compensated'
   | 'expired';
 
-export type MapResult = { ok: true; row: ExternalMissionRow } | { ok: false; reason: SkipReason };
+// En cas de rejet, l'identifiant externe (s'il est lisible) permet de
+// désactiver une mission déjà importée qui ne remplit plus les conditions.
+export type MapResult = { ok: true; row: ExternalMissionRow } | { ok: false; reason: SkipReason; externalId: string | null };
 
 type Json = Record<string, unknown>;
 
@@ -246,37 +254,38 @@ function pickPlace(m: Json, center?: { lat: number; lng: number }): Place {
 
 export function mapApiEngagementMission(
   input: unknown,
-  options: { now?: Date; center?: { lat: number; lng: number } } = {},
+  options: { now?: Date; center?: { lat: number; lng: number }; baseUrl?: string } = {},
 ): MapResult {
-  if (!input || typeof input !== 'object') return { ok: false, reason: 'invalid' };
+  if (!input || typeof input !== 'object') return { ok: false, reason: 'invalid', externalId: null };
   const m = input as Json;
   const now = options.now ?? new Date();
 
   const externalId = str(m._id) ?? str(m.id);
   const title = str(m.title);
-  if (!externalId || !title) return { ok: false, reason: 'invalid' };
+  const skip = (reason: SkipReason): MapResult => ({ ok: false, reason, externalId });
+  if (!externalId || !title) return skip('invalid');
 
   const applicationUrl = httpsUrl(m.applicationUrl);
-  if (!applicationUrl) return { ok: false, reason: 'missing_application_url' };
+  if (!applicationUrl) return skip('missing_application_url');
 
   const deletedAt = isoDate(m.deletedAt);
-  if (m.deleted === true || deletedAt) return { ok: false, reason: 'deleted' };
+  if (m.deleted === true || deletedAt) return skip('deleted');
 
   const statusCode = str(m.statusCode);
-  if (statusCode && statusCode !== 'ACCEPTED') return { ok: false, reason: 'not_accepted' };
+  if (statusCode && statusCode !== 'ACCEPTED') return skip('not_accepted');
 
   const remote = str(m.remote);
-  if (remote === 'full') return { ok: false, reason: 'remote_full' };
+  if (remote === 'full') return skip('remote_full');
 
   const missionType = str(m.type);
-  if (missionType && !PHASE0_MISSION_TYPES.includes(missionType)) return { ok: false, reason: 'type_excluded' };
+  if (missionType && !PHASE0_MISSION_TYPES.includes(missionType)) return skip('type_excluded');
 
   const compensation = num(m.compensationAmount);
-  if (compensation != null && compensation > 0) return { ok: false, reason: 'compensated' };
+  if (compensation != null && compensation > 0) return skip('compensated');
 
   const startsAt = isoDate(m.startAt);
   const endsAt = isoDate(m.endAt);
-  if (endsAt && Date.parse(endsAt) < now.getTime()) return { ok: false, reason: 'expired' };
+  if (endsAt && Date.parse(endsAt) < now.getTime()) return skip('expired');
 
   const description = stripHtml(str(m.descriptionHtml) ?? str(m.description));
   const activities = strArray(m.activities).length > 0 ? strArray(m.activities) : (str(m.activity)?.split(',').map((a) => a.trim()).filter(Boolean) ?? []);
@@ -300,6 +309,8 @@ export function mapApiEngagementMission(
     ok: true,
     row: {
       source: API_ENGAGEMENT_SOURCE,
+      source_type: 'api',
+      source_name: 'API Engagement',
       external_id: externalId,
       client_id: str(m.clientId),
       publisher_id: str(m.publisherId),
@@ -319,10 +330,13 @@ export function mapApiEngagementMission(
       organization_rna: str(m.organizationRNA) ?? str(m.associationRNA),
       organization_siren: str(m.organizationSiren) ?? str(m.associationSiren),
       organization_status_juridique: str(m.organizationStatusJuridique),
-      // Le format v0 ne renvoie pas de photo de mission (`image`) ; si un
-      // jour il en renvoie une en https, elle est prise en priorité.
-      image_url: httpsUrl(m.image),
+      // GET /v0/mission ne renvoie AUCUNE photo de mission : les seuls
+      // visuels sont des logos (MISSION_FIELDS, api/src/v0/mission/constants.ts).
+      // Le champ `image` du schéma d'écriture v2 n'est pas exposé en v0 :
+      // il n'est jamais lu ici. organizationLogo reste un LOGO.
+      image_url: null,
       source_illustration_url: httpsUrl(m.domainLogo),
+      domain_logo_url: httpsUrl(m.domainLogo),
       category: categorize(str(m.domain), title, description, activities),
       city: place.city,
       postal_code: place.postalCode,
@@ -336,7 +350,8 @@ export function mapApiEngagementMission(
       duration_minutes: durationMinutes,
       places: places != null && places >= 0 ? Math.floor(places) : null,
       application_url: applicationUrl,
-      source_url: httpsUrl(m.organizationUrl) ?? httpsUrl(m.publisherUrl),
+      // Provenance exacte : la fiche de la mission dans l'API (GET /v0/mission/{id}).
+      source_url: `${(options.baseUrl ?? API_ENGAGEMENT_PROD_URL).replace(/\/+$/, '')}/v0/mission/${encodeURIComponent(externalId)}`,
       is_active: true,
       source_created_at: isoDate(m.createdAt),
       source_updated_at: isoDate(m.updatedAt),

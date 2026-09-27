@@ -436,6 +436,20 @@ export interface Database {
           raw: Json | null;
           imported_at: string;
           updated_at: string;
+          // Migration 20260927120000 : provenance, visuel retenu, doublons.
+          source_type?: string | null;
+          source_name?: string | null;
+          last_checked_at?: string | null;
+          last_changed_at?: string | null;
+          image_source?: string | null;
+          image_rights_status?: string | null;
+          domain_logo_url?: string | null;
+          content_hash?: string | null;
+          dedupe_key?: string | null;
+          duplicate_of_external?: string | null;
+          duplicate_of_mission?: string | null;
+          deactivated_at?: string | null;
+          deactivation_reason?: string | null;
         };
         Insert: {
           id?: string;
@@ -483,9 +497,76 @@ export interface Database {
           deactivated: number;
           skip_reasons: Json;
           error_message: string | null;
+          // Agent de découverte (migration 20260927120000).
+          created_count?: number;
+          updated_count?: number;
+          unchanged_count?: number;
+          reactivated_count?: number;
+          duplicates?: number;
+          without_image?: number;
+          images_found?: number;
+          images_rejected?: number;
+          sources_report?: Json;
+          errors?: Json;
         };
         Insert: Partial<Database['public']['Tables']['external_import_runs']['Row']> & { source: string; trigger: 'manual' | 'cron' };
         Update: Partial<Database['public']['Tables']['external_import_runs']['Row']>;
+        Relationships: [];
+      };
+      mission_images: {
+        Row: {
+          id: string;
+          mission_id: string | null;
+          external_mission_id: string | null;
+          image_url: string;
+          storage_path: string | null;
+          source: 'structure_upload' | 'partner_feed' | 'authorized_source';
+          source_url: string | null;
+          rights_status: 'source_provided' | 'licensed' | 'authorized' | 'unknown';
+          rights_note: string | null;
+          license: string | null;
+          attribution: string | null;
+          rights_attested_by: string | null;
+          rights_attested_at: string | null;
+          is_primary: boolean;
+          position: number;
+          alt_text: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database['public']['Tables']['mission_images']['Row']> & {
+          image_url: string;
+          source: Database['public']['Tables']['mission_images']['Row']['source'];
+          rights_status: Database['public']['Tables']['mission_images']['Row']['rights_status'];
+        };
+        Update: Partial<Pick<Database['public']['Tables']['mission_images']['Row'], 'is_primary' | 'position' | 'alt_text'>>;
+        Relationships: [];
+      };
+      mission_sources: {
+        Row: {
+          id: string;
+          name: string;
+          source_type: 'api' | 'open_data' | 'rss' | 'xml' | 'json' | 'authorized_page';
+          adapter: string;
+          base_url: string;
+          documentation_url: string | null;
+          terms_url: string | null;
+          reuse_basis: string | null;
+          license: string | null;
+          automated_access_allowed: boolean;
+          mission_images_reusable: boolean;
+          logos_reusable: boolean;
+          enabled: boolean;
+          config: Json;
+          verified_at: string | null;
+          verified_by: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
         Relationships: [];
       };
       external_applications: {
@@ -1762,6 +1843,18 @@ export interface Database {
       founder_external_missions_overview: {
         Args: Record<string, never>;
         Returns: Json;
+      };
+      founder_mission_agent_overview: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      set_mission_primary_image: {
+        Args: { p_image_id: string };
+        Returns: undefined;
+      };
+      founder_set_image_rights: {
+        Args: { p_image_id: string; p_rights_status: string; p_note?: string | null };
+        Returns: undefined;
       };
       founder_verify_external_application: {
         Args: { p_application_id: string; p_note?: string | null };

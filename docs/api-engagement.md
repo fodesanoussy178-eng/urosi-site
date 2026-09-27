@@ -19,6 +19,16 @@ correspondance est commentée dans `supabase/functions/_shared/apiEngagement.ts`
   `source_updated_at`) ; après un parcours complet, les missions non revues
   sont désactivées (jamais supprimées).
 
+## Visuels
+
+- `GET /v0/mission` ne renvoie **aucune photo de mission** : seulement
+  `organizationLogo`, `associationLogo`, `domainLogo`, `publisherLogo`
+  (`MISSION_FIELDS`, `api/src/v0/mission/constants.ts`). Le champ `image` du
+  schéma d'écriture v2 n'est pas exposé en v0 et n'est jamais lu.
+- `organizationLogo` est affiché comme un logo (médaillon), jamais comme une
+  photo ; `domainLogo` est stocké dans `domain_logo_url`. Voir
+  `docs/mission-agent.md` (hiérarchie des visuels).
+
 ## Tracking diffuseur
 
 - **Clic** : `applicationUrl` renvoyé par l'API est déjà le lien tracké
@@ -37,9 +47,11 @@ correspondance est commentée dans `supabase/functions/_shared/apiEngagement.ts`
    - `IMPORT_CRON_SECRET` = une valeur aléatoire longue ;
    - facultatif : `API_ENGAGEMENT_URL=https://api.bac-a-sable.api-engagement.beta.gouv.fr`
      pour tester sur le bac à sable.
-3. Déployer la fonction : `supabase functions deploy import-api-engagement --no-verify-jwt`
-   (l'authentification est faite dans la fonction : fondateur ou secret cron).
-4. Centre Fondateur → « Missions externes » → **Relancer l'import**. Sans clé,
+3. Déployer l'agent : `supabase functions deploy mission-agent --no-verify-jwt`
+   (l'authentification est faite dans la fonction : fondateur ou secret cron ;
+   `import-api-engagement` reste disponible et délègue à l'agent).
+4. Centre Fondateur → « Agent Missions » → **Relancer maintenant**. Sans clé,
    le run est journalisé « non configuré » et rien n'est modifié.
-5. Une fois un import manuel réussi : appliquer
-   `supabase/manual/schedule_api_engagement_import.sql` (2 imports par jour).
+5. Une fois une exécution manuelle réussie : appliquer
+   `supabase/manual/schedule_mission_agent.sql` (toutes les 3 heures). L'ancien
+   fichier `schedule_api_engagement_import.sql` est remplacé.

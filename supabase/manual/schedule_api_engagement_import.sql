@@ -1,3 +1,6 @@
+-- REMPLACE par supabase/manual/schedule_mission_agent.sql (agent toutes les 3 h).
+-- Ne plus appliquer ce fichier ; conserve pour historique.
+--
 -- A APPLIQUER A LA MAIN, UNIQUEMENT APRES :
 --   1. reception de la vraie cle API Engagement (fournie par le charge de
 --      deploiement API Engagement) et creation du secret Edge Function

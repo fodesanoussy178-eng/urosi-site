@@ -50,10 +50,26 @@ describe('modèle unifié des missions', () => {
     expect(m.startTime).toBe('09:00');
     expect(m.endTime).toBe('12:00');
     expect(m.isShort).toBe(true);
-    expect(m.illustrationUrl).toBe('https://cdn.example.org/domain.png');
+    expect(m.domainLogoUrl).toBe('https://cdn.example.org/domain.png');
+    expect(m.imageUrl).toBeNull();
     expect(m.applicationUrl).toContain('/r/66f1a2b3c4d5e6f7a8b9c0d1/');
     expect(m.partnerName).toBe('JeVeuxAider.gouv.fr');
     expect(m.impressionUrl).toBe('https://api.api-engagement.beta.gouv.fr/r/impression/66f1a2b3c4d5e6f7a8b9c0d1/65aa00000000000000000001');
+  });
+
+  it('ne présente comme photo que l’image retenue par l’agent avec des droits connus', () => {
+    expect(fromExternalMission(external({ image_url: 'https://cdn.example.org/p.jpg', image_source: 'partner_mission_image', image_rights_status: 'source_provided' }))).toMatchObject({
+      imageUrl: 'https://cdn.example.org/p.jpg',
+      imageLevel: 'partner_mission_image',
+    });
+    expect(fromExternalMission(external({ image_url: 'https://cdn.example.org/p.jpg', image_source: 'authorized_image', image_rights_status: 'unknown' })).imageUrl).toBeNull();
+    expect(fromExternalMission(external({ image_url: 'https://cdn.example.org/logo.png', image_source: 'organization_logo', image_rights_status: 'source_provided' })).imageUrl).toBeNull();
+    expect(fromExternalMission(external({ domain_logo_url: 'https://cdn.example.org/d2.png' })).domainLogoUrl).toBe('https://cdn.example.org/d2.png');
+  });
+
+  it('rattache la photo principale d’une mission native', () => {
+    expect(fromNativeMission(native(), 'https://x.supabase.co/storage/v1/object/public/mission-images/a/b/c.jpg')).toMatchObject({ imageLevel: 'native_photo' });
+    expect(fromNativeMission(native())).toMatchObject({ imageUrl: null, imageLevel: null });
   });
 
   it('distingue mission solidaire UROSI et mission rémunérée, et rattache les anciennes catégories', () => {
