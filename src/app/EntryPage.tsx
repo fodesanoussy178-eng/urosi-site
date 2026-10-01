@@ -1,65 +1,83 @@
 import { useNavigate } from 'react-router-dom';
-import { Logo } from '@/components/ui/Logo';
-import { T, FONT } from '@/components/ui/theme';
+import { PublicShell } from '@/components/public/PublicShell';
+import { Icon } from '@/components/public/icons';
+import { sceneSvg } from '@/features/missions/categoryScene';
+import { features } from '@/lib/features';
+
+// Choix du rôle (maquette phase 0) : deux grandes cartes illustrées.
+function RoleCard({
+  icon,
+  title,
+  text,
+  scene,
+  onClick,
+}: {
+  icon: 'user' | 'building';
+  title: [string, string];
+  text: string;
+  scene: string;
+  onClick: () => void;
+}) {
+  return (
+    <button type="button" className="pub-role" onClick={onClick} aria-label={`${title[0]} ${title[1]}`}>
+      <div className="pub-role-text">
+        <span className="pub-role-icon"><Icon name={icon} size={22} color="#1d5fe6" /></span>
+        <h2>
+          {title[0]}
+          <br />
+          {title[1]}
+        </h2>
+        <p>{text}</p>
+      </div>
+      {/* Illustration statique générée par UROSI. */}
+      <div className="pub-role-art" aria-hidden="true" dangerouslySetInnerHTML={{ __html: scene }} />
+      <span className="pub-role-go" aria-hidden="true"><Icon name="arrowRight" size={20} color="#fff" /></span>
+    </button>
+  );
+}
 
 export function EntryPage() {
   const nav = useNavigate();
   return (
-    <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, padding: 16 }}>
-      <div style={{ width: 300, textAlign: 'center' }}>
-        <div style={{ marginBottom: 28 }}>
-          <Logo sz={78} />
+    <PublicShell minimal>
+      <div className="pub-wrap" style={{ maxWidth: 980, paddingTop: 44, paddingBottom: 20 }}>
+        <div style={{ textAlign: 'center', marginBottom: 30 }}>
+          <span className="pub-kicker">Missions solidaires · Métropole de Lille</span>
+          <h1 className="pub-h1">Comment souhaitez-vous utiliser UROSI ?</h1>
+          <p className="pub-lede">Deux espaces, un même objectif : plus d’engagement, plus d’impact près de chez vous.</p>
         </div>
-        <div style={{ fontSize: 12, color: T.mu, marginBottom: 30 }}>Micro-missions · Métropole de Lille</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div>
-            <button
-              onClick={() => nav('/inscription/travailleur')}
-              style={{ width: '100%', textAlign: 'left', padding: '16px 17px', borderRadius: 13, border: `1.5px solid ${T.cb}`, background: T.card, cursor: 'pointer' }}
-            >
-              <div style={{ fontSize: 19, marginBottom: 5 }}>👷</div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: T.text, marginBottom: 2 }}>Je cherche des missions</div>
-              <div style={{ fontSize: 12, color: T.mu }}>Trouver du travail flexible près de chez moi</div>
-            </button>
-            <button
-              onClick={() => nav('/demo?role=worker')}
-              style={{ marginTop: 7, background: 'none', color: T.cyan, border: 'none', fontSize: 11, fontWeight: 900, textDecoration: 'underline', cursor: 'pointer' }}
-            >
-              Voir la démo travailleur
-            </button>
-          </div>
-          <div>
-            <button
-              onClick={() => nav('/inscription/structure')}
-              style={{ width: '100%', textAlign: 'left', padding: '16px 17px', borderRadius: 13, border: 'none', background: T.grad, cursor: 'pointer' }}
-            >
-              <div style={{ fontSize: 19, marginBottom: 5 }}>🏢</div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', marginBottom: 2 }}>Je cherche des renforts</div>
-              <div style={{ fontSize: 12, color: '#bfdbfe' }}>Publier des missions, gérer mes candidats</div>
-            </button>
-            <button
-              onClick={() => nav('/demo?role=structure')}
-              style={{ marginTop: 7, background: 'none', color: T.cyan, border: 'none', fontSize: 11, fontWeight: 900, textDecoration: 'underline', cursor: 'pointer' }}
-            >
-              Voir la démo structure
-            </button>
-          </div>
+        <div className="pub-roles">
+          <RoleCard
+            icon="user"
+            title={['Je cherche', 'des missions']}
+            text="Découvrir des missions solidaires près de chez moi et construire mon parcours."
+            scene={sceneSvg('soutien_scolaire', 'role-participant')}
+            onClick={() => nav('/inscription/participant')}
+          />
+          <RoleCard
+            icon="building"
+            title={['Je cherche', 'des bénévoles']}
+            text="Publier des missions solidaires et rencontrer des personnes motivées pour agir sur le terrain."
+            scene={sceneSvg('aide_alimentaire', 'role-structure')}
+            onClick={() => nav('/inscription/structure')}
+          />
         </div>
-        <button
-          onClick={() => nav('/connexion')}
-          style={{ marginTop: 22, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: T.sub, textDecoration: 'underline', fontWeight: 700 }}
-        >
-          Déjà un compte ? Se connecter
-        </button>
-        <div>
-          <button
-            onClick={() => nav('/')}
-            style={{ marginTop: 12, background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: T.mu, fontWeight: 600 }}
-          >
-            ← Retour à l'accueil
+        <div style={{ textAlign: 'center', marginTop: 26, display: 'grid', gap: 10, justifyItems: 'center' }}>
+          <button type="button" className="pub-btn pub-btn-quiet" onClick={() => nav('/connexion')} style={{ color: '#1d5fe6' }}>
+            Déjà un compte ? <strong style={{ textDecoration: 'underline' }}>Se connecter</strong>
           </button>
+          <div style={{ display: 'flex', gap: 18, fontSize: 13.5, color: '#4a5a72', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <button type="button" onClick={() => nav('/missions')} style={{ background: 'none', border: 'none', color: 'inherit', font: 'inherit', fontWeight: 700, cursor: 'pointer' }}>
+              Voir les missions sans compte →
+            </button>
+            {features.paidLayer && (
+              <button type="button" onClick={() => nav('/demo?role=worker')} style={{ background: 'none', border: 'none', color: 'inherit', font: 'inherit', fontWeight: 700, cursor: 'pointer' }}>
+                Voir la démo
+              </button>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </PublicShell>
   );
 }

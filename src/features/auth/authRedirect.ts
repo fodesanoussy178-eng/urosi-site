@@ -5,8 +5,16 @@
 // unique, jamais reutilise pour une connexion ulterieure sans rapport).
 const KEY = 'urosi:post-auth-redirect';
 
-function isSafePath(value: string | null): value is string {
-  return !!value && value.startsWith('/') && !value.startsWith('//');
+// Chemin interne uniquement : un seul « / » en tête, ni « // » ni « \ »
+// (React Router ≤ 7.17 interprète « /\\site » comme une URL externe :
+// GHSA-jjmj-jmhj-qwj2), ni caractère de contrôle.
+export function isSafePath(value: string | null | undefined): value is string {
+  return (
+    !!value &&
+    /^\/(?![/\\])/.test(value) &&
+    !value.includes('\\') &&
+    ![...value].some((ch) => ch.charCodeAt(0) < 0x20)
+  );
 }
 
 export function setStoredAuthRedirect(pathname: string): void {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { T, FONT, inp } from '@/components/ui/theme';
 import { AideRegles, DocModal, type DocKey } from '@/components/ui/DocModal';
@@ -7,6 +7,7 @@ import { SectionTitle, AccountCard, DeleteAccountCard } from '@/components/ui/Se
 import { useBodyScrollLock } from '@/components/ui/useBodyScrollLock';
 import { signOut } from '@/features/auth/authService';
 import { updateProfile, type Profile } from '@/features/profile/profileService';
+import { features } from '@/lib/features';
 
 type ProfileUpdate = Parameters<typeof updateProfile>[1];
 
@@ -32,7 +33,7 @@ function IdentityCard({ profile, onSave }: { profile: Profile | null; onSave: (u
 
   const effectiveFirstName = publicFirstName.trim() || firstNameOf(legalName);
   const lastPart = lastNamePartOf(legalName);
-  const preview = showLastName && lastPart ? `${effectiveFirstName} ${lastPart}` : effectiveFirstName || 'Travailleur';
+  const preview = showLastName && lastPart ? `${effectiveFirstName} ${lastPart}` : effectiveFirstName || (features.paidLayer ? 'Travailleur' : 'Participant');
 
   async function save() {
     setBusy(true);
@@ -81,7 +82,7 @@ function IdentityCard({ profile, onSave }: { profile: Profile | null; onSave: (u
         </div>
       </div>
 
-      <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Bio (visible sur ton CV vivant)</div>
+      <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Bio (visible sur ton CV)</div>
       <textarea
         aria-label="Bio"
         value={bio}
@@ -96,25 +97,30 @@ function IdentityCard({ profile, onSave }: { profile: Profile | null; onSave: (u
         aria-label="Compétences"
         value={skillsText}
         onChange={(e) => setSkillsText(e.target.value)}
-        placeholder="service, caisse, manutention…"
+        placeholder={features.paidLayer ? 'service, caisse, manutention…' : 'accueil, animation, logistique…'}
         style={{ ...inp, marginBottom: 12 }}
       />
 
-      <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Statut</div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 14 }}>
-        <button onClick={() => setMicro(false)} style={{ background: !micro ? '#fff' : T.row, color: !micro ? '#000' : T.sub, border: `1px solid ${!micro ? '#fff' : T.cb}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
-          Particulier
-        </button>
-        <button onClick={() => setMicro(true)} style={{ background: micro ? '#fff' : T.row, color: micro ? '#000' : T.sub, border: `1px solid ${micro ? '#fff' : T.cb}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
-          Micro-entrepreneur
-        </button>
-      </div>
+      {/* Statut professionnel : couche rémunérée uniquement (en sommeil en phase 0). */}
+      {features.paidLayer && (
+        <>
+        <div style={{ fontSize: 9, fontWeight: 700, color: T.mu, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Statut</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 14 }}>
+          <button onClick={() => setMicro(false)} style={{ background: !micro ? '#fff' : T.row, color: !micro ? '#000' : T.sub, border: `1px solid ${!micro ? '#fff' : T.cb}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
+            Particulier
+          </button>
+          <button onClick={() => setMicro(true)} style={{ background: micro ? '#fff' : T.row, color: micro ? '#000' : T.sub, border: `1px solid ${micro ? '#fff' : T.cb}`, borderRadius: 9, padding: '10px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
+            Micro-entrepreneur
+          </button>
+        </div>
+        </>
+      )}
 
       <details style={{ marginBottom: 14 }}>
-        <summary style={{ fontSize: 10.5, fontWeight: 800, color: T.mu, cursor: 'pointer' }}>Nom légal complet (usage interne : KYC, paiement, conformité)</summary>
+        <summary style={{ fontSize: 10.5, fontWeight: 800, color: T.mu, cursor: 'pointer' }}>{features.paidLayer ? 'Nom légal complet (usage interne : KYC, paiement, conformité)' : 'Nom complet'}</summary>
         <div style={{ marginTop: 8 }}>
           <input aria-label="Nom légal complet" value={legalName} onChange={(e) => setLegalName(e.target.value)} style={{ ...inp, marginBottom: 6 }} />
-          <div style={{ fontSize: 9.5, color: T.mu, lineHeight: 1.5 }}>Utilisé uniquement pour la vérification d'identité et le paiement — jamais montré aux structures.</div>
+          <div style={{ fontSize: 9.5, color: T.mu, lineHeight: 1.5 }}>{features.paidLayer ? "Utilisé uniquement pour la vérification d'identité et le paiement — jamais montré aux structures." : 'Ton nom de famille reste masqué aux structures, sauf si tu choisis de l’afficher.'}</div>
         </div>
       </details>
 
@@ -134,11 +140,14 @@ export function WorkerSettingsSheet({
   profile,
   onClose,
   onProfileSaved,
+  extraTop,
 }: {
   session: Session;
   profile: Profile | null;
   onClose: () => void;
   onProfileSaved: () => Promise<void>;
+  // Phase 0 : photo facultative + centres d'intérêt, fournis par l'espace participant.
+  extraTop?: ReactNode;
 }) {
   useBodyScrollLock(true);
   const [docKey, setDocKey] = useState<DocKey | null>(null);
@@ -158,6 +167,8 @@ export function WorkerSettingsSheet({
         </div>
 
         {toast && <div style={{ marginBottom: 12, background: T.card, border: `1px solid ${T.cb}`, borderRadius: 8, padding: '8px 11px', fontSize: 11, color: T.sub }}>{toast}</div>}
+
+        {extraTop}
 
         <SectionTitle>Identité</SectionTitle>
         <SectionErrorBoundary label="Identité">
@@ -188,10 +199,23 @@ export function WorkerSettingsSheet({
           </div>
         </SectionErrorBoundary>
 
-        <SectionTitle>Documents légaux</SectionTitle>
-        <SectionErrorBoundary label="Documents légaux">
-          <AideRegles onOpen={setDocKey} />
-        </SectionErrorBoundary>
+        {features.paidLayer ? (
+          <>
+            <SectionTitle>Documents légaux</SectionTitle>
+            <SectionErrorBoundary label="Documents légaux">
+              <AideRegles onOpen={setDocKey} />
+            </SectionErrorBoundary>
+          </>
+        ) : (
+          <>
+            <SectionTitle>Documents légaux</SectionTitle>
+            <div style={{ background: T.card, border: `1px solid ${T.cb}`, borderRadius: 14, padding: 15, display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12 }}>
+              <a href="/cgu" target="_blank" rel="noreferrer" style={{ color: T.cyan, fontWeight: 800 }}>Conditions d’utilisation</a>
+              <a href="/confidentialite" target="_blank" rel="noreferrer" style={{ color: T.cyan, fontWeight: 800 }}>Confidentialité</a>
+              <a href="/mentions-legales" target="_blank" rel="noreferrer" style={{ color: T.cyan, fontWeight: 800 }}>Mentions légales</a>
+            </div>
+          </>
+        )}
 
         <SectionTitle>Session</SectionTitle>
         <SectionErrorBoundary label="Session">

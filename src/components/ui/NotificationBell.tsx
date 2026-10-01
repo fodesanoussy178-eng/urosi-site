@@ -11,6 +11,8 @@ import {
   restoreNotification,
   deleteAllNotifications,
   isProtectedNotification,
+  isVisibleInCurrentPhase,
+  phaseWording,
   subscribeToNotifications,
   unsubscribeNotifications,
   type Notification,
@@ -132,10 +134,10 @@ function NotificationRow({
         <span style={{ fontSize: 16, flexShrink: 0 }}>{KIND_ICONS[n.kind] ?? '·'}</span>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ fontSize: 12, fontWeight: 800, color: T.text, flex: 1 }}>{n.title}</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: T.text, flex: 1 }}>{phaseWording(n.title)}</div>
             {!n.read_at && <span aria-hidden style={{ width: 6, height: 6, borderRadius: 3, background: T.cyan, flexShrink: 0 }} />}
           </div>
-          {n.body && <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.45, marginTop: 2 }}>{n.body}</div>}
+          {n.body && <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.45, marginTop: 2 }}>{phaseWording(n.body)}</div>}
           <div style={{ fontSize: 9, color: T.mu, marginTop: 3 }}>
             {timeAgo(n.created_at)}
             {protectedNotif && <span style={{ color: T.amber, fontWeight: 800 }}> · en cours de traitement</span>}
@@ -231,18 +233,20 @@ export function NotificationBell({ profileId, onDataChanged }: { profileId: stri
   useEffect(() => {
     let active = true;
     fetchNotifications(profileId)
-      .then((list) => active && setItems(list))
+      .then((list) => active && setItems(list.filter(isVisibleInCurrentPhase)))
       .catch(() => undefined);
     fetchImportantNotifications(profileId)
-      .then((list) => active && setImportant(list))
+      .then((list) => active && setImportant(list.filter(isVisibleInCurrentPhase)))
       .catch(() => undefined);
     const channel = subscribeToNotifications(profileId, {
       onInsert: (n) => {
+        if (!isVisibleInCurrentPhase(n)) return;
         setItems((prev) => [n, ...prev]);
         if (n.is_critical) setImportant((prev) => [n, ...prev]);
         changed.current?.();
       },
       onUpdate: (n) => {
+        if (!isVisibleInCurrentPhase(n)) return;
         setItems((prev) => (n.deleted_at || n.archived_at ? prev.filter((x) => x.id !== n.id) : prev.map((x) => (x.id === n.id ? n : x))));
         setImportant((prev) => {
           if (n.deleted_at) return prev.filter((x) => x.id !== n.id);

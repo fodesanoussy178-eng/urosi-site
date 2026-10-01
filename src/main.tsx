@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './styles.css';
 import './styles/responsive.css';
+import './styles/public.css';
 import { applyThemeMode, readThemeMode } from './lib/themeMode';
 
 applyThemeMode(readThemeMode());

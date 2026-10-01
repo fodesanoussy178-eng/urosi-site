@@ -31,7 +31,7 @@ describe('WorkerSignupPage', () => {
     expect((screen.getByLabelText('Email') as HTMLInputElement).value).toBe('');
   });
 
-  it('exige la confirmation du mot de passe et les CGU puis inscrit le travailleur', async () => {
+  it('inscrit le participant avec l’essentiel : prénom, nom ou initiale, email, mot de passe, ville', async () => {
     const user = userEvent.setup();
     vi.mocked(authService.signUp).mockResolvedValue({ session: null } as never);
     render(
@@ -44,12 +44,7 @@ describe('WorkerSignupPage', () => {
     await user.type(screen.getByLabelText('Nom'), 'Durand');
     await user.type(screen.getByLabelText('Email'), 'camille@exemple.fr');
     await user.type(screen.getByLabelText('Mot de passe'), 'secret123');
-    await user.type(screen.getByLabelText('Confirmer le mot de passe'), 'secret123');
     await user.type(screen.getByLabelText('Ville'), 'Lille');
-
-    // CGU non cochées : bouton désactivé
-    expect(screen.getByRole('button', { name: /Remplis tes infos|Créer mon compte/ })).toBeDisabled();
-    await user.click(screen.getByLabelText("J'accepte les conditions d'utilisation"));
     await user.click(screen.getByRole('button', { name: 'Créer mon compte' }));
 
     await waitFor(() =>
@@ -59,6 +54,49 @@ describe('WorkerSignupPage', () => {
         fullName: 'Camille Durand',
         role: 'worker',
         city: 'Lille',
+      }),
+    );
+    expect(await screen.findByText('Compte créé !')).toBeInTheDocument();
+  });
+
+  it('refuse un formulaire incomplet sans appeler le serveur', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <WorkerSignupPage />
+      </MemoryRouter>,
+    );
+    await user.type(screen.getByLabelText('Prénom'), 'Léa');
+    await user.click(screen.getByRole('button', { name: 'Créer mon compte' }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(authService.signUp).not.toHaveBeenCalled();
+  });
+
+  it('transmet les centres d’intérêt facultatifs, sans aucun document demandé', async () => {
+    const user = userEvent.setup();
+    vi.mocked(authService.signUp).mockResolvedValue({ session: null } as never);
+    render(
+      <MemoryRouter>
+        <WorkerSignupPage />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByLabelText(/IBAN|pièce d'identité|SIRET/i)).toBeNull();
+    await user.type(screen.getByLabelText('Prénom'), 'Léa');
+    await user.type(screen.getByLabelText('Nom'), 'M');
+    await user.type(screen.getByLabelText('Email'), 'lea@exemple.fr');
+    await user.type(screen.getByLabelText('Mot de passe'), 'secret123');
+    await user.type(screen.getByLabelText('Ville'), 'Roubaix');
+    await user.click(screen.getByRole('button', { name: 'Aide alimentaire' }));
+    await user.click(screen.getByRole('button', { name: 'Créer mon compte' }));
+
+    await waitFor(() =>
+      expect(authService.signUp).toHaveBeenCalledWith({
+        email: 'lea@exemple.fr',
+        password: 'secret123',
+        fullName: 'Léa M',
+        role: 'worker',
+        city: 'Roubaix',
+        interests: ['aide_alimentaire'],
       }),
     );
   });

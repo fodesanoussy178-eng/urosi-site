@@ -70,6 +70,18 @@ export type ReliabilityEventType =
 export type ReliabilityEventStatus = 'pending' | 'confirmed' | 'disputed' | 'dismissed';
 export type QRTokenType = 'start' | 'end';
 export type ConversationStatus = 'open' | 'closed';
+// Phase 0 : cycle d'une candidature sur une plateforme partenaire. Tout ce
+// qui précède 'verified' est déclaratif (clic, puis déclarations).
+export type ExternalApplicationStatus =
+  | 'external_application_started'
+  | 'accepted_declared'
+  | 'completed_declared'
+  | 'not_done_declared'
+  | 'verified'
+  | 'verified_completed'
+  | 'not_confirmed'
+  | 'withdrawn';
+export type ExternalImportStatus = 'running' | 'success' | 'partial' | 'error' | 'not_configured';
 export type CvStatus = 'pending_verification' | 'verified' | 'disputed' | 'rejected';
 export type RatingRequestStatus = 'pending' | 'completed' | 'dismissed';
 export type RatingVisibilityStatus = 'pending' | 'published';
@@ -144,6 +156,7 @@ export interface Database {
           bio: string | null;
           skills: string[];
           public_first_name: string | null;
+          public_profile?: boolean;
           show_last_name: boolean;
           is_founder_test_account: boolean;
           kyc_status: ProfileKycStatus;
@@ -168,6 +181,8 @@ export interface Database {
           conversion_started_at: string | null;
           unlocked_at: string | null;
           unlock_notified_at: string | null;
+          avatar_url: string | null;
+          interests: string[];
         };
         Insert: {
           id: string;
@@ -205,6 +220,8 @@ export interface Database {
           conversion_started_at?: string | null;
           unlocked_at?: string | null;
           unlock_notified_at?: string | null;
+          avatar_url?: string | null;
+          interests?: string[];
         };
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>;
         Relationships: [];
@@ -376,6 +393,225 @@ export interface Database {
           },
         ];
       };
+      external_missions: {
+        Row: {
+          id: string;
+          source: string;
+          external_id: string;
+          client_id: string | null;
+          publisher_id: string | null;
+          publisher_name: string | null;
+          publisher_url: string | null;
+          publisher_logo_url: string | null;
+          mission_type: string | null;
+          domain: string | null;
+          activities: string[];
+          status_code: string | null;
+          remote: string | null;
+          title: string;
+          description: string | null;
+          organization_name: string | null;
+          organization_logo_url: string | null;
+          organization_url: string | null;
+          organization_rna: string | null;
+          organization_siren: string | null;
+          organization_status_juridique: string | null;
+          image_url: string | null;
+          source_illustration_url: string | null;
+          category: string;
+          city: string | null;
+          postal_code: string | null;
+          department_code: string | null;
+          address: string | null;
+          lat: number | null;
+          lng: number | null;
+          starts_at: string | null;
+          ends_at: string | null;
+          schedule_text: string | null;
+          duration_minutes: number | null;
+          places: number | null;
+          application_url: string;
+          source_url: string | null;
+          is_active: boolean;
+          source_created_at: string | null;
+          source_updated_at: string | null;
+          source_deleted_at: string | null;
+          last_seen_at: string;
+          raw: Json | null;
+          imported_at: string;
+          updated_at: string;
+          // Migration 20260927120000 : provenance, visuel retenu, doublons.
+          source_type?: string | null;
+          source_name?: string | null;
+          last_checked_at?: string | null;
+          last_changed_at?: string | null;
+          image_source?: string | null;
+          image_rights_status?: string | null;
+          domain_logo_url?: string | null;
+          content_hash?: string | null;
+          dedupe_key?: string | null;
+          duplicate_of_external?: string | null;
+          duplicate_of_mission?: string | null;
+          deactivated_at?: string | null;
+          deactivation_reason?: string | null;
+        };
+        Insert: {
+          id?: string;
+          source: string;
+          external_id: string;
+          title: string;
+          description?: string | null;
+          organization_name?: string | null;
+          organization_logo_url?: string | null;
+          image_url?: string | null;
+          source_illustration_url?: string | null;
+          category?: string;
+          city?: string | null;
+          postal_code?: string | null;
+          address?: string | null;
+          lat?: number | null;
+          lng?: number | null;
+          starts_at?: string | null;
+          ends_at?: string | null;
+          schedule_text?: string | null;
+          duration_minutes?: number | null;
+          places?: number | null;
+          application_url: string;
+          source_url?: string | null;
+          is_active?: boolean;
+          raw?: Json | null;
+          imported_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['external_missions']['Insert']>;
+        Relationships: [];
+      };
+      external_import_runs: {
+        Row: {
+          id: string;
+          source: string;
+          trigger: 'manual' | 'cron';
+          triggered_by: string | null;
+          status: ExternalImportStatus;
+          started_at: string;
+          finished_at: string | null;
+          fetched: number;
+          imported: number;
+          skipped: number;
+          deactivated: number;
+          skip_reasons: Json;
+          error_message: string | null;
+          // Agent de découverte (migration 20260927120000).
+          created_count?: number;
+          updated_count?: number;
+          unchanged_count?: number;
+          reactivated_count?: number;
+          duplicates?: number;
+          without_image?: number;
+          images_found?: number;
+          images_rejected?: number;
+          sources_report?: Json;
+          errors?: Json;
+        };
+        Insert: Partial<Database['public']['Tables']['external_import_runs']['Row']> & { source: string; trigger: 'manual' | 'cron' };
+        Update: Partial<Database['public']['Tables']['external_import_runs']['Row']>;
+        Relationships: [];
+      };
+      mission_images: {
+        Row: {
+          id: string;
+          mission_id: string | null;
+          external_mission_id: string | null;
+          image_url: string;
+          storage_path: string | null;
+          source: 'structure_upload' | 'partner_feed' | 'authorized_source';
+          source_url: string | null;
+          rights_status: 'source_provided' | 'licensed' | 'authorized' | 'unknown';
+          rights_note: string | null;
+          license: string | null;
+          attribution: string | null;
+          rights_attested_by: string | null;
+          rights_attested_at: string | null;
+          is_primary: boolean;
+          position: number;
+          alt_text: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database['public']['Tables']['mission_images']['Row']> & {
+          image_url: string;
+          source: Database['public']['Tables']['mission_images']['Row']['source'];
+          rights_status: Database['public']['Tables']['mission_images']['Row']['rights_status'];
+        };
+        Update: Partial<Pick<Database['public']['Tables']['mission_images']['Row'], 'is_primary' | 'position' | 'alt_text'>>;
+        Relationships: [];
+      };
+      mission_sources: {
+        Row: {
+          id: string;
+          name: string;
+          source_type: 'api' | 'open_data' | 'rss' | 'xml' | 'json' | 'authorized_page';
+          adapter: string;
+          base_url: string;
+          documentation_url: string | null;
+          terms_url: string | null;
+          reuse_basis: string | null;
+          license: string | null;
+          automated_access_allowed: boolean;
+          mission_images_reusable: boolean;
+          logos_reusable: boolean;
+          enabled: boolean;
+          config: Json;
+          verified_at: string | null;
+          verified_by: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      external_applications: {
+        Row: {
+          id: string;
+          user_id: string;
+          external_mission_id: string;
+          source: string;
+          clicked_at: string;
+          status: ExternalApplicationStatus;
+          status_updated_at: string;
+          accepted_declared_at: string | null;
+          completed_declared_at: string | null;
+          declared_minutes: number | null;
+          verified_at: string | null;
+          verified_by: string | null;
+          verification_note: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          external_mission_id: string;
+          source: string;
+          clicked_at?: string;
+          status?: ExternalApplicationStatus;
+          status_updated_at?: string;
+          accepted_declared_at?: string | null;
+          completed_declared_at?: string | null;
+          declared_minutes?: number | null;
+        };
+        Update: Partial<Database['public']['Tables']['external_applications']['Insert']>;
+        Relationships: [
+          {
+            foreignKeyName: 'external_applications_external_mission_id_fkey';
+            columns: ['external_mission_id'];
+            isOneToOne: false;
+            referencedRelation: 'external_missions';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       missions: {
         Row: {
           id: string;
@@ -543,6 +779,8 @@ export interface Database {
           payment_ready_at: string | null;
           conversation_status: ConversationStatus;
           cv_status: CvStatus | null;
+          // « J'y suis allé » / « Je n'y suis pas allé » (parcours Phase 0).
+          participant_declared_completed?: boolean | null;
           cv_status_reason: string | null;
           cv_verified_at: string | null;
           stripe_payment_intent_id: string | null;
@@ -1607,6 +1845,67 @@ export interface Database {
       is_french_holiday: {
         Args: { p_date: string };
         Returns: boolean;
+      };
+      founder_external_missions_overview: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      // Parcours Phase 0 (migration 20260928120000).
+      record_application_click: {
+        Args: { p_external_mission_id: string; p_visitor_id?: string | null };
+        Returns: string;
+      };
+      claim_visitor_clicks: {
+        Args: { p_visitor_id: string };
+        Returns: number;
+      };
+      declare_participation: {
+        Args: { p_kind: string; p_mission_id: string; p_went: boolean };
+        Returns: string;
+      };
+      get_participation_request: {
+        Args: { p_token: string };
+        Returns: Json;
+      };
+      answer_participation_request: {
+        Args: { p_token: string; p_confirmed: boolean };
+        Returns: string;
+      };
+      public_participant_profile: {
+        Args: { p_user_id: string };
+        Returns: Json;
+      };
+      founder_issue_confirmation_request: {
+        Args: { p_application_id: string; p_channel_note: string };
+        Returns: string;
+      };
+      structure_pending_external_confirmations: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      structure_answer_external_participation: {
+        Args: { p_application_id: string; p_confirmed: boolean };
+        Returns: string;
+      };
+      founder_pending_participations: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      founder_mission_agent_overview: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      set_mission_primary_image: {
+        Args: { p_image_id: string };
+        Returns: undefined;
+      };
+      founder_set_image_rights: {
+        Args: { p_image_id: string; p_rights_status: string; p_note?: string | null };
+        Returns: undefined;
+      };
+      founder_verify_external_application: {
+        Args: { p_application_id: string; p_note?: string | null };
+        Returns: undefined;
       };
       has_active_mandat: {
         Args: Record<string, never>;

@@ -9,7 +9,7 @@ function localAppRoutes(): Plugin {
       server.middlewares.use((request, _response, next) => {
         const url = request.url ?? '';
         const [pathname, query] = url.split('?');
-        if (pathname === '/demo') request.url = `/app.html${query ? `?${query}` : ''}`;
+        if (pathname === '/demo' || pathname === '/missions') request.url = `/app.html${query ? `?${query}` : ''}`;
         next();
       });
     },
@@ -17,7 +17,7 @@ function localAppRoutes(): Plugin {
 }
 
 // Deux pages :
-//  - index.html : site vitrine + démo interactive (aucune donnée réelle)
+//  - index.html : site vitrine (phase 0 : missions solidaires, aucune donnée réelle)
 //  - app.html   : l'application React (routes internes /app, /connexion, etc.)
 //  - cgu.html / confidentialite.html / mentions-legales.html : pages légales statiques
 export default defineConfig({

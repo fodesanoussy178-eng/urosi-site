@@ -4,7 +4,7 @@ import { Fld } from '@/components/ui/Fld';
 import { T, inp } from '@/components/ui/theme';
 import { isDemoFounderCode, rememberDemoFounderAccess } from '@/lib/founder';
 import { isUnconfirmedEmailError, requestPasswordReset, resendConfirmationEmail, signIn } from './authService';
-import { consumeStoredAuthRedirect } from './authRedirect';
+import { consumeStoredAuthRedirect, isSafePath } from './authRedirect';
 import { describeError } from '@/lib/errors';
 
 export function SignInForm() {
@@ -50,7 +50,7 @@ export function SignInForm() {
       return;
     }
     const requested = params.get('next');
-    const safeRequested = requested?.startsWith('/') && !requested.startsWith('//') ? requested : null;
+    const safeRequested = isSafePath(requested) ? requested : null;
     // Un lien public (QR /scan/:token, /valider/:qrCode) doit rouvrir la
     // meme page apres connexion, jamais /app : sessionStorage a la priorite
     // sur le fallback /valider/ et sur /app.
@@ -123,7 +123,7 @@ export function SignInForm() {
       <button
         onClick={submit}
         disabled={busy}
-        style={{ width: '100%', background: busy ? T.row : '#fff', color: busy ? T.mu : '#000', border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: busy ? 'not-allowed' : 'pointer', marginTop: 4 }}
+        style={{ width: '100%', background: busy ? T.row : T.grad, color: busy ? T.mu : '#fff', border: 'none', borderRadius: 10, padding: '13px 0', fontSize: 14, fontWeight: 900, cursor: busy ? 'not-allowed' : 'pointer', marginTop: 4 }}
       >
         {busy ? '…' : internalCode.trim() || founderDestination ? 'Accéder à l’espace fondateur' : 'Se connecter'}
       </button>
