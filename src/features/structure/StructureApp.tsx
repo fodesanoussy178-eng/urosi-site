@@ -125,6 +125,12 @@ function lastSlot(slots: MissionSlot[]): MissionSlot | null {
   return slots.slice().sort((a, b) => slotEndsAt(b).getTime() - slotEndsAt(a).getTime())[0] ?? null;
 }
 
+// Phase 0 : les anciennes missions rémunérées restent en base (verrouillées
+// par mission_features) mais n'apparaissent plus dans l'espace structure.
+function phaseMissions<M extends { is_solidaire: boolean }>(missions: M[]): M[] {
+  return features.paidLayer ? missions : missions.filter((m) => m.is_solidaire);
+}
+
 function formatMoney(cents: number): string {
   return `${(cents / 100).toFixed(2).replace('.', ',')} €`;
 }
@@ -333,7 +339,7 @@ export function StructureApp() {
 
   async function reload() {
     if (!structure) return;
-    const missions = await fetchMissionsForStructure(structure.id);
+    const missions = phaseMissions(await fetchMissionsForStructure(structure.id));
     setMis(missions);
     await loadMissionData(missions);
   }
@@ -395,7 +401,7 @@ export function StructureApp() {
         const st = mine[0] ?? null;
         setStructure(st);
         if (st) {
-          const missions = await fetchMissionsForStructure(st.id);
+          const missions = phaseMissions(await fetchMissionsForStructure(st.id));
           setMis(missions);
           await loadMissionData(missions);
         }
@@ -735,7 +741,7 @@ export function StructureApp() {
   const accueilSections: Array<{ key: string; label: string; hint: string; missions: Mission[] }> = [
     { key: 'candidatures', label: 'Candidatures à traiter', hint: 'Choisir un candidat', missions: mis.filter((m) => missionBucket(m) === 'open' && candCount(m.id) > 0) },
     { key: 'confirmees', label: 'Confirmées — à préparer', hint: 'Préparer la mission', missions: mis.filter((m) => missionBucket(m) === 'accepted') },
-    { key: 'encours', label: 'En cours', hint: 'Suivre · scanner le QR', missions: mis.filter((m) => missionBucket(m) === 'in_progress') },
+    { key: 'encours', label: 'En cours', hint: features.qrAttendance ? 'Suivre · scanner le QR' : 'Confirmer la participation', missions: mis.filter((m) => missionBucket(m) === 'in_progress') },
     { key: 'publiees', label: 'Publiées — en attente de candidats', hint: '', missions: mis.filter((m) => missionBucket(m) === 'open' && candCount(m.id) === 0) },
   ].filter((s) => s.missions.length > 0);
   const accueilEmpty = accueilSections.length === 0;

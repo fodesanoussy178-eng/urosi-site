@@ -4,7 +4,7 @@ import { Fld } from '@/components/ui/Fld';
 import { T, inp } from '@/components/ui/theme';
 import { isDemoFounderCode, rememberDemoFounderAccess } from '@/lib/founder';
 import { isUnconfirmedEmailError, requestPasswordReset, resendConfirmationEmail, signIn } from './authService';
-import { consumeStoredAuthRedirect } from './authRedirect';
+import { consumeStoredAuthRedirect, isSafePath } from './authRedirect';
 import { describeError } from '@/lib/errors';
 
 export function SignInForm() {
@@ -50,7 +50,7 @@ export function SignInForm() {
       return;
     }
     const requested = params.get('next');
-    const safeRequested = requested?.startsWith('/') && !requested.startsWith('//') ? requested : null;
+    const safeRequested = isSafePath(requested) ? requested : null;
     // Un lien public (QR /scan/:token, /valider/:qrCode) doit rouvrir la
     // meme page apres connexion, jamais /app : sessionStorage a la priorite
     // sur le fallback /valider/ et sur /app.

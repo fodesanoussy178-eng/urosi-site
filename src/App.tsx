@@ -147,13 +147,14 @@ function AppShell() {
         <Route path="/fondateur" element={<Navigate to="/connexion?next=/fondateur" replace />} />
         <Route path="/fondateur/kyc" element={<Navigate to="/connexion?next=/fondateur" replace />} />
         <Route path="/reinitialisation" element={<ResetPasswordPage />} />
-        <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
-        <Route path="/scan/:token" element={<ScanPage />} />
+        {/* Pointage QR : en retrait en phase 0 (VITE_FEATURE_QR_ATTENDANCE). */}
+        {features.qrAttendance && <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />}
+        {features.qrAttendance && <Route path="/scan/:token" element={<ScanPage />} />}
         {features.paidLayer && <Route path="/paiement/succes" element={<PaymentResultPage outcome="success" />} />}
         {features.paidLayer && <Route path="/paiement/annule" element={<PaymentResultPage outcome="cancel" />} />}
-        <Route path="/valider" element={<WorkerAttendancePage />} />
-        <Route path="/valider/:qrCode" element={<WorkerAttendancePage />} />
-        <Route path="/validation" element={<Navigate to="/connexion?next=/validation" replace />} />
+        {features.qrAttendance && <Route path="/valider" element={<WorkerAttendancePage />} />}
+        {features.qrAttendance && <Route path="/valider/:qrCode" element={<WorkerAttendancePage />} />}
+        {features.qrAttendance && <Route path="/validation" element={<Navigate to="/connexion?next=/validation" replace />} />}
         <Route path="*" element={<Navigate to="/connexion" replace />} />
       </Routes>
     );
@@ -252,13 +253,13 @@ function AppShell() {
         <Route path="/fondateur" element={<FounderAdminPage />} />
         <Route path="/fondateur/kyc" element={<Navigate to="/fondateur?section=kyc" replace />} />
         <Route path="/reinitialisation" element={<ResetPasswordPage />} />
-        <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />
-        <Route path="/scan/:token" element={<ScanPage />} />
+        {features.qrAttendance && <Route path="/pointage/:applicationId/:token" element={<CheckinPage />} />}
+        {features.qrAttendance && <Route path="/scan/:token" element={<ScanPage />} />}
         {features.paidLayer && <Route path="/paiement/succes" element={<PaymentResultPage outcome="success" />} />}
         {features.paidLayer && <Route path="/paiement/annule" element={<PaymentResultPage outcome="cancel" />} />}
-        <Route path="/valider" element={<WorkerAttendancePage />} />
-        <Route path="/valider/:qrCode" element={<WorkerAttendancePage />} />
-        <Route path="/validation" element={<ValidatorApp />} />
+        {features.qrAttendance && <Route path="/valider" element={<WorkerAttendancePage />} />}
+        {features.qrAttendance && <Route path="/valider/:qrCode" element={<WorkerAttendancePage />} />}
+        {features.qrAttendance && <Route path="/validation" element={<ValidatorApp />} />}
         <Route path="*" element={<Navigate to="/app" replace />} />
       </Routes>
     );
